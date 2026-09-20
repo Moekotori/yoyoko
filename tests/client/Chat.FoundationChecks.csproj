@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/client/Core/Chat.Core.csproj" />
+    <ProjectReference Include="../../src/client/Storage/Chat.Storage.csproj" />
+    <ProjectReference Include="../../src/client/Networking/Chat.Networking.csproj" />
+    <ProjectReference Include="../../src/client/Media/Chat.Media.csproj" />
+    <None Include="../../docs/protocol/fixtures/*.json" Link="Fixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

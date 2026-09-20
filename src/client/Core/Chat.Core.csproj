@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Domain/Chat.Domain.csproj" />
+    <ProjectReference Include="../Protocol/Chat.Protocol.csproj" />
+
+  </ItemGroup>
+</Project>

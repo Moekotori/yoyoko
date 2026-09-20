@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Core/Chat.Core.csproj" />
+    <ProjectReference Include="../Networking/Chat.Networking.csproj" />
+    <ProjectReference Include="../Storage/Chat.Storage.csproj" />
+    <ProjectReference Include="../Media/Chat.Media.csproj" />
+    <ProjectReference Include="../UI/Chat.UI.csproj" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+{
+  "instance_id":"01950000-0000-7000-8000-000000000001",
+  "name":"Local community",
+  "protocol_version":1,
+  "api_version":1,
+  "api":"http://localhost:8080/api/v1",
+  "gateway":"ws://localhost:8080/gateway",
+  "cdn":"http://localhost:9000/chat",
+  "rtc":"http://localhost:7880"
+}

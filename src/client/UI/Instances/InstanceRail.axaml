@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:items="using:Chat.UI.Instances"
+  x:Class="Chat.UI.Instances.InstanceRail" x:DataType="vm:ShellViewModel">
+  <Grid RowDefinitions="64,*" Background="{StaticResource RailBrush}">
+    <TextBlock Text="↗" FontSize="28" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+    <ListBox Grid.Row="1" ItemsSource="{Binding Instances}" SelectedItem="{Binding SelectedInstance}" Margin="6,8"
+      AutomationProperties.Name="实例列表">
+      <ListBox.ItemTemplate><DataTemplate x:DataType="items:InstanceItem">
+        <TextBlock Text="{Binding Initial}" ToolTip.Tip="{Binding Host}" FontSize="18" Margin="4,8" HorizontalAlignment="Center" />
+      </DataTemplate></ListBox.ItemTemplate>
+    </ListBox>
+  </Grid>
+</UserControl>

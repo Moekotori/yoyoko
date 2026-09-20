@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel">
+  <Grid RowDefinitions="Auto,*,Auto" Background="{StaticResource SidebarBrush}">
+    <StackPanel Margin="22,23,16,0" Spacing="8">
+      <TextBlock Text="{Binding InstanceName}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+      <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" TextTrimming="CharacterEllipsis" />
+      <TextBlock Text="频道" Classes="muted" FontSize="12" Margin="0,38,0,0" />
+    </StackPanel>
+    <ListBox Grid.Row="1" ItemsSource="{Binding Channels}" Margin="12,16" AutomationProperties.Name="频道列表" />
+    <TextBlock Grid.Row="2" Text="未登录" Classes="muted" Margin="22,20" />
+  </Grid>
+</UserControl>

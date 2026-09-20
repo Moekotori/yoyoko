@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Core/Chat.Core.csproj" />
+    <ProjectReference Include="../Domain/Chat.Domain.csproj" />
+    <ProjectReference Include="../Protocol/Chat.Protocol.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <EmbeddedResource Include="Migrations/*.sql" />
+  </ItemGroup>
+</Project>

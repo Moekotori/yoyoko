@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" x:Class="Chat.UI.Instances.AddInstanceView" x:DataType="vm:ShellViewModel">
+  <StackPanel MaxWidth="480" Margin="40" Spacing="18" VerticalAlignment="Center" HorizontalAlignment="Center">
+    <TextBlock Text="连接你的社区" FontSize="30" FontWeight="SemiBold" />
+    <TextBlock Text="添加官方或自托管实例，所有社区都在这里。" Classes="muted" TextWrapping="Wrap" Margin="0,0,0,18" />
+    <TextBlock Text="实例地址" FontSize="13" />
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+      <TextBox Text="{Binding Address}" PlaceholderText="chat.example.com" AutomationProperties.Name="实例地址" MinWidth="200">
+        <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding AddInstance}" /></TextBox.KeyBindings>
+      </TextBox>
+      <Button Grid.Column="1" Classes="primary" Content="添加实例" Command="{Binding AddInstance}" />
+    </Grid>
+    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" MinHeight="40" AutomationProperties.LiveSetting="Polite" />
+  </StackPanel>
+</UserControl>

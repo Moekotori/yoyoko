@@ -1,0 +1,28 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <SolidColorBrush x:Key="CanvasBrush">#161819</SolidColorBrush>
+    <SolidColorBrush x:Key="SidebarBrush">#1C1F20</SolidColorBrush>
+    <SolidColorBrush x:Key="RailBrush">#111314</SolidColorBrush>
+    <SolidColorBrush x:Key="PrimaryTextBrush">#E6E9E7</SolidColorBrush>
+    <SolidColorBrush x:Key="MutedTextBrush">#959E99</SolidColorBrush>
+    <SolidColorBrush x:Key="AccentBrush">#A8D8BE</SolidColorBrush>
+  </Styles.Resources>
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource CanvasBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+  <Style Selector="Button"><Setter Property="CornerRadius" Value="2" /><Setter Property="BorderThickness" Value="0" /></Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="#17271E" />
+    <Setter Property="Padding" Value="18,11" />
+  </Style>
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="2" /><Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Background" Value="#202425" /><Setter Property="Padding" Value="12,11" />
+  </Style>
+  <Style Selector="ListBox"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
+  <Style Selector="ListBoxItem"><Setter Property="CornerRadius" Value="2" /></Style>
+</Styles>

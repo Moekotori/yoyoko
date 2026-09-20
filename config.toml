@@ -1,0 +1,31 @@
+[server]
+# Stable identity: set a unique UUIDv7 before deploying a new independent instance.
+instance_id = "01950000-0000-7000-8000-000000000001"
+name = "Local community"
+listen = "127.0.0.1:8080"
+public_url = "http://localhost:8080"
+allowed_origins = ["http://localhost:8080"]
+
+[database]
+url = "postgres://chat:chat_dev@localhost:5432/chat"
+max_connections = 8
+
+[redis]
+url = "redis://localhost:6379"
+
+[storage]
+provider = "s3"
+endpoint = "http://localhost:9000"
+public_url = "http://localhost:9000/chat"
+bucket = "chat"
+access_key = "chat_dev"
+secret_key = "local-development-only"
+
+[rtc]
+provider = "livekit"
+public_url = "http://localhost:7880"
+api_key = "devkey"
+api_secret = "local-development-only-change-me-32"
+
+[logging]
+filter = "info,tower_http=warn"

@@ -1,0 +1,70 @@
+name: foundation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  desktop-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore Chat.sln --locked-mode
+      - run: dotnet build Chat.sln -c Release --no-restore
+      - run: dotnet run --project tests/client -c Release --no-build
+      - run: cmake -S native-media-core -B build/native
+      - run: cmake --build build/native --config Release
+      - run: ctest --test-dir build/native -C Release --output-on-failure
+  server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: chat
+          POSTGRES_PASSWORD: chat_dev
+          POSTGRES_DB: chat
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U chat -d chat" --health-interval 5s --health-timeout 3s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo run --locked -p chat-server -- migrate
+      - run: cargo run --locked -p chat-server -- migrate
+      - run: cargo build --release --locked -p chat-server
+  structure-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore Chat.sln --locked-mode
+      - run: dotnet format whitespace Chat.sln --verify-no-changes --no-restore
+      - run: python3 scripts/check_boundaries.py
+      - run: docker compose config --quiet
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build api
+      - run: docker compose up -d
+      - run: |
+          for i in $(seq 1 30); do
+            if curl --fail http://localhost:8080/health/live; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+      - if: always()
+        run: docker compose down

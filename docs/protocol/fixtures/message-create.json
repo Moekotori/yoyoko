@@ -1,0 +1,10 @@
+{
+  "op":"dispatch", "event":"MESSAGE_CREATE", "seq":"9007199254740993",
+  "data":{
+    "id":"01950000-0000-7000-8000-000000000010",
+    "channel_id":"01950000-0000-7000-8000-000000000020",
+    "author_id":"01950000-0000-7000-8000-000000000030",
+    "kind":"text", "content":"Hello, world", "created_at":"2026-09-20T10:00:00Z",
+    "edited_at":null, "reply_to":null, "mentions":[], "attachments":[], "embeds":[], "reactions":[], "encrypted_payload":null
+  }
+}

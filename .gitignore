@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+/target/
+/build/
+/artifacts/
+.env
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+config.local.toml
