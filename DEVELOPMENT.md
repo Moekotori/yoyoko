@@ -24,7 +24,7 @@ cargo run --locked -p chat-server
 局域网测试（同一 Wi-Fi 下的另一台电脑或本机第二客户端）不要用默认的 loopback 监听。使用：
 
 ```sh
-npm run lan
+npm run dev
 ```
 
 服务会绑到 `0.0.0.0:8080`，并打印本机局域网地址。在客户端输入该地址（可省略 `http://`，内网 IP 会默认走 HTTP）。默认 `cargo run` 仍只监听 `127.0.0.1`，避免无意暴露开发凭据。系统若弹出防火墙/网络权限，选择允许。`CHAT_LAN_PORT` / `CHAT_LAN_HOST` 可覆盖端口和通告地址。
@@ -75,7 +75,7 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 ```sh
 npm test                 # 协议 fixtures
 npm run test:live        # 启动本机 API 后测 HTTP / Gateway
-npm run lan              # 0.0.0.0 监听，供局域网客户端连接
+npm run dev              # 0.0.0.0 监听，供本机/局域网客户端连接（lan 同义）
 npm run ci               # fixtures + live（日常本地管线）
 npm run ci -- --full     # 再加 .NET、CMake、边界检查和 Rust
 npm run ci -- protocol   # 只跑指定 job：protocol|live|desktop|native|structure|server

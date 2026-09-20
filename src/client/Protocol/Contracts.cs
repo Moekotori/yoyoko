@@ -32,8 +32,10 @@ public sealed record VoiceFlags(bool SelfMute, bool SelfDeaf);
 public sealed record VoiceStateDto(Guid UserId, Guid ServerId, Guid? ChannelId, bool SelfMute, bool SelfDeaf, string DisplayName);
 public sealed record RtcTokenDto(string Token, Uri Url, string Room, DateTimeOffset ExpiresAt);
 public sealed record VoiceJoinDto(RtcTokenDto Rtc, VoiceStateDto State);
-public sealed record GatewayReady(string SessionId, UserDto User, ServerDto[] Servers, ChannelDto[] Channels,
-    UserDto[] Users, int HeartbeatIntervalMs, VoiceStateDto[] VoiceStates);
+public sealed record ReadyDto(string SessionId, UserDto User, ServerDto[] Servers, ChannelDto[] Channels,
+    UserDto[] Users, int HeartbeatIntervalMs, VoiceStateDto[]? VoiceStates);
+public sealed record SendMessageRequest(string? Content, Guid? ReplyTo, Guid[] AttachmentIds);
+public sealed record MessagePageDto(MessageDto[] Items, Guid? Before);
 public sealed record MessageDto(Guid Id, Guid ChannelId, Guid AuthorId, string Kind,
     string? Content, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, Guid? ReplyTo,
     Guid[] Mentions, AttachmentDto[] Attachments, JsonElement[] Embeds,
@@ -65,7 +67,10 @@ public sealed record AttachmentDto(Guid Id, string FileName, string MimeType, lo
 [JsonSerializable(typeof(VoiceStateDto[]))]
 [JsonSerializable(typeof(RtcTokenDto))]
 [JsonSerializable(typeof(VoiceJoinDto))]
-[JsonSerializable(typeof(GatewayReady))]
+[JsonSerializable(typeof(ReadyDto))]
+[JsonSerializable(typeof(SendMessageRequest))]
+[JsonSerializable(typeof(MessagePageDto))]
 [JsonSerializable(typeof(MessageDto))]
 [JsonSerializable(typeof(MessageDto[]))]
+[JsonSerializable(typeof(Guid[]))]
 public partial class ProtocolJson : JsonSerializerContext;

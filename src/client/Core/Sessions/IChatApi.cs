@@ -28,6 +28,14 @@ public interface IChatApi : IDisposable
     Task<MessageDto> SendMessageAsync(Guid channelId, SendMessageRequest request, string idempotencyKey, CancellationToken cancellationToken);
     Task<AttachmentDto> UploadAsync(PickedImage image, CancellationToken cancellationToken);
     Task<byte[]?> DownloadAsync(Uri url, int maxBytes, CancellationToken cancellationToken);
+    Task<VoiceJoinDto> JoinVoiceAsync(Guid channelId, bool mute, bool deaf, CancellationToken cancellationToken);
+    Task LeaveVoiceAsync(CancellationToken cancellationToken);
+    Task<VoiceStateDto> PatchVoiceAsync(bool mute, bool deaf, CancellationToken cancellationToken);
+}
+
+public sealed class ChatApiException(string code, string message) : Exception(message)
+{
+    public string Code { get; } = code;
 }
 
 public interface IChatApiFactory

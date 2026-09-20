@@ -3,6 +3,7 @@ using System.Text.Json;
 using Chat.Core.Instances;
 using Chat.Core.Messaging;
 using Chat.Core.Realtime;
+using Chat.Core.Voice;
 using Chat.Domain.Instances;
 using Chat.Protocol;
 
@@ -21,7 +22,7 @@ public sealed class InstanceSession : IAsyncDisposable
     private readonly string _refreshToken;
     private Task? _loop;
     public InstanceSession(InstanceDescriptor descriptor, Account account, IChatApi api, IMessageCache cache,
-        ICredentialVault vault, Func<IGatewayConnection> gateways, string accessToken, string refreshToken)
+        ICredentialVault vault, Func<IGatewayConnection> gateways, IVoiceMedia media, string accessToken, string refreshToken)
     {
         Descriptor = descriptor;
         Account = account;
@@ -33,31 +34,33 @@ public sealed class InstanceSession : IAsyncDisposable
         _refreshToken = refreshToken;
         _api.SetAccessToken(accessToken);
         Scope = new(descriptor.Id, account.Key.Id);
+        Voice = new VoiceRuntime(api, media);
     }
     public InstanceDescriptor Descriptor { get; }
     public Account Account { get; }
     public CacheScope Scope { get; }
     public IReadOnlyList<ServerDto> Servers { get; private set; } = [];
     public IReadOnlyList<ChannelDto> Channels { get; private set; } = [];
+    public VoiceRuntime Voice { get; }
     public event Action? CommunityChanged;
     public event Action<MessageDto>? MessageArrived;
 
     public static async Task<InstanceSession> SignInAsync(InstanceDescriptor descriptor, IChatApi api,
-        IMessageCache cache, ICredentialVault vault, Func<IGatewayConnection> gateways, string username, string password,
-        string? displayName, bool register, CancellationToken cancellationToken)
+        IMessageCache cache, ICredentialVault vault, Func<IGatewayConnection> gateways, IVoiceMedia media,
+        string username, string password, string? displayName, bool register, CancellationToken cancellationToken)
     {
         var auth = register
             ? await api.RegisterAsync(new(username, displayName ?? username, password), cancellationToken)
             : await api.LoginAsync(new(username, password), cancellationToken);
         var account = new Account(new(descriptor.Id, auth.User.Id), auth.User.DisplayName);
-        var session = new InstanceSession(descriptor, account, api, cache, vault, gateways, auth.AccessToken, auth.RefreshToken);
+        var session = new InstanceSession(descriptor, account, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
         await session.PersistAuthAsync(cancellationToken);
         session.Start();
         return session;
     }
 
     public static async Task<InstanceSession?> RestoreAsync(InstanceDescriptor descriptor, IChatApi api,
-        IMessageCache cache, ICredentialVault vault, Func<IGatewayConnection> gateways, CancellationToken cancellationToken)
+        IMessageCache cache, ICredentialVault vault, Func<IGatewayConnection> gateways, IVoiceMedia media, CancellationToken cancellationToken)
     {
         var accountId = await cache.GetSettingAsync("account:" + descriptor.Id.Value, cancellationToken);
         if (accountId is null || !Guid.TryParse(accountId, out var id)) return null;
@@ -67,7 +70,7 @@ public sealed class InstanceSession : IAsyncDisposable
         {
             var auth = await api.RefreshAsync(refresh, cancellationToken);
             var account = new Account(new(descriptor.Id, auth.User.Id), auth.User.DisplayName);
-            var session = new InstanceSession(descriptor, account, api, cache, vault, gateways, auth.AccessToken, auth.RefreshToken);
+            var session = new InstanceSession(descriptor, account, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
             await session.PersistAuthAsync(cancellationToken);
             var cached = await cache.LoadCommunityAsync(session.Scope, cancellationToken);
             session.ApplyCommunity(cached);
@@ -220,9 +223,22 @@ public sealed class InstanceSession : IAsyncDisposable
         {
             var ready = envelope.Data.Deserialize(ProtocolJson.Default.ReadyDto) ?? throw new InvalidDataException("READY");
             ApplyCommunity(new(ready.Servers, ready.Channels, ready.Users));
+            Voice.Replace(ready.VoiceStates);
             await _cache.SaveCommunityAsync(Scope, new(Servers, Channels, ready.Users), cancellationToken);
             await _cache.SaveCursorAsync(Scope, ready.SessionId, envelope.Seq ?? 0, cancellationToken);
             CommunityChanged?.Invoke();
+            return;
+        }
+        if (envelope.Event == "VOICE_STATE_UPDATE")
+        {
+            var state = envelope.Data.Deserialize(ProtocolJson.Default.VoiceStateDto);
+            if (state is not null) Voice.Apply(state);
+            CommunityChanged?.Invoke();
+            if (envelope.Seq is long voiceSeq)
+            {
+                var cursor = await _cache.LoadCursorAsync(Scope, cancellationToken);
+                await _cache.SaveCursorAsync(Scope, cursor.SessionId, voiceSeq, cancellationToken);
+            }
             return;
         }
         if (envelope.Event == "MESSAGE_CREATE")
@@ -262,6 +278,7 @@ public sealed class InstanceSession : IAsyncDisposable
         _lifetime.Cancel();
         if (_loop is not null)
             try { await _loop.WaitAsync(TimeSpan.FromSeconds(2)); } catch { /* shutdown */ }
+        await Voice.DisposeAsync();
         if (_gateway is not null) await _gateway.DisposeAsync();
         _api.Dispose();
         _lifetime.Dispose();

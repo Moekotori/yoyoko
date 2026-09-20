@@ -130,7 +130,7 @@ dotnet run --project src/client/App -c Release
 
 在客户端输入 `http://localhost:8080`，点击“添加实例”。成功后显示实例名称并保存到 SQLite，重启后可离线恢复。此流程不需要 PostgreSQL 或 Docker，也不会登录账号、创建频道或启用麦克风。
 
-同一局域网里的其他设备请用 `npm run lan` 启动服务，再在客户端输入打印出的 `http://192.168.x.x:8080`。默认进程只绑回环地址，局域网连不上。
+同一局域网里的其他设备请用 `npm run dev` 启动服务，再在客户端输入打印出的 `http://192.168.x.x:8080`。默认 `cargo run` 只绑回环地址，局域网连不上。`npm run lan` 与 `dev` 相同。
 
 App 开发工程使用 `UseAppHost=false`，由已安装的 dotnet runtime 启动；独立安装包与签名发布属于后续工作。
 

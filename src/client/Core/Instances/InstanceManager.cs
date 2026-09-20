@@ -14,6 +14,13 @@ public sealed class InstanceManager(IInstanceStore store, IInstanceDiscovery dis
             _contexts.TryAdd(item.Id, new InstanceContext(item));
     }
 
+    public async Task<InstanceDiscovery> RefreshDiscoveryAsync(InstanceContext context, CancellationToken cancellationToken)
+    {
+        var info = await discovery.DiscoverAsync(context.Descriptor.BaseUrl, cancellationToken);
+        context.AttachDiscovery(info);
+        return info;
+    }
+
     public async Task<InstanceContext> AddAsync(string address, CancellationToken cancellationToken)
     {
         var uri = NormalizeAddress(address);
@@ -30,6 +37,7 @@ public sealed class InstanceManager(IInstanceStore store, IInstanceDiscovery dis
         var descriptor = new InstanceDescriptor(id, uri, info.Name);
         await store.SaveAsync(descriptor, cancellationToken);
         var context = new InstanceContext(descriptor);
+        context.AttachDiscovery(info);
         _contexts.Add(id, context);
         return context;
     }

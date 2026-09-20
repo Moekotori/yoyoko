@@ -6,6 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev": "node scripts/lan.mjs",
     "test": "node --test tests/node/fixtures.test.mjs",
     "test:live": "node scripts/ci.mjs live",
     "lan": "node scripts/lan.mjs",

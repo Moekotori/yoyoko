@@ -1,15 +1,16 @@
-using Chat.Core.Realtime;
 using Chat.Core.Sessions;
 using Chat.Domain.Instances;
+using Chat.Protocol;
 
 namespace Chat.Core.Instances;
 
 public sealed class InstanceContext(InstanceDescriptor descriptor) : IAsyncDisposable
 {
     public InstanceDescriptor Descriptor { get; } = descriptor;
+    public InstanceDiscovery? Discovery { get; private set; }
     public InstanceSession? Session { get; private set; }
     public Account? Account => Session?.Account;
-    public IGatewayConnection? Gateway => null;
+    public void AttachDiscovery(InstanceDiscovery discovery) => Discovery = discovery;
     public void AttachSession(InstanceSession session)
     {
         if (session.Descriptor.Id != Descriptor.Id) throw new ArgumentException("Instance mismatch.");

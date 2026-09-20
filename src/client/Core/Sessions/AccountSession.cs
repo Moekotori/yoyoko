@@ -40,7 +40,7 @@ public sealed class AccountSession : IAsyncDisposable
         gateway.Event += session.OnGateway;
         await gateway.StartAsync(discovery.Gateway, auth.AccessToken, cancellationToken);
         session._gateway = gateway;
-        instance.AttachSession(session.Account, gateway: null);
+        instance.AttachAccount(session.Account);
         return session;
     }
 
