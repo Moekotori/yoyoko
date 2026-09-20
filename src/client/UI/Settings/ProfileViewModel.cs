@@ -32,8 +32,16 @@ public sealed class ProfileViewModel : ObservableObject
     public AsyncCommand ChangeAvatar { get; }
     public AsyncCommand RemoveAvatar { get; }
     public bool IsSignedIn { get; private set; }
-    public string Username { get => _username; set { _username = value; Changed(); } }
-    public string DisplayName { get => _displayName; set { _displayName = value; Changed(); } }
+    public string Username { get => _username; set { _username = value; Changed(); Changed(nameof(Initial)); } }
+    public string DisplayName { get => _displayName; set { _displayName = value; Changed(); Changed(nameof(Initial)); } }
+    public string Initial
+    {
+        get
+        {
+            var name = string.IsNullOrWhiteSpace(DisplayName) ? Username.Trim() : DisplayName.Trim();
+            return name.Length == 0 ? "?" : System.Globalization.StringInfo.GetNextTextElement(name);
+        }
+    }
     public string Status { get => _status; private set { _status = value; Changed(); Changed(nameof(HasStatus)); } }
     public bool HasStatus => Status.Length > 0;
     public AvatarPlayback? Playback

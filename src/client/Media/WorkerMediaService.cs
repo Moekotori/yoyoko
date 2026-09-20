@@ -146,7 +146,7 @@ public sealed class WorkerMediaService : IMediaService
 
     private async Task SendDiscardAsync(Dictionary<string, object?> payload, CancellationToken cancellationToken)
     {
-        using var _ = await SendAsync(payload, cancellationToken);
+        using (await SendAsync(payload, cancellationToken)) { }
     }
 
     private async Task<JsonDocument> SendAsync(Dictionary<string, object?> payload, CancellationToken cancellationToken)

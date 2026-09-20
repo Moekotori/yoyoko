@@ -772,6 +772,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     {
         var item = SelectedInstance ?? throw new InvalidOperationException(_text.Get(TextKey.NoInstanceSelected));
         if (item.Context.Session is { } session) await session.SignOutAsync();
+        ClearAccountDrafts();
         item.Context.AttachSessionClear();
         DetachTimeline();
         foreach (var pending in PendingFiles.ToList())

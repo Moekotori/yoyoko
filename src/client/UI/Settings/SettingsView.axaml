@@ -1,42 +1,35 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel">
-  <UserControl.Styles>
-    <StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" />
-  </UserControl.Styles>
-  <Grid RowDefinitions="52,*">
-    <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
+  <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" /></UserControl.Styles>
+  <Grid ColumnDefinitions="148,*">
+    <Border Background="{StaticResource SidebarBrush}">
+      <StackPanel Margin="12,30" Spacing="4">
+        <TextBlock Text="{i18n:T Settings}" FontSize="18" FontWeight="SemiBold" Margin="12,0,0,28" />
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowGeneral}" Content="{i18n:T GeneralSettings}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.General}" />
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowAppearance}" Content="{i18n:T Appearance}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Appearance}" />
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowVoice}" Content="{i18n:T Voice}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Voice}" />
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowProfile}" Content="{i18n:T Profile}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Profile}" />
+      </StackPanel>
+    </Border>
+    <Grid Grid.Column="1" MaxWidth="656" Margin="28,24,28,0" RowDefinitions="48,*">
       <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{i18n:T Settings}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" />
-        <Button Grid.Column="1" Classes="icon" Command="{Binding Close}" ToolTip.Tip="{i18n:T CloseSettings}"
+        <TextBlock Text="{Binding SectionTitle}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="settingsClose" Command="{Binding Close}" ToolTip.Tip="{i18n:T CloseSettings}"
           AutomationProperties.Name="{i18n:T CloseSettings}">
-          <PathIcon Data="{StaticResource IconClose}" />
+          <PathIcon Data="{StaticResource IconClose}" Width="16" Height="16" />
         </Button>
       </Grid>
-    </Border>
-    <Grid Grid.Row="1" ColumnDefinitions="156,*">
-      <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
-        <StackPanel Margin="12,26" Spacing="4">
-          <Button Classes="settingsNav" Classes.selected="{Binding ShowGeneral}" Content="{i18n:T GeneralSettings}"
-            Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.General}" />
-          <Button Classes="settingsNav" Classes.selected="{Binding ShowAppearance}" Content="{i18n:T Appearance}"
-            Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Appearance}" />
-          <Border Height="1" Background="{StaticResource DividerBrush}" Margin="10,14" />
-          <Button Classes="settingsNav" Classes.selected="{Binding ShowProfile}" Content="{i18n:T Profile}"
-            Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Profile}" />
-        </StackPanel>
-      </Border>
-      <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Panel MaxWidth="600" Margin="32,32,32,40" VerticalAlignment="Top">
-          <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowGeneral}">
-            <vm:GeneralSettingsView />
-          </Border>
-          <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowAppearance}">
-            <vm:AppearanceSettingsView />
-          </Border>
-          <Border Classes="settingsPage" Classes.active="{Binding ShowProfile}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowProfile}">
-            <vm:ProfileSettingsView />
-          </Border>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Panel Margin="0,18,0,32" VerticalAlignment="Top">
+          <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowVoice}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowVoice}"><vm:VoiceSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowProfile}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowProfile}"><vm:ProfileSettingsView /></Border>
         </Panel>
       </ScrollViewer>
     </Grid>

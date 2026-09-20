@@ -2,18 +2,15 @@
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.AppearanceSettingsView" x:DataType="vm:SettingsViewModel">
   <StackPanel>
-    <TextBlock Text="{i18n:T Appearance}" Classes="settingsTitle" />
-    <Grid ColumnDefinitions="*,Auto" MinHeight="68" ColumnSpacing="20">
-      <TextBlock Text="{i18n:T CompactLayout}" VerticalAlignment="Center" TextWrapping="Wrap" />
-      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding Compact}"
-        AutomationProperties.Name="{i18n:T CompactLayout}" />
+    <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
+      <TextBlock Text="{i18n:T CompactLayout}" Classes="settingsLabel" />
+      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding Compact}" AutomationProperties.Name="{i18n:T CompactLayout}" />
     </Grid>
-    <Border Height="1" Background="{StaticResource DividerBrush}" />
-    <Grid ColumnDefinitions="*,Auto" MinHeight="68" ColumnSpacing="20">
-      <TextBlock Text="{i18n:T ReduceMotion}" VerticalAlignment="Center" TextWrapping="Wrap" />
-      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding ReduceMotion}"
-        AutomationProperties.Name="{i18n:T ReduceMotion}" />
+    <Border Classes="settingsRowDivider" />
+    <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
+      <TextBlock Text="{i18n:T ReduceMotion}" Classes="settingsLabel" />
+      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding ReduceMotion}" AutomationProperties.Name="{i18n:T ReduceMotion}" />
     </Grid>
-    <Border Height="1" Background="{StaticResource DividerBrush}" />
+    <Border Classes="settingsRowDivider" />
   </StackPanel>
 </UserControl>

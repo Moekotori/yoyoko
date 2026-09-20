@@ -58,6 +58,10 @@ Check(catalog.Get(Locale.English, TextKey.Settings) == "Settings", "English sett
 Check(catalog.Get(Locale.Japanese, TextKey.Settings) == "設定", "Japanese settings label");
 await using var media = new UnavailableMediaService();
 Check(media.Capabilities == MediaCapabilities.None, "no false media capabilities");
+var devices = await media.ListDevicesAsync(default);
+Check(devices.Inputs.Count == 0 && devices.Outputs.Count == 0, "unavailable media exposes no devices");
+await media.SetDevicesAsync(new AudioRoute("in:mic", "out:speakers"), default);
+Check(AudioRoute.System.InputDeviceId is null && AudioRoute.System.OutputDeviceId is null, "system route is unset");
 var directory = Path.Combine(Path.GetTempPath(), "chat-checks-" + Guid.NewGuid());
 try
 {

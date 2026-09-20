@@ -2,35 +2,37 @@
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
   x:Class="Chat.UI.Settings.ProfileSettingsView" x:DataType="vm:SettingsViewModel">
   <StackPanel>
-    <TextBlock Text="{i18n:T Profile}" Classes="settingsTitle" />
-    <StackPanel IsVisible="{Binding !Profile.IsSignedIn}" Spacing="20">
-      <TextBlock Text="{i18n:T NeedSignIn}" Classes="muted" TextWrapping="Wrap" />
-      <Button Classes="primary settingsPrimary" Content="{i18n:T SignIn}" Command="{Binding Close}" />
+    <StackPanel IsVisible="{Binding !Profile.IsSignedIn}" Spacing="24">
+      <TextBlock Text="{i18n:T NeedSignIn}" FontSize="18" />
+      <Button Classes="primary settingsPrimary" Content="{i18n:T SignIn}" Command="{Binding Close}" HorizontalAlignment="Left" />
     </StackPanel>
     <StackPanel IsVisible="{Binding Profile.IsSignedIn}">
-      <Grid ColumnDefinitions="72,*" ColumnSpacing="20" Margin="0,0,0,28">
-        <Grid Width="72" Height="72">
+      <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="18">
+        <Grid Width="64" Height="64">
           <c:Avatar Playback="{Binding Profile.Playback}" />
-          <PathIcon Data="{StaticResource IconPeople}" Width="26" Height="26" Foreground="{StaticResource MutedTextBrush}"
-            IsVisible="{Binding !Profile.HasAvatar}" />
+          <TextBlock Text="{Binding Profile.Initial}" FontSize="24" FontWeight="Medium" Foreground="{StaticResource AccentBrush}"
+            HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !Profile.HasAvatar}" />
         </Grid>
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6">
+        <TextBlock Grid.Column="1" Text="{Binding Profile.DisplayName}" FontSize="19" FontWeight="Medium"
+          VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4">
           <Button Classes="settingsSecondary" Content="{i18n:T ChangeAvatar}" Command="{Binding Profile.ChangeAvatar}" />
-          <Button Content="{i18n:T RemoveAvatar}" Command="{Binding Profile.RemoveAvatar}" HorizontalAlignment="Left"
+          <Button Content="{i18n:T RemoveAvatar}" Command="{Binding Profile.RemoveAvatar}" HorizontalAlignment="Center" FontSize="12"
             Foreground="{StaticResource MutedTextBrush}" IsVisible="{Binding Profile.HasAvatar}" />
         </StackPanel>
       </Grid>
-      <Border Height="1" Background="{StaticResource DividerBrush}" Margin="0,0,0,26" />
-      <StackPanel Spacing="8" Margin="0,0,0,20">
-        <TextBlock Text="{i18n:T Username}" FontSize="13" />
-        <TextBox Classes="settingsField" Text="{Binding Profile.Username}" AutomationProperties.Name="{i18n:T Username}" />
-      </StackPanel>
-      <StackPanel Spacing="8">
-        <TextBlock Text="{i18n:T DisplayNameField}" FontSize="13" />
-        <TextBox Classes="settingsField" Text="{Binding Profile.DisplayName}" AutomationProperties.Name="{i18n:T DisplayNameField}" />
-      </StackPanel>
-      <Button Classes="primary settingsPrimary" Content="{i18n:T SaveProfile}" Command="{Binding Profile.Save}" Margin="0,28,0,0" />
-      <TextBlock Text="{Binding Profile.Status}" Classes="muted" FontSize="13" TextWrapping="Wrap" Margin="0,14,0,0" IsVisible="{Binding Profile.HasStatus}" />
+      <Border Classes="settingsDivider" />
+      <Grid ColumnDefinitions="104,*" RowDefinitions="44,44" RowSpacing="20" ColumnSpacing="20">
+        <TextBlock Text="{i18n:T Username}" FontSize="14" VerticalAlignment="Center" />
+        <TextBox Grid.Column="1" Classes="settingsField" Text="{Binding Profile.Username}" AutomationProperties.Name="{i18n:T Username}" />
+        <TextBlock Grid.Row="1" Text="{i18n:T DisplayNameField}" FontSize="14" VerticalAlignment="Center" />
+        <TextBox Grid.Row="1" Grid.Column="1" Classes="settingsField" Text="{Binding Profile.DisplayName}" AutomationProperties.Name="{i18n:T DisplayNameField}" />
+      </Grid>
+      <Border Classes="settingsDivider" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+        <TextBlock Text="{Binding Profile.Status}" Classes="muted" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" IsVisible="{Binding Profile.HasStatus}" />
+        <Button Grid.Column="1" Classes="primary settingsPrimary" Content="{i18n:T SaveProfile}" Command="{Binding Profile.Save}" />
+      </Grid>
     </StackPanel>
   </StackPanel>
 </UserControl>

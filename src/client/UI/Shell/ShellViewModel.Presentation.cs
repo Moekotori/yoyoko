@@ -108,7 +108,7 @@ public sealed partial class ShellViewModel
             }
         }
         if (args.PropertyName is nameof(IsSignedIn) or nameof(ShowSettings)) Changed(nameof(ShowChannelEmpty));
-        if (args.PropertyName == nameof(IsSignedIn) && !IsSignedIn) { _channelDrafts.Clear(); _draftKey = null; OpenChannels.Clear(); }
+        if (args.PropertyName == nameof(IsSignedIn) && !IsSignedIn) { _draftKey = null; OpenChannels.Clear(); }
         if (args.PropertyName == nameof(Status)) Changed(nameof(HasStatus));
     }
 
@@ -121,6 +121,12 @@ public sealed partial class ShellViewModel
             _refreshQueued = false;
             if (_presentationDisposed) return;
             Changed(nameof(TextChannels)); Changed(nameof(VoiceChannels));
+            for (var index = OpenChannels.Count - 1; index >= 0; index--)
+            {
+                var current = Channels.FirstOrDefault(item => item.Id == OpenChannels[index].Id);
+                if (current is null) OpenChannels.RemoveAt(index);
+                else if (!ReferenceEquals(current, OpenChannels[index])) OpenChannels[index] = current;
+            }
             foreach (var item in Channels.Concat(OpenChannels).Distinct()) item.IsSelected = item.Id == SelectedChannel?.Id;
             RefreshMessagePresentation();
         });
@@ -143,6 +149,15 @@ public sealed partial class ShellViewModel
         Participants.Clear();
         foreach (var row in Messages.DistinctBy(row => row.Item.Message.AuthorId).Take(50)) Participants.Add(row);
         Changed(nameof(EmptyMessages)); Changed(nameof(EmptyMessageTitle));
+    }
+
+    private void ClearAccountDrafts()
+    {
+        var account = SelectedInstance?.Context.Account;
+        if (account is null) return;
+        var prefix = $"{SelectedInstance!.Context.Descriptor.Id.Value}:{account.Key.Id}:";
+        foreach (var key in _channelDrafts.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal)).ToArray())
+            _channelDrafts.Remove(key);
     }
 
     private void DisposePresentation()

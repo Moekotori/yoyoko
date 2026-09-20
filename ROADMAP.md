@@ -23,7 +23,7 @@
 | --- | --- |
 | 2 | 编辑、删除、回复、mention、reaction、通知、typing、presence；虚拟化与全局缓存预算验收。附件上传/下载与可配置大小上限已提前落地 |
 | 3 | 完整角色管理、频道 override、moderation、kick/ban；基础授权早在 Phase 1 生效 |
-| 4 | 语音控制面已落地（token、状态、mute/deafen、频道音质上限与用户自选档位、隔离 worker）。剩余：链接 LiveKit 客户端、设备选择、按档位编码 Opus/AEC/RNNoise、真实双端听筒验收；不将 native crash 放进 UI |
+| 4 | 语音控制面已落地（token、状态、mute/deafen、频道音质上限与用户自选档位、输入/输出设备选择、隔离 worker）。剩余：链接 LiveKit 客户端、按档位编码 Opus/AEC/RNNoise、把所选设备接到捕获/播放、真实双端听筒验收；不将 native crash 放进 UI |
 | 5 | 三平台 capture、H.264 硬件编码、零拷贝路径优先、1080p30/60 与 2–3 帧队列 |
 | 6 | 自托管生产安装器、单一业务配置衍生基础设施配置、TLS、TURN、MinIO bucket、安全默认值、迁移/备份/恢复 |
 | 7 | 媒体进程协议、资源回收、重启、崩溃恢复与分发硬化；崩溃隔离不推迟到此阶段才处理 |

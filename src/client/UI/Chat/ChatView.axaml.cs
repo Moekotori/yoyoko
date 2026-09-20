@@ -75,13 +75,7 @@ public partial class ChatView : UserControl
         _subscribed.ScrollToLatest = ScrollToEnd;
         _subscribed.IsNearBottom = NearBottom;
         _subscribed.PropertyChanged += OnShellChanged;
-        _subscribed.IsNearBottom = IsNearBottom;
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (_subscribed is null || _scroll is not null) return;
-            _scroll = Messages.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
-            if (_scroll is not null) _scroll.ScrollChanged += OnScrollChanged;
-        });
+        if (IsLoaded) AttachScroll();
     }
 
     private void Unsubscribe()
@@ -89,7 +83,6 @@ public partial class ChatView : UserControl
         if (_subscribed is not null)
         {
             _subscribed.PropertyChanged -= OnShellChanged;
-            if (_subscribed.IsNearBottom == IsNearBottom) _subscribed.IsNearBottom = null;
             if (_subscribed.ScrollToLatest == ScrollToEnd) _subscribed.ScrollToLatest = null;
             if (_subscribed.IsNearBottom == NearBottom) _subscribed.IsNearBottom = null;
         }
@@ -97,7 +90,6 @@ public partial class ChatView : UserControl
         _scroll = null;
         _subscribed = null;
     }
-    private bool IsNearBottom() => _scroll is null || _scroll.Extent.Height - _scroll.Viewport.Height - _scroll.Offset.Y < 72;
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs args)
     {

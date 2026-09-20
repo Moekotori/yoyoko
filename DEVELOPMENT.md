@@ -17,7 +17,10 @@ dotnet restore Chat.sln --locked-mode
 dotnet build Chat.sln -c Release --no-restore
 dotnet run --project src/client/App -c Release --no-build
 cargo run --locked -p chat-server
+cargo build --locked -p chat-media-worker
 ```
+
+`chat-media-worker` 按需启动，用于列出输入/输出设备。未构建该二进制时，设置里只有“系统默认”，不会假装已经枚举到麦克风。
 
 客户端输入 `http://localhost:8080` 并点击“添加实例”。重新打开后可以离线看到已保存实例。发现阶段不会自动登录、开启 Gateway 或访问麦克风。开发工程设置 `UseAppHost=false`，由已安装的 dotnet runtime 直接运行；独立安装包的 host/signing 属于后续发布工作。
 

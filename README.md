@@ -12,7 +12,7 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 | --- | --- |
 | Avalonia 桌面外壳、轻量 MVVM、独立客户端项目 | 已实现 |
 | 登录 / 注册表单 | 独立页签、居中等宽输入、密码框回车提交；视觉验收状态见 [UI 说明](docs/ui/README.md#authentication-form) |
-| 设置页面 | 通用 / 外观 / 资料分类、语言和发送方式单选、布局与动效开关；[离屏渲染与验证记录](docs/ui/README.md#settings) |
+| 设置页面 | 侧边分类导航、语言 / 快捷键 / 设备下拉框、紧凑布局与动效开关；[离屏渲染与验证记录](docs/ui/README.md#settings) |
 | 客户端界面语言（中文 / English / 日本語），设置中切换 | 已实现；跟随系统，可覆盖并写入本地偏好 |
 | 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
 | 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
@@ -24,7 +24,7 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 | 注册、登录、社区/频道、文字消息 | 已接通控制面；完整验收见路线图 |
 | 社区屏蔽词与发言冷却 | 已实现；owner / MANAGE_MESSAGES 可 PATCH，发送时服务端强制 |
 | 聊天附件（拖拽/选择图片与文件、可配置上限、对端下载） | 已实现；默认 24 MiB，服务端 `storage.max_bytes` 可改 |
-| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位 | 已实现控制面（含 384/510 kbps 高音质选择）；真实麦克风/听筒需 LiveKit 与媒体 worker |
+| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 控制面与设备枚举已实现；真实麦克风/听筒需 LiveKit 与媒体 worker |
 | 屏幕共享 | **Not implemented yet** |
 
 本机已通过 .NET Release 构建、Rust 聚焦测试与 Clippy、Native C ABI 检查，并验证了实例添加和离线恢复。Windows/Linux 的实际构建、GUI、安装包及媒体硬件尚未验证。

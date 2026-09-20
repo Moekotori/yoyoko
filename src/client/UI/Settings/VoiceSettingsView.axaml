@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization" xmlns:voice="using:Chat.UI.Voice"
+  x:Class="Chat.UI.Settings.VoiceSettingsView" x:DataType="vm:SettingsViewModel">
+  <StackPanel>
+    <Grid Classes="settingsRow" ColumnDefinitions="*,220" ColumnSpacing="20">
+      <TextBlock Text="{i18n:T InputDevice}" Classes="settingsLabel" />
+      <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding Devices.Inputs}" SelectedItem="{Binding Devices.SelectedInput}"
+        AutomationProperties.Name="{i18n:T InputDevice}">
+        <ComboBox.ItemTemplate><DataTemplate x:DataType="voice:AudioDeviceChoice"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
+      </ComboBox>
+    </Grid>
+    <Border Classes="settingsRowDivider" />
+    <Grid Classes="settingsRow" ColumnDefinitions="*,220" ColumnSpacing="20">
+      <TextBlock Text="{i18n:T OutputDevice}" Classes="settingsLabel" />
+      <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding Devices.Outputs}" SelectedItem="{Binding Devices.SelectedOutput}"
+        AutomationProperties.Name="{i18n:T OutputDevice}">
+        <ComboBox.ItemTemplate><DataTemplate x:DataType="voice:AudioDeviceChoice"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
+      </ComboBox>
+    </Grid>
+    <Border Classes="settingsRowDivider" />
+    <TextBlock Text="{Binding Devices.Error}" Classes="muted" Margin="0,16,0,0" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" />
+  </StackPanel>
+</UserControl>

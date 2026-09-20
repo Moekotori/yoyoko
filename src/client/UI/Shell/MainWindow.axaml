@@ -68,5 +68,8 @@
     <Panel Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding ShowSettings}">
       <settings:SettingsView DataContext="{Binding Settings}" />
     </Panel>
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="#292530" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" Padding="14,6" MinWidth="280">
+      <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Workspace.Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding Workspace.DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
+    </Border>
   </Grid>
 </Window>

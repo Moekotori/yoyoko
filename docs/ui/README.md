@@ -2,18 +2,18 @@
 
 ## Settings
 
-Settings now has a persistent header and category navigation, with a separately scrolling content pane capped at 600 logical pixels. The old content accidentally occupied the header grid row; the new layout explicitly places it beneath the header. Views and shared scoped styles live in `UI/Settings`:
+Settings has a compact 148px sidebar for General, Appearance, Voice and Profile. The content area has a fixed section header and independently scrolling body. Labels and controls align in 72px rows; the sidebar remains visible while changing categories.
 
-- General: native-language radio choices and explicit Enter / Ctrl-or-Command+Enter send choices. Selecting the current send choice is idempotent; changing language updates existing option objects to retain keyboard focus.
-- Appearance: compact layout and reduced motion use accessible `ToggleSwitch` controls bound to the existing persisted preferences. Section changes have a 120ms fade, disabled by reduced motion.
-- Profile: avatar actions, aligned username/display-name fields, save action and visible success/error feedback. Signed-out users see the existing sign-in requirement. No fake profile is inserted into the live application.
-- Close button and Escape return to the previous content; category selection stays local to the settings presentation model.
+- General: language and send shortcut are collapsed 220×36 dropdowns, with styled dark popup menus. Two-way selection updates the existing preferences; changing locale preserves option identity and updates the section title.
+- Appearance: compact layout and reduced motion use compact switches. Expanded radio tiles, keyboard illustrations and density diagrams have been removed. Category transitions fade for 120ms unless reduced motion is enabled.
+- Voice: existing input/output device selectors use the same dropdown dimensions; device errors remain visible. This is presentation of existing device controls, not new media functionality.
+- Profile: avatar actions, aligned username/display-name inputs, save/status footer and signed-out entry remain intact. Close and Escape return to the previous content.
 
-Verification (2026-09-20): desktop Release build passed; dependency boundaries and diff whitespace checks passed. A temporary Avalonia Headless + Skia harness rendered the actual production views at 908×738 and 688×546, checked radio selection idempotence, stable language option identity, and the two-way compact toggle binding. Screenshots were inspected for layout and overflow. The profile screenshot uses an explicit local rendering fixture, not a signed-in account.
+Verification (2026-09-21): Release build passed with zero warnings/errors. An Avalonia Headless + Skia harness rendered the production views at 908×738 and 688×546, including an expanded language menu. It checked dropdown selection writes, repeated-selection behavior, language option identity and toggle binding. Captures were inspected for alignment/overflow; the profile capture uses an explicit rendering fixture rather than a signed-in account.
 
-Native macOS window/input verification remains blocked by the locked Mac. These captures establish offscreen rendering, not live OS keyboard/mouse or server profile-save acceptance. A separate `DesignPreviewWindow` runtime-loader warning appeared during the shared-checkout desktop build. No protocol or roadmap phase changes are part of this work.
+Native macOS window reads timed out in the preceding verification attempt. The images below establish offscreen rendering, not live OS input, hardware device routing or server profile-save acceptance. No protocol or roadmap phase changes are part of this work.
 
-Rendered evidence: [general](settings/general.png), [appearance](settings/appearance.png), [general at minimum pane size](settings/general-small.png), [profile layout fixture at minimum pane size](settings/profile-small.png).
+Rendered evidence: [general](settings/general.png), [language dropdown](settings/general-dropdown.png), [appearance](settings/appearance.png), [general at minimum pane size](settings/general-small.png), [profile fixture at minimum pane size](settings/profile-small.png).
 
 ## Authentication form
 

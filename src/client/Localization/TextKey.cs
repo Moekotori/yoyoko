@@ -153,6 +153,9 @@ public static class TextKey
     public const string ModerationSaved = "ModerationSaved";
     public const string ChatBehavior = "ChatBehavior";
     public const string GeneralSettings = "GeneralSettings";
+    public const string SendShortcut = "SendShortcut";
+    public const string MessageDensity = "MessageDensity";
+    public const string ComfortableLayout = "ComfortableLayout";
     public const string Appearance = "Appearance";
     public const string EnterToSend = "EnterToSend";
     public const string CtrlEnterToSend = "CtrlEnterToSend";
