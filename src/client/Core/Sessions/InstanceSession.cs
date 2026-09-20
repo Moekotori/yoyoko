@@ -37,7 +37,7 @@ public sealed class InstanceSession : IAsyncDisposable
         _refreshToken = refreshToken;
         _api.SetAccessToken(accessToken);
         Scope = new(descriptor.Id, me.Id);
-        Voice = new VoiceRuntime(api, media);
+        Voice = new VoiceRuntime(api, media, me.Id);
         _users[me.Id] = me;
     }
     public InstanceDescriptor Descriptor { get; }

@@ -144,6 +144,7 @@ pub fn router(state: Arc<AppState>) -> Router {
                 Json(ApiError {
                     code: "not_found".into(),
                     message: "No such endpoint.".into(),
+                    retry_after_seconds: None,
                 }),
             )
         })
@@ -191,6 +192,7 @@ async fn ready(State(state): State<Arc<AppState>>) -> impl IntoResponse {
             Json(ApiError {
                 code: "unavailable".into(),
                 message: "Database unavailable.".into(),
+                retry_after_seconds: None,
             }),
         )
             .into_response(),
@@ -875,6 +877,54 @@ mod tests {
         let high: VoiceJoin = json(high).await;
         assert_eq!(high.audio.id, "high");
         assert_eq!(high.audio.bitrate_bps, 128_000);
+        let very = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/voice/join", voice.id),
+            Some(&alice.access_token),
+            r#"{"audio_quality":"very_high"}"#,
+        )
+        .await;
+        assert_eq!(very.status(), StatusCode::OK);
+        let very: VoiceJoin = json(very).await;
+        assert_eq!(very.audio.id, "very_high");
+        assert_eq!(very.audio.bitrate_bps, 384_000);
+        let cap = patch_json(
+            &app,
+            &format!("/api/v1/channels/{}", voice.id),
+            &alice.access_token,
+            r#"{"audio_quality":"high"}"#,
+        )
+        .await;
+        assert_eq!(cap.status(), StatusCode::OK);
+        let capped: Channel = json(cap).await;
+        assert_eq!(capped.audio_quality.as_deref(), Some("high"));
+        let clamped = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/voice/join", voice.id),
+            Some(&alice.access_token),
+            r#"{"audio_quality":"studio"}"#,
+        )
+        .await;
+        assert_eq!(clamped.status(), StatusCode::OK);
+        let clamped: VoiceJoin = json(clamped).await;
+        assert_eq!(clamped.audio.id, "high");
+        assert_eq!(clamped.max_audio_quality, "high");
+        let invalid = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/voice/join", voice.id),
+            Some(&alice.access_token),
+            r#"{"audio_quality":"lossless"}"#,
+        )
+        .await;
+        assert_eq!(invalid.status(), StatusCode::BAD_REQUEST);
+        let restore = patch_json(
+            &app,
+            &format!("/api/v1/channels/{}", voice.id),
+            &alice.access_token,
+            r#"{"audio_quality":"studio"}"#,
+        )
+        .await;
+        assert_eq!(restore.status(), StatusCode::OK);
         let eve: AuthResponse = json(
             post_json(
                 &app,
@@ -1045,6 +1095,57 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(auth_download.status(), StatusCode::OK);
+
+        let bob: AuthResponse = json(
+            post_json(
+                &app,
+                "/api/v1/auth/register",
+                None,
+                r#"{"username":"bob","display_name":"Bob","password":"password1"}"#,
+            )
+            .await,
+        )
+        .await;
+        let joined = post_json(
+            &app,
+            "/api/v1/servers/join",
+            Some(&bob.access_token),
+            &format!(r#"{{"invite_code":"{}"}}"#, created.invite_code),
+        )
+        .await;
+        assert_eq!(joined.status(), StatusCode::OK);
+        let listed = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/v1/channels/{}/messages", channel.id))
+                    .header("authorization", format!("Bearer {}", bob.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let page: chat_protocol::MessagePage = json(listed).await;
+        let file = page
+            .items
+            .iter()
+            .flat_map(|item| item.attachments.iter())
+            .find(|item| item.file_name == "notes.txt")
+            .expect("bob should see the text file");
+        let peer = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/v1/attachments/{}/content", file.id))
+                    .header("authorization", format!("Bearer {}", bob.access_token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(peer.status(), StatusCode::OK);
+        let peer_body = to_bytes(peer.into_body(), 1024).await.unwrap();
+        assert_eq!(&peer_body[..], b"hello file");
     }
 
     #[tokio::test]
@@ -1103,6 +1204,8 @@ mod tests {
         )
         .await;
         assert_eq!(blocked.status(), StatusCode::BAD_REQUEST);
+        let blocked_body: serde_json::Value = json(blocked).await;
+        assert_eq!(blocked_body["code"], "blocked_word");
         let ok = post_json(
             &app,
             &format!("/api/v1/channels/{}/messages", channel.id),
@@ -1119,6 +1222,9 @@ mod tests {
         )
         .await;
         assert_eq!(cooled.status(), StatusCode::TOO_MANY_REQUESTS);
+        let cooled_body: serde_json::Value = json(cooled).await;
+        assert_eq!(cooled_body["code"], "cooldown");
+        assert!(cooled_body["retry_after_seconds"].as_u64().unwrap() >= 1);
     }
 
     async fn patch_json(

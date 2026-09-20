@@ -1,35 +1,29 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
-  x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel">
-  <Grid RowDefinitions="Auto,*,Auto" Background="{StaticResource SidebarBrush}">
-    <StackPanel Margin="22,23,16,0" Spacing="8">
-      <TextBlock Text="{Binding InstanceName}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-      <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" TextTrimming="CharacterEllipsis" />
-      <TextBlock Text="{i18n:T Channels}" Classes="muted" FontSize="12" Margin="0,28,0,0" IsVisible="{Binding IsSignedIn}" />
-    </StackPanel>
-    <ListBox Grid.Row="1" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel}"
-      Margin="12,16" AutomationProperties.Name="{i18n:T ChannelList}" IsVisible="{Binding IsSignedIn}">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="ch:ChannelItem">
-          <TextBlock Text="{Binding Label}" Margin="4,6" TextTrimming="CharacterEllipsis" />
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
-    <StackPanel Grid.Row="2" Margin="18,8,18,16" Spacing="8" IsVisible="{Binding IsSignedIn}">
-      <Grid ColumnDefinitions="34,*" ColumnSpacing="10">
-        <c:Avatar Width="34" Height="34" Playback="{Binding AccountPlayback}" VerticalAlignment="Center" />
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Text="{Binding AccountName}" FontSize="13" TextTrimming="CharacterEllipsis" />
-          <TextBlock Text="{Binding AccountHandle}" Classes="muted" FontSize="11" TextTrimming="CharacterEllipsis" />
-        </StackPanel>
-      </Grid>
-      <TextBlock Text="{Binding InviteHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-      <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" />
-      <Button Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
-      <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" />
-      <Button Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
-      <Button Content="{i18n:T SignOut}" Command="{Binding SignOut}" HorizontalAlignment="Stretch" />
-    </StackPanel>
-    <TextBlock Grid.Row="2" Text="{i18n:T SignedOut}" Classes="muted" Margin="22,20" IsVisible="{Binding ShowGuest}" />
-  </Grid>
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
+ x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel" x:Name="Sidebar">
+  <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="10,16" Spacing="2">
+        <Button Command="{Binding ToggleTextChannels}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,0,0,5">
+          <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{i18n:T TextChannels}" Classes="section" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronUp}" Width="12" Height="12" IsVisible="{Binding TextExpanded}" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" IsVisible="{Binding !TextExpanded}" /></Grid>
+        </Button>
+        <ItemsControl ItemsSource="{Binding TextChannels}" IsVisible="{Binding TextExpanded}">
+          <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
+            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,3">
+              <StackPanel Orientation="Horizontal" Spacing="10"><PathIcon Data="{StaticResource IconHash}" Width="17" Height="17" Opacity="0.65" /><TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" /></StackPanel>
+            </Button>
+          </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Command="{Binding ToggleVoiceChannels}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,23,0,5">
+          <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{i18n:T VoiceChannels}" Classes="section" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronUp}" Width="12" Height="12" IsVisible="{Binding VoiceExpanded}" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" IsVisible="{Binding !VoiceExpanded}" /></Grid>
+        </Button>
+        <ItemsControl ItemsSource="{Binding VoiceChannels}" IsVisible="{Binding VoiceExpanded}">
+          <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
+            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,3">
+              <StackPanel Orientation="Horizontal" Spacing="10"><PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" /><TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" /></StackPanel>
+            </Button>
+          </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
 </UserControl>

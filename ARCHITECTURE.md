@@ -17,11 +17,13 @@
 | Native C ABI 与句柄生命周期 | 已实现；能力位为 0 |
 | 账号、聊天、同步 | 已开始；以当前服务端 Store / Gateway 为准 |
 | 附件 | 已实现：multipart 流式上传、可配置 `storage.max_bytes`、签名或登录下载、图片 256px 缩略图；S3/MinIO 仍为后续 |
-| 语音控制面 | 已实现：CONNECT_VOICE/SPEAK、加入/离开、mute/deafen、Gateway `VOICE_STATE_UPDATE`、LiveKit JWT |
+| 语音控制面 | 已实现：CONNECT_VOICE/SPEAK、加入/离开、mute/deafen、频道音质上限与用户自选档位（最高 510 kbps Opus）、Gateway `VOICE_STATE_UPDATE`、LiveKit JWT（metadata 带编码参数） |
 | 语音媒体 | 按需 `chat-media-worker`；默认未链接 LiveKit 客户端，加入媒体失败时频道成员仍可见，不伪装接通 |
 | 屏幕共享 | **Not implemented yet** |
 
 ## Monorepo
+
+当前同仓是为了协议 DTO 与 fixtures 一起改。服务端必须能在协议稳定、独立发布节奏和镜像部署具备后，整包抽出为独立仓库；抽出的是客户端 vs 服务端，不是业务微服务。跨端只允许协议文档、fixtures 与各自维护的 Protocol DTO；运行时只走 HTTP `/api/v1` 与 Gateway。
 
 ```text
 Chat.sln / Directory.*.props / global.json
@@ -97,7 +99,7 @@ Access token 仅会话内存持有；refresh token 通过 `ICredentialVault` 接
 
 ## Server
 
-Rust + Tokio + Axum 模块化单体。一个 API/Gateway 进程；PostgreSQL、Redis、S3 和 LiveKit 是基础设施，不拆业务微服务。
+Rust + Tokio + Axum 模块化单体。一个 API/Gateway 进程；PostgreSQL、Redis、S3 和 LiveKit 是基础设施，不拆业务微服务。app 内按业务能力分 handler / service / repository port / adapter，不把路由、编排和持久化堆进同一文件。服务端不得依赖桌面客户端源码或进程，以便日后整包分离。
 
 `api → service → repository port ← PostgreSQL adapter`。领域对象无 SQLx / Axum 类型。ChannelService 展示实际边界：先检查授权，再读 repository。权限实现当前 fail closed。尚无业务路由，不会把无鉴权的数据库读写暴露到网络。
 

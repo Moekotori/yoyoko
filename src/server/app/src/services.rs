@@ -604,11 +604,17 @@ pub async fn patch_channel(
             "audio_quality only applies to voice channels.",
         ));
     }
-    let quality = parse_quality(audio_quality.as_deref())?;
+    let Some(requested) = audio_quality.filter(|value| !value.trim().is_empty()) else {
+        return Ok(to_protocol_channel(channel));
+    };
+    let quality = parse_quality(Some(&requested))?;
     let updated = state
         .store
         .set_channel_audio_quality(channel_id, quality)
         .await?;
+    for voice in state.voice.clamp_channel(channel_id, quality).await {
+        publish_voice(state, &voice, false).await?;
+    }
     let members = state.store.list_members(updated.server_id).await?;
     let payload = serde_json::to_value(to_protocol_channel(updated.clone())).unwrap_or_default();
     dispatch(state, &members, "CHANNEL_UPDATE", payload).await?;

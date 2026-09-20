@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>WinExe</OutputType>
     <UseAppHost>false</UseAppHost><AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault></PropertyGroup>
+  <PropertyGroup>
+    <!-- HotAvalonia strips itself and the runtime XAML loader from Release. -->
+    <HotAvaloniaIncludeXamlLoader>false</HotAvaloniaIncludeXamlLoader>
+    <HotAvaloniaRemote>false</HotAvaloniaRemote>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/Chat.Core.csproj" />
     <ProjectReference Include="../Networking/Chat.Networking.csproj" />
@@ -9,6 +14,8 @@
     <ProjectReference Include="../UI/Chat.UI.csproj" />
     <ProjectReference Include="../Localization/Chat.Localization.csproj" />
     <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="HotAvalonia" PrivateAssets="All" />
+    <PackageReference Include="Avalonia.Markup.Xaml.Loader" PrivateAssets="All" />
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

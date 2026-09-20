@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Chat.Localization;
-using Chat.UI.Localization;
 using FileKinds = global::Chat.Core.Messaging.FileKinds;
 using PickedFile = global::Chat.Core.Sessions.PickedFile;
 
@@ -26,7 +25,7 @@ public partial class MainWindow : Window
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = I18n.Presenter.Get(TextKey.PickFiles),
+            Title = global::Chat.UI.Localization.I18n.Presenter.Get(TextKey.PickFiles),
             AllowMultiple = true
         });
         var result = new List<PickedFile>();
@@ -43,11 +42,11 @@ public partial class MainWindow : Window
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = I18n.Presenter.Get(TextKey.PickAvatar),
+            Title = global::Chat.UI.Localization.I18n.Presenter.Get(TextKey.PickAvatar),
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType(I18n.Presenter.Get(TextKey.Image))
+                new FilePickerFileType(global::Chat.UI.Localization.I18n.Presenter.Get(TextKey.Image))
                 {
                     Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp"],
                     MimeTypes = ["image/png", "image/jpeg", "image/gif", "image/webp"]
@@ -65,7 +64,7 @@ public partial class MainWindow : Window
     {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = I18n.Presenter.Get(TextKey.SaveFile),
+            Title = global::Chat.UI.Localization.I18n.Presenter.Get(TextKey.SaveFile),
             SuggestedFileName = fileName
         });
         return file is null ? null : await file.OpenWriteAsync();

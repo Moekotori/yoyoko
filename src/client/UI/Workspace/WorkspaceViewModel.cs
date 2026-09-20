@@ -23,7 +23,7 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     private readonly I18n _text;
     public WorkspaceViewModel(bool isPreview, I18n? text = null)
     {
-        _text = text ?? I18n.Presenter;
+        _text = text ?? global::Chat.UI.Localization.I18n.Presenter;
         IsPreview = isPreview;
         SelectChannel = new(value => { if (value is ChannelItem channel) SelectedChannel = channel; });
         CloseTab = new(value => { if (value is ChannelItem channel) CloseChannel(channel); });

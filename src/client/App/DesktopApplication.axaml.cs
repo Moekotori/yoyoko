@@ -9,6 +9,7 @@ using Chat.Networking.WebSocket;
 using Chat.Storage;
 using Chat.UI.Localization;
 using Chat.UI.Shell;
+using Chat.UI.Preview;
 
 namespace Chat.App;
 
@@ -24,6 +25,16 @@ public partial class DesktopApplication : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var settings = AppSettings.Load();
+            if (desktop.Args?.Contains("--design-preview") == true)
+            {
+                var previewLocale = FileLocalePreference.Load(settings.PreferencesPath);
+                _i18n = new I18n(new TextCatalog(), previewLocale);
+                I18n.Use(_i18n);
+                desktop.MainWindow = new DesignPreviewWindow(settings.ProductName, _i18n);
+                desktop.Exit += (_, _) => { _i18n.Dispose(); _lifetime.Dispose(); };
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
             _http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
             var cache = new SqliteCache(settings.CachePath);
             var vault = new FileCredentialVault(Path.GetDirectoryName(settings.CachePath)!);
@@ -34,7 +45,7 @@ public partial class DesktopApplication : Application
             I18n.Use(_i18n);
             var shell = new ShellViewModel(_instances, cache, vault, new HttpInstanceDiscovery(_http),
                 new ChatApiFactory(), () => new WebSocketConnection(), new MediaVoiceAdapter(media),
-                locale, locale, _i18n, settings.ProductName, _lifetime.Token);
+                locale, locale, locale, _i18n, settings.ProductName, _lifetime.Token);
             var window = new MainWindow { DataContext = shell };
             desktop.MainWindow = window;
             window.Opened += async (_, _) => await shell.InitializeAsync(cache.InitializeAsync);

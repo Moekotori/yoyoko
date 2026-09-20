@@ -5,6 +5,12 @@ cd "$(dirname "$0")"
 # Finder 启动时不一定继承终端的开发工具路径。
 export PATH="$PATH:$HOME/.dotnet:$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin"
 
+mode="${1:-release}"
+if [[ "$mode" != release && "$mode" != --watch ]]; then
+  printf '用法：./start.command [--watch]\n' >&2
+  exit 1
+fi
+
 server_pid=""
 client_pid=""
 cleanup() {
@@ -30,8 +36,10 @@ for tool in dotnet curl; do
   fi
 done
 
-printf '正在构建桌面客户端…\n'
-dotnet build src/client/App/Chat.App.csproj -c Release --nologo
+if [[ "$mode" == release ]]; then
+  printf '正在构建桌面客户端…\n'
+  dotnet build src/client/App/Chat.App.csproj -c Release --nologo
+fi
 
 origin="http://localhost:8080"
 discovery=$(curl --noproxy '*' -fsS --max-time 2 "$origin/.well-known/lightchat" 2>/dev/null || true)
@@ -69,8 +77,15 @@ else
   fi
 fi
 
-printf '\n正在打开客户端。在界面中添加实例：%s\n关闭窗口或按 Ctrl+C 结束。\n\n' "$origin"
-dotnet src/client/App/bin/Release/net10.0/Chat.App.dll &
+printf '\n正在打开客户端。在界面中添加实例：%s\n' "$origin"
+if [[ "$mode" == --watch ]]; then
+  printf '开发模式：保存 XAML 实时刷新，C# 修改热重载或自动重启。\n按 Ctrl+C 停止监听。\n\n'
+  DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1 \
+    dotnet watch --non-interactive --project src/client/App/Chat.App.csproj run --configuration Debug &
+else
+  printf '关闭窗口或按 Ctrl+C 结束。\n\n'
+  dotnet src/client/App/bin/Release/net10.0/Chat.App.dll &
+fi
 client_pid=$!
 wait "$client_pid"
 client_pid=""

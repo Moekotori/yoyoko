@@ -1,0 +1,8 @@
+{
+  "id": "01950000-0000-7000-8000-000000000040",
+  "name": "Moderated",
+  "owner_id": "01950000-0000-7000-8000-000000000001",
+  "invite_code": "abcd1234",
+  "blocked_words": ["spam"],
+  "cooldown_seconds": 5
+}

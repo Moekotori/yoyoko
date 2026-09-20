@@ -2,6 +2,7 @@ namespace Chat.Localization;
 
 public static class TextKey
 {
+    public const string PageParticipants = "PageParticipants";
     public const string Settings = "Settings";
     public const string Language = "Language";
     public const string CloseSettings = "CloseSettings";
@@ -33,6 +34,7 @@ public static class TextKey
     public const string Messages = "Messages";
     public const string Sending = "Sending";
     public const string SendFailed = "SendFailed";
+    public const string RetrySend = "RetrySend";
     public const string Image = "Image";
     public const string SendMessage = "SendMessage";
     public const string Send = "Send";
@@ -56,6 +58,10 @@ public static class TextKey
     public const string QualityVeryHighDetail = "QualityVeryHighDetail";
     public const string QualityStudio = "QualityStudio";
     public const string QualityStudioDetail = "QualityStudioDetail";
+    public const string InputDevice = "InputDevice";
+    public const string OutputDevice = "OutputDevice";
+    public const string DefaultDevice = "DefaultDevice";
+    public const string DevicesUnavailable = "DevicesUnavailable";
     public const string MutedSuffix = "MutedSuffix";
     public const string DeafenedSuffix = "DeafenedSuffix";
     public const string CacheLoadFailed = "CacheLoadFailed";
@@ -145,4 +151,15 @@ public static class TextKey
     public const string CooldownWait = "CooldownWait";
     public const string InvalidCooldown = "InvalidCooldown";
     public const string ModerationSaved = "ModerationSaved";
+    public const string ChatBehavior = "ChatBehavior";
+    public const string GeneralSettings = "GeneralSettings";
+    public const string Appearance = "Appearance";
+    public const string EnterToSend = "EnterToSend";
+    public const string CtrlEnterToSend = "CtrlEnterToSend";
+    public const string CompactLayout = "CompactLayout";
+    public const string ReduceMotion = "ReduceMotion";
+    public const string Moderation = "Moderation";
+    public const string BlockedWordsHint = "BlockedWordsHint";
+    public const string CooldownSeconds = "CooldownSeconds";
+    public const string SaveModeration = "SaveModeration";
 }

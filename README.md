@@ -11,6 +11,8 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 | 能力 | 状态 |
 | --- | --- |
 | Avalonia 桌面外壳、轻量 MVVM、独立客户端项目 | 已实现 |
+| 登录 / 注册表单 | 独立页签、居中等宽输入、密码框回车提交；视觉验收状态见 [UI 说明](docs/ui/README.md#authentication-form) |
+| 设置页面 | 通用 / 外观 / 资料分类、语言和发送方式单选、布局与动效开关；[离屏渲染与验证记录](docs/ui/README.md#settings) |
 | 客户端界面语言（中文 / English / 日本語），设置中切换 | 已实现；跟随系统，可覆盖并写入本地偏好 |
 | 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
 | 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
@@ -20,8 +22,9 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 | C++ Native Media C ABI | 骨架可编译，能力位为 0，媒体操作明确返回未实现 |
 | PostgreSQL migration、Docker Compose、CI | 本地 Node 管线已接通；容器/迁移及远程 GitHub Actions 运行尚未验收 |
 | 注册、登录、社区/频道、文字消息 | 已接通控制面；完整验收见路线图 |
+| 社区屏蔽词与发言冷却 | 已实现；owner / MANAGE_MESSAGES 可 PATCH，发送时服务端强制 |
 | 聊天附件（拖拽/选择图片与文件、可配置上限、对端下载） | 已实现；默认 24 MiB，服务端 `storage.max_bytes` 可改 |
-| 语音频道加入/离开、mute/deafen、LiveKit token | 已实现控制面；真实麦克风/听筒需 LiveKit 与媒体 worker |
+| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位 | 已实现控制面（含 384/510 kbps 高音质选择）；真实麦克风/听筒需 LiveKit 与媒体 worker |
 | 屏幕共享 | **Not implemented yet** |
 
 本机已通过 .NET Release 构建、Rust 聚焦测试与 Clippy、Native C ABI 检查，并验证了实例添加和离线恢复。Windows/Linux 的实际构建、GUI、安装包及媒体硬件尚未验证。
@@ -70,7 +73,7 @@ Desktop Client
 | RTC | WebRTC / LiveKit | 独立于聊天 Backend 的媒体传输 |
 | Native Media | C++ + C ABI | 音频处理、捕获、硬件编解码与平台能力 |
 
-服务端先采用模块化单体，不提前拆微服务。客户端以独立工程明确边界，业务不写进窗口，也不直接依赖数据库实现。
+服务端先采用模块化单体，不提前拆微服务。同仓是过渡：跨端只走协议，服务端必须能日后整包分离为独立仓库，不依赖桌面客户端源码或进程。客户端以独立工程明确边界，业务不写进窗口，也不直接依赖数据库实现。
 
 ```text
 App 组合根
@@ -118,6 +121,8 @@ docs/                协议、数据库、ADR 与验证记录
 ## 快速开始
 
 macOS 上双击仓库根目录的 `start.command`，或在终端运行 `./start.command`，即可构建并打开桌面 UI。脚本会启动本地服务端；若 `http://localhost:8080` 已有可用的聊天服务则复用。关闭客户端时只停止脚本自己启动的服务。首次启动需要安装 .NET SDK 10 和 Rust，且需要联网下载构建依赖。
+
+调 UI 时双击 `dev.command`（或运行 `./dev.command`）：使用 Debug 模式，保存 `.axaml` 后由 HotAvalonia 实时重载；C# 修改由 `dotnet watch` 热重载，无法应用时自动重启客户端。按 Ctrl+C 停止开发模式。Rust 服务端不随客户端修改重启。具体限制见 [开发热重载](DEVELOPMENT.md#开发热重载)。
 
 需要 .NET SDK 10、Rust stable ≥ 1.90。构建原生骨架另需 CMake ≥ 3.24 和 C++20 编译器。协议 fixtures 与对本机 API 的 live 检查需要 Node.js ≥ 22（无 npm 依赖）。以下命令均在仓库根目录执行。
 
@@ -167,7 +172,7 @@ docker compose up -d --build
 
 ## 开发原则与必要检查
 
-- 文件与模块按职责拆分，明确依赖和状态所有者，不堆进单个窗口、ViewModel 或万能服务。
+- 文件与模块按职责拆分，明确依赖和状态所有者，不堆进单个窗口、ViewModel 或万能服务；服务端同样按能力拆 handler / service / adapter，为日后整包分离服务端做准备。
 - UI 从简，通过文字、间距和对齐建立层级；避免滥用圆角、卡片、边框、阴影和辅助小字。
 - 消息列表必须分页和虚拟化，图片缩略图优先，网络与缓存有界，媒体按需启动。
 - 权限在服务端验证，官方与自托管遵循同一协议；未实现的能力明确失败，不伪造成功。

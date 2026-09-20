@@ -19,9 +19,14 @@ public sealed class ProfileViewModel : ObservableObject
         _session = session;
         _pick = pick;
         _text = text;
-        Save = new(SaveAsync, onError);
-        ChangeAvatar = new(ChangeAvatarAsync, onError);
-        RemoveAvatar = new(RemoveAvatarAsync, onError);
+        void ReportError(Exception error)
+        {
+            Status = _text.Error(error);
+            onError(error);
+        }
+        Save = new(SaveAsync, ReportError);
+        ChangeAvatar = new(ChangeAvatarAsync, ReportError);
+        RemoveAvatar = new(RemoveAvatarAsync, ReportError);
     }
     public AsyncCommand Save { get; }
     public AsyncCommand ChangeAvatar { get; }

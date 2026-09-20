@@ -10,6 +10,9 @@ public sealed class TimelineItem
     public required MessageDto Message { get; set; }
     public SendStatus Status { get; set; }
     public Guid LocalId { get; set; }
+    public string Idempotency { get; set; } = "";
+    public List<PickedFile> Outbox { get; } = [];
+    public List<Guid> Uploaded { get; } = [];
 }
 
 public sealed class ChannelTimeline(CacheScope scope, Guid channelId, Guid accountId, IChatApi api, IMessageCache cache)
@@ -70,30 +73,79 @@ public sealed class ChannelTimeline(CacheScope scope, Guid channelId, Guid accou
             new("http://127.0.0.1/.pending"), null)).ToArray();
         var pending = new MessageDto(localId, channelId, accountId, "text", content, DateTimeOffset.UtcNow, null, null,
             [], localFiles, [], [], null);
-        var row = new TimelineItem { Message = pending, Status = SendStatus.Sending, LocalId = localId };
+        var row = new TimelineItem
+        {
+            Message = pending,
+            Status = SendStatus.Sending,
+            LocalId = localId,
+            Idempotency = localId.ToString("N")[..16]
+        };
+        row.Outbox.AddRange(files);
         _items.Add(row);
         Trim();
         Changed?.Invoke();
+        await PushAsync(row, cancellationToken);
+    }
+
+    public Task RetryAsync(Guid localId, CancellationToken cancellationToken)
+    {
+        var row = _items.Find(item => item.LocalId == localId && item.Status == SendStatus.Failed)
+            ?? throw new InvalidOperationException("Nothing to retry.");
+        return PushAsync(row, cancellationToken);
+    }
+
+    public void DropFailed(Guid localId)
+    {
+        var index = _items.FindIndex(item => item.LocalId == localId && item.Status == SendStatus.Failed);
+        if (index < 0) return;
+        Release(_items[index]);
+        _items.RemoveAt(index);
+        Changed?.Invoke();
+    }
+
+    public void ReleaseUnsent()
+    {
+        foreach (var item in _items)
+            if (item.Status != SendStatus.Sent)
+                Release(item);
+    }
+
+    private async Task PushAsync(TimelineItem row, CancellationToken cancellationToken)
+    {
+        row.Status = SendStatus.Sending;
+        Changed?.Invoke();
         try
         {
-            var uploaded = new List<Guid>();
-            foreach (var file in files)
+            while (row.Uploaded.Count < row.Outbox.Count)
             {
+                var file = row.Outbox[row.Uploaded.Count];
+                if (file.Content.CanSeek) file.Content.Position = 0;
                 var dto = await api.UploadAsync(file, cancellationToken);
-                uploaded.Add(dto.Id);
+                row.Uploaded.Add(dto.Id);
             }
-            var sent = await api.SendMessageAsync(channelId, new(content, null, [.. uploaded]), localId.ToString("N")[..16], cancellationToken);
+            var sent = await api.SendMessageAsync(channelId, new(row.Message.Content, null, [.. row.Uploaded]),
+                row.Idempotency, cancellationToken);
             await cache.UpsertAsync(scope, sent, cancellationToken);
             row.Message = sent;
             row.Status = SendStatus.Sent;
+            Release(row);
             Changed?.Invoke();
         }
         catch
         {
             row.Status = SendStatus.Failed;
+            foreach (var file in row.Outbox)
+                if (file.Content.CanSeek) file.Content.Position = 0;
             Changed?.Invoke();
             throw;
         }
+    }
+
+    private static void Release(TimelineItem row)
+    {
+        foreach (var file in row.Outbox)
+            file.Content.Dispose();
+        row.Outbox.Clear();
     }
 
     public void ApplyRemote(MessageDto message)

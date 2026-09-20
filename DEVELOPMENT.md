@@ -37,6 +37,25 @@ cmake -S native-media-core -B build/native -DCMAKE_BUILD_TYPE=Release
 cmake --build build/native --config Release
 ```
 
+## 开发热重载
+
+macOS 双击根目录 `dev.command`，或运行：
+
+```sh
+./dev.command
+# 等价入口
+./start.command --watch
+```
+
+脚本启动或复用本地服务，然后以 Debug 配置运行客户端。普通 `start.command` 仍使用 Release。两种模式共用客户端缓存，切换前先关闭原客户端。
+
+- App 和 UI 接入免费开源的 [HotAvalonia](https://github.com/Kira-NT/HotAvalonia)，版本统一锁定。保存现有 `.axaml` 布局、样式时直接重载，不必手动构建。终端显示重载文件和解析错误；修正 XAML 后重新保存即可。
+- C# 由 [dotnet watch](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-watch) 处理；不能热重载的结构性变更自动重启。修改构造函数或初始化代码不会重新执行已完成的初始化，必要时停止并重新运行脚本。
+- 增加/删除控件文件、修改项目配置或嵌入图片后，可能需要重新启动开发模式。未引入图片资源注入依赖，不承诺图片文件原位热替换。
+- XAML 重载可能重置控件内部状态，自动重启也不保留内存中的输入和登录状态。只关闭客户端窗口不会结束监听；在启动终端按 Ctrl+C，脚本会清理自己启动的服务并保留原有服务。
+- 热重载限于客户端。Rust 服务代码改动仍需重新构建并启动服务端。
+- HotAvalonia 及运行时 XAML Loader 在 Release 中移除；开发模式的编译器和文件监听开销不能用于评价 Release 的内存目标。仅在 Debug 输出 HotAvalonia 诊断日志。
+
 ## 配置
 
 服务端唯一应用配置为 `config.toml`；`CHAT_CONFIG=/path/config.toml` 指定路径。所有字段支持 `CHAT__SECTION__KEY` 覆盖，例如 `CHAT__SERVER__NAME`、`CHAT__DATABASE__MAX_CONNECTIONS`、`CHAT__STORAGE__MAX_BYTES`；数组用逗号分隔，例如 `CHAT__SERVER__ALLOWED_ORIGINS=https://a.example,https://b.example`。附件上限默认 24 MiB，允许 64 KiB..=256 MiB。不要把真实密钥写入版本库。`check-config` 仅显示校验结果，不打印秘密。

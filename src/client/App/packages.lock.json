@@ -16,6 +16,27 @@
           "Avalonia.X11": "12.1.2"
         }
       },
+      "Avalonia.Markup.Xaml.Loader": {
+        "type": "Direct",
+        "requested": "[12.1.2, )",
+        "resolved": "12.1.2",
+        "contentHash": "FdBbjwR7BwRy9EYo7rx8KywNZgrMZSLOld8Pr/4gpBBk2VC7p29CGfGZ7vb0HhHge3huJFxmGEoWDkAuQ5NzUA==",
+        "dependencies": {
+          "Avalonia": "12.1.2"
+        }
+      },
+      "HotAvalonia": {
+        "type": "Direct",
+        "requested": "[3.1.5, )",
+        "resolved": "3.1.5",
+        "contentHash": "UGLwx15WGsPMjNXsPoJzN0+1m9lQ12+Vh4N3DIuJB4A0Fq0KTl+6yPjzU2OaAhYGfEc+TEuHPIuQ6Hd+ZxbLQQ==",
+        "dependencies": {
+          "Avalonia.Markup.Xaml.Loader": "11.0.0",
+          "HotAvalonia.Core": "3.1.5",
+          "HotAvalonia.Extensions": "3.1.5",
+          "HotAvalonia.Fody": "3.1.5"
+        }
+      },
       "Avalonia.Angle.Windows.Natives": {
         "type": "Transitive",
         "resolved": "2.1.27548.20260419",
@@ -101,6 +122,11 @@
           "Avalonia.Skia": "12.1.2"
         }
       },
+      "Fody": {
+        "type": "Transitive",
+        "resolved": "6.9.2",
+        "contentHash": "YBHobPGogb0vYhGYIxn/ndWqTjNWZveDi5jdjrcshL2vjwU3gQGyDeI7vGgye+2rAM5fGRvlLgNWLW3DpviS/w=="
+      },
       "HarfBuzzSharp": {
         "type": "Transitive",
         "resolved": "8.3.1.3",
@@ -129,6 +155,24 @@
         "type": "Transitive",
         "resolved": "8.3.1.3",
         "contentHash": "bx8CE8Js+XGX8PUxAHCBDEORt5aaBYtMN4Hr9QFs57Xithh6yjUyYqksizH6eRDhJkwsGI+SXWmPmMm8lZC9Pw=="
+      },
+      "HotAvalonia.Core": {
+        "type": "Transitive",
+        "resolved": "3.1.5",
+        "contentHash": "AUpPx9CixH7iuqkZtNBAdtgXyXRozIe1SPSZtpZ6Q7uaTupW6PF88YolR4s+hlUQCUtWLxwIAuhMlonKNV0K3g=="
+      },
+      "HotAvalonia.Extensions": {
+        "type": "Transitive",
+        "resolved": "3.1.5",
+        "contentHash": "WRbykqoI3XUpZrhEtzxsbisex925BPYPxKHoO4PH9q9KdgqEwDHzeLMaqX2Xe90zmOf81k8osKwdgHjrQZreSw=="
+      },
+      "HotAvalonia.Fody": {
+        "type": "Transitive",
+        "resolved": "3.1.5",
+        "contentHash": "tJDz5jRgNE738BwyT2T0WhsORtouNF54bqw0GSnFby84b48VARipvscCGUVDJSqfX8Q5Wyhrb2IqQiw5Rb+g5A==",
+        "dependencies": {
+          "Fody": "6.9.2"
+        }
       },
       "MicroCom.Runtime": {
         "type": "Transitive",

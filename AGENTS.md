@@ -25,19 +25,41 @@
 | 附件 | S3 Compatible Storage，自托管优先 MinIO |
 | RTC | WebRTC + LiveKit SFU，媒体不经过聊天 Backend |
 
-任何设计都要考虑 Memory、CPU、Latency、Maintainability、Self-hostability、Cross-platform。不能以“以后再优化”为由接受明显无界的分配、队列或全量加载，也不为尚未出现的规模引入微服务。
+任何设计都要考虑 Memory、CPU、Latency、Maintainability、Self-hostability、Cross-platform。不能以“以后再优化”为由接受明显无界的分配、队列或全量加载。不为尚未出现的规模引入微服务。日后分离服务端指把服务端整包抽成独立产品，不是把单体拆成一堆业务进程。
 
 ## 模块与文件必须拆清楚
 
 - 用独立项目/crate、公开契约和依赖方向落实模块化，不能只建文件夹、所有代码仍互相访问。
-- 当前客户端项目为 `App / Domain / Protocol / Localization / Core / Networking / Storage / Media / UI`。服务端划分 `domain / protocol / app`，app 内按业务能力分 service、repository port 和 adapter。界面语言是独立 Localization 模块：公开 Locale、ILocalePreference、ITextCatalog；Core/Networking 抛 `ClientFault` 键，不查文案表。语言是客户端级偏好，不是实例身份。
+- 当前客户端项目为 `App / Domain / Protocol / Localization / Core / Networking / Storage / Media / UI`。服务端划分 `domain / protocol / app`；app 内按业务能力分目录（auth、community、channel、message、attachment、voice 等），各自持有 handler、service、repository port 和 adapter，禁止继续堆进单个 `api.rs` / `services.rs` / `store.rs` / `postgres.rs`。
+- 界面语言是独立 Localization 模块：公开 Locale、ILocalePreference、ITextCatalog；Core/Networking 抛 `ClientFault` 键，不查文案表。语言是客户端级偏好，不是实例身份。
 - App 只负责组合、配置与生命周期；Domain 不依赖 UI/网络/存储；Core 定义业务与所需端口；基础设施实现端口；UI 通过 Core 操作业务。
 - Window/code-behind 只放视图装配与必要交互适配。禁止把业务、SQL、HTTP、媒体状态持续堆入 MainWindow、单个 ViewModel 或万能 Service。
-- 按职责拆文件，视图、ViewModel、契约、适配器、配置和迁移分开维护。相关的小型类型可以同文件，不为每个类型机械地创建项目，也不为未来可能用到的功能建空模块。
+- 一个文件只承担一类职责：视图、ViewModel、HTTP 路由、业务编排、持久化、DTO 映射、配置、迁移分开维护。文件随职责增长必须拆开，禁止把新能力继续追加进已有万能文件。
+- 相关的小型类型可以同文件，不为每个类型机械地创建项目，也不为未来可能用到的功能建空模块。
 - 每个模块拥有自己的状态、数据访问和释放方式。默认隐藏实现，仅公开必要 API；禁止循环依赖、访问内部实现和绕过模块接口写表。
 - 连接、后台任务、取消令牌、事件订阅、图片、native handle 必须有明确的所有者与释放路径。
-- 保持 `scripts/check_boundaries.py` 与架构一致；新增允许引用必须有职责依据，不能通过放宽检查掩盖依赖倒置。
+- 保持 `scripts/check_boundaries.py` 与架构一致；新增允许引用必须有职责依据，不能通过放宽检查掩盖依赖倒置。服务端同样：`chat-domain` 不依赖 Axum/SQLx；`chat-protocol` 只含 DTO 与版本常量；`chat-server` 的 handler 不直接写库。
 - 不默认引入反射扫描 DI、全局消息总线、层层 CQRS/Mediator 或无职责边界的 Common/Utils。
+
+## 耦合与服务端分离
+
+当前为便于协议共进化，客户端与服务端同仓开发，这是过渡形态。服务端必须始终能整包抽出为独立产品（独立仓库、独立构建/测试/镜像、独立发布），不依赖桌面客户端的源码、工程或进程。抽出条件是协议稳定或显式版本、独立发布节奏、镜像部署；未到条件前仍同仓，但不得增加会挡住抽出的耦合。
+
+唯一允许的跨端耦合：
+
+- 协议文档、`docs/protocol/fixtures`、`protocol_version` / `api_version`
+- 两端各自维护的 Protocol DTO（C# `Chat.Protocol` 与 Rust `chat-protocol`）；改字段必须同时审查两端与 fixtures
+- 运行时只走 HTTP `/api/v1` 与 Gateway WebSocket；客户端通过 `/.well-known/lightchat` 发现任意兼容实例
+
+禁止的耦合：
+
+- 客户端引用服务端 crate/源码，或服务端引用客户端项目、Avalonia、SQLite 缓存、桌面凭据路径
+- 共享领域对象、共享进程、把聊天 Backend 嵌进桌面进程，或绕过协议走内部函数/文件/数据库捷径
+- UI 直接打 HTTP/SQL；handler 直接访问 SQLx/本地文件；Service 泄露基础设施类型
+- 一份配置、一份路径或一个类型同时服务桌面与 Backend 实现细节
+- 为“方便本地开发”把客户端目录写进服务端，或让服务端假设本机一定有桌面 UI
+
+分离时拆的是「客户端仓库 vs 服务端仓库」，不是拆业务微服务。一个 API/Gateway 进程仍然是服务端形态；PostgreSQL、Redis、MinIO、LiveKit 是基础设施，不因此变成业务服务。新代码必须在抽出 `src/server` 后仍能独立成立。
 
 ## UI 从简
 

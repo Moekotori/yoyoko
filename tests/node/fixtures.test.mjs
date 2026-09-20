@@ -42,6 +42,13 @@ test("user-update fixture carries an optional animated avatar", () => {
   assert.match(envelope.data.avatar.mime_type, /^image\//);
 });
 
+test("server fixture carries optional moderation fields", () => {
+  const server = JSON.parse(readFixture("server.json"));
+  assert.equal(server.cooldown_seconds, 5);
+  assert.deepEqual(server.blocked_words, ["spam"]);
+  assert.match(server.id, /^[0-9a-f-]{36}$/);
+});
+
 test("rtc-token fixture is a closed contract shape", () => {
   const token = JSON.parse(readFixture("rtc-token.json"));
   assert.equal(typeof token.token, "string");

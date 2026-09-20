@@ -1,10 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization" xmlns:voice="using:Chat.UI.Voice"
   x:Class="Chat.UI.Voice.VoiceView" x:DataType="vm:ShellViewModel">
   <Grid RowDefinitions="*,Auto" Margin="28">
     <StackPanel Spacing="10">
       <TextBlock Text="{Binding PaneTitle}" FontSize="22" FontWeight="SemiBold" />
       <TextBlock Text="{Binding VoiceStatus}" Classes="muted" TextWrapping="Wrap" />
+      <TextBlock Text="{i18n:T InputDevice}" FontSize="13" Margin="0,12,0,0" />
+      <ComboBox ItemsSource="{Binding Devices.Inputs}" SelectedItem="{Binding Devices.SelectedInput}"
+        HorizontalAlignment="Stretch" MinHeight="40" AutomationProperties.Name="{i18n:T InputDevice}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="voice:AudioDeviceChoice">
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Text="{i18n:T OutputDevice}" FontSize="13" Margin="0,8,0,0" />
+      <ComboBox ItemsSource="{Binding Devices.Outputs}" SelectedItem="{Binding Devices.SelectedOutput}"
+        HorizontalAlignment="Stretch" MinHeight="40" AutomationProperties.Name="{i18n:T OutputDevice}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="voice:AudioDeviceChoice">
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Text="{Binding Devices.Error}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" />
       <TextBlock Text="{i18n:T AudioQuality}" FontSize="13" Margin="0,12,0,0" />
       <ComboBox ItemsSource="{Binding AudioQualityChoices}" SelectedItem="{Binding SelectedAudioQuality}"
         HorizontalAlignment="Stretch" MinHeight="40" AutomationProperties.Name="{i18n:T AudioQuality}">

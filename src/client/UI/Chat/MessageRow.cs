@@ -71,13 +71,16 @@ public sealed class MessageRow : ObservableObject
     private readonly Func<AttachmentDto, Task> _save;
     private string _author;
     private AvatarPlayback? _playback;
-    public MessageRow(TimelineItem item, string author, Func<AttachmentDto, Task> save)
+    public MessageRow(TimelineItem item, string author, Func<AttachmentDto, Task> save,
+        Func<TimelineItem, Task> retry, Action<Exception> onError)
     {
         Item = item;
         _author = author;
         _save = save;
+        Retry = new AsyncCommand(() => retry(Item), onError);
         Update();
     }
+    public ICommand Retry { get; }
     public TimelineItem Item { get; }
     public Guid Id => Item.Message.Id;
     public string Author { get => _author; private set { _author = value; Changed(); } }

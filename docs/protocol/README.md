@@ -26,6 +26,7 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 | GET /users/me | 当前实例身份 |
 | PATCH /users/me | 更新用户名、显示名、头像（avatar_id 或 clear_avatar） |
 | GET/POST /servers | 社区列表/创建 |
+| PATCH /servers/{id}/moderation | 社区屏蔽词与发言冷却（owner 或 MANAGE_MESSAGES）。`blocked_words` 最多 200 条、每词 1–32 字符；`cooldown_seconds` 0–600 |
 | GET/POST /servers/{id}/channels | 频道列表/创建 |
 | GET/POST /channels/{id}/messages | before 游标分页/发送（Idempotency-Key） |
 | PATCH/DELETE /channels/{id}/messages/{message_id} | 编辑/删除（**Not implemented yet**） |
@@ -34,10 +35,10 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 | GET /attachments/{id}/thumbnail | 图片 JPEG 缩略图 |
 | POST /channels/{id}/rtc-token | 校验 ConnectVoice 后签发短期 LiveKit token（已实现；可发布取决于 Speak） |
 | POST /channels/{id}/voice/join | 加入语音频道；可带 `audio_quality`（standard/high/very_high/studio），服务端按频道上限钳制 |
-| PATCH /channels/{id} | 频道所有者设置 `audio_quality` 上限 |
+| PATCH /channels/{id} | 拥有 MANAGE_CHANNEL 的成员设置语音频道 `audio_quality` 上限 |
 | POST /voice/leave、PATCH /voice/state | 离开；更新 mute/deafen，以及可选的发送音质 |
 
-业务接口使用 Bearer access token；refresh rotation、Argon2id、限流、body/field limits 和服务端授权检查在 Phase 1 接入。错误 envelope `{ "code": "...", "message": "..." }`；不得泄露数据库或密钥。普通 WebSocket 不接管 CRUD、文件或媒体数据。
+业务接口使用 Bearer access token；refresh rotation、Argon2id、限流、body/field limits 和服务端授权检查在 Phase 1 接入。错误 envelope `{ "code": "...", "message": "..." }`，冷却拒绝时额外带 `retry_after_seconds`。发送消息可能返回 `blocked_word`（400）或 `cooldown`（429）。不得泄露数据库或密钥。普通 WebSocket 不接管 CRUD、文件或媒体数据。Server DTO 含 `blocked_words` 与 `cooldown_seconds`（默认 `[]` / `0`）。
 
 ## Gateway
 
@@ -64,6 +65,6 @@ Phase 1：验证 token 和 origin（原生无 Origin 的客户端仍需 token）
 - READY / outbox commit / replay ordering 原子语义、15 分钟或 10,000 事件的有界 retention 在 Phase 1 实现，不创建无界内存事件队列。
 - reconnect cursor 必须按实例和账号独立。Redis 驱逐造成 replay 缺失时走 invalid_session，不能谎称恢复成功。
 
-计划事件：READY、MESSAGE_CREATE/UPDATE/DELETE、CHANNEL_CREATE/UPDATE/DELETE、SERVER_CREATE/UPDATE、MEMBER_JOIN/LEAVE、USER_UPDATE、PRESENCE_UPDATE、TYPING_START、VOICE_STATE_UPDATE。User 含可选 `avatar`（download/thumbnail URL、`animated`）；JPEG/PNG/GIF/WebP，GIF/APNG/动态 WebP 为 animated，上限 8 MiB、边长 4096。`VOICE_STATE_UPDATE` 已实现：`channel_id` 为 null 表示离开。语音状态含 `audio_quality`。音质档位：`standard` 48 kHz 单声道 64 kbps、`high` 立体声 128 kbps、`very_high` 256 kbps、`studio` 510 kbps（Opus 上限）。加入响应带 `audio` 编码参数与 `max_audio_quality`。typing 不持久化；presence/voice 高频状态不写 PostgreSQL。语音状态保存在 API 进程内存中；单进程模块化单体足够，多节点需 Redis。消息含 text/system/encrypted、reply、mention、attachment、embed、reaction；见 Message DTO。
+计划事件：READY、MESSAGE_CREATE/UPDATE/DELETE、CHANNEL_CREATE/UPDATE/DELETE、SERVER_CREATE/UPDATE、MEMBER_JOIN/LEAVE、USER_UPDATE、PRESENCE_UPDATE、TYPING_START、VOICE_STATE_UPDATE。User 含可选 `avatar`（download/thumbnail URL、`animated`）；JPEG/PNG/GIF/WebP，GIF/APNG/动态 WebP 为 animated，上限 8 MiB、边长 4096。`VOICE_STATE_UPDATE` 已实现：`channel_id` 为 null 表示离开。语音状态含 `audio_quality`。音质档位：`standard` 48 kHz 单声道 64 kbps、`high` 立体声 128 kbps、`very_high` 立体声 384 kbps、`studio` 510 kbps（Opus 上限）。用户在频道上限内自选发送音质；加入响应带 `audio` 编码参数与 `max_audio_quality`。降低上限时服务端钳制已在频道内的发送档位并广播 `VOICE_STATE_UPDATE`。typing 不持久化；presence/voice 高频状态不写 PostgreSQL。语音状态保存在 API 进程内存中；单进程模块化单体足够，多节点需 Redis。消息含 text/system/encrypted、reply、mention、attachment、embed、reaction；见 Message DTO。
 
 官方与自托管走同一套协议与版本协商；无官方专用权限后门。当前不做 federation；未来 Web/移动端不需依赖 C# 逻辑。

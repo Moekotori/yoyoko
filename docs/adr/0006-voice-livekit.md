@@ -8,7 +8,7 @@ Status: Accepted · 2026-09-20
 
 ## Decision
 
-聊天 API 负责鉴权、CONNECT_VOICE/SPEAK、签发短期 LiveKit JWT、广播 `VOICE_STATE_UPDATE`。RTP 只到 LiveKit。桌面通过按需 `chat-media-worker` 进程接入 RTC，主进程只传控制命令。Worker 未链接或 LiveKit 不可达时明确失败，频道成员列表仍以 Gateway 为准。
+聊天 API 负责鉴权、CONNECT_VOICE/SPEAK、签发短期 LiveKit JWT、广播 `VOICE_STATE_UPDATE`。JWT `metadata` 携带发送音质档位（standard 64 kbps 单声道、high 128 kbps、very_high 384 kbps、studio 510 kbps Opus 上限）。频道存的是上限，用户在上限内自选；降低上限会钳制已在频道内的发送档位。RTP 只到 LiveKit。桌面通过按需 `chat-media-worker` 进程接入 RTC，主进程只传控制命令。Worker 未链接或 LiveKit 不可达时明确失败，频道成员列表仍以 Gateway 为准。编码器按这些档位工作仍属后续，不能把控制面选择写成已经出声。
 
 ## Consequences
 

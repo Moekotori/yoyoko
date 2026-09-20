@@ -29,7 +29,7 @@ public static class AudioQualities
     {
         Standard => new(Standard, 48000, 1, 64_000, 20, true, true),
         High => new(High, 48000, 2, 128_000, 20, false, true),
-        VeryHigh => new(VeryHigh, 48000, 2, 256_000, 20, false, true),
+        VeryHigh => new(VeryHigh, 48000, 2, 384_000, 20, false, true),
         _ => new(Studio, 48000, 2, 510_000, 20, false, true)
     };
 }

@@ -7,8 +7,10 @@ namespace Chat.Media;
 public sealed class WorkerMediaService : IMediaService
 {
     private readonly string _path;
+    private readonly SemaphoreSlim _gate = new(1, 1);
     private Process? _process;
     private int _nextId = 1;
+    private bool _session;
     public WorkerMediaService(string path) => _path = path;
     public MediaCapabilities Capabilities => MediaCapabilities.Voice;
     public bool Available => true;
@@ -20,9 +22,87 @@ public sealed class WorkerMediaService : IMediaService
         return path is null ? new UnavailableMediaService() : new WorkerMediaService(path);
     }
 
-    public async Task ConnectAsync(Uri endpoint, string token, bool muted, bool deafened, AudioCaptureOptions audio, CancellationToken cancellationToken)
+    public async Task ConnectAsync(Uri endpoint, string token, bool muted, bool deafened, AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken)
     {
         await LeaveAsync(cancellationToken);
+        await EnsureProcessAsync(cancellationToken);
+        _session = true;
+        await SendDiscardAsync(new Dictionary<string, object?>
+        {
+            ["id"] = _nextId++,
+            ["op"] = "join",
+            ["url"] = endpoint.AbsoluteUri,
+            ["token"] = token,
+            ["muted"] = muted,
+            ["deafened"] = deafened,
+            ["quality"] = audio.Quality,
+            ["sample_rate_hz"] = audio.SampleRateHz,
+            ["channels"] = audio.Channels,
+            ["bitrate_bps"] = audio.BitrateBps,
+            ["frame_ms"] = audio.FrameMs,
+            ["dtx"] = audio.Dtx,
+            ["fec"] = audio.Fec,
+            ["input_device"] = route.InputDeviceId,
+            ["output_device"] = route.OutputDeviceId
+        }, cancellationToken);
+    }
+
+    public Task SetMutedAsync(bool muted, CancellationToken cancellationToken)
+        => SendDiscardAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "mute", ["muted"] = muted }, cancellationToken);
+    public Task SetDeafenedAsync(bool deafened, CancellationToken cancellationToken)
+        => SendDiscardAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "deafen", ["deafened"] = deafened }, cancellationToken);
+    public Task SetQualityAsync(AudioCaptureOptions audio, CancellationToken cancellationToken)
+        => SendDiscardAsync(new Dictionary<string, object?>
+        {
+            ["id"] = _nextId++,
+            ["op"] = "quality",
+            ["quality"] = audio.Quality,
+            ["sample_rate_hz"] = audio.SampleRateHz,
+            ["channels"] = audio.Channels,
+            ["bitrate_bps"] = audio.BitrateBps,
+            ["frame_ms"] = audio.FrameMs,
+            ["dtx"] = audio.Dtx,
+            ["fec"] = audio.Fec
+        }, cancellationToken);
+
+    public async Task<AudioDeviceList> ListDevicesAsync(CancellationToken cancellationToken)
+    {
+        var owned = await EnsureProcessAsync(cancellationToken);
+        try
+        {
+            using var doc = await SendAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "devices" }, cancellationToken);
+            return new AudioDeviceList(ReadDevices(doc.RootElement, "inputs"), ReadDevices(doc.RootElement, "outputs"));
+        }
+        finally
+        {
+            if (owned && !_session) await StopAsync();
+        }
+    }
+
+    public async Task SetDevicesAsync(AudioRoute route, CancellationToken cancellationToken)
+    {
+        if (_process is null || _process.HasExited)
+            return;
+        await SendDiscardAsync(new Dictionary<string, object?>
+        {
+            ["id"] = _nextId++,
+            ["op"] = "device",
+            ["input_device"] = route.InputDeviceId,
+            ["output_device"] = route.OutputDeviceId
+        }, cancellationToken);
+    }
+
+    public async Task LeaveAsync(CancellationToken cancellationToken)
+    {
+        _session = false;
+        await StopAsync();
+    }
+
+    private async Task<bool> EnsureProcessAsync(CancellationToken cancellationToken)
+    {
+        if (_process is { HasExited: false }) return false;
+        await StopAsync();
+        cancellationToken.ThrowIfCancellationRequested();
         var process = new Process
         {
             StartInfo = new ProcessStartInfo(_path)
@@ -39,43 +119,10 @@ public sealed class WorkerMediaService : IMediaService
         _process = process;
         process.Exited += (_, _) => Faulted?.Invoke("Media worker exited.");
         _ = DrainAsync(process, cancellationToken);
-        await SendAsync(new Dictionary<string, object?>
-        {
-            ["id"] = _nextId++,
-            ["op"] = "join",
-            ["url"] = endpoint.AbsoluteUri,
-            ["token"] = token,
-            ["muted"] = muted,
-            ["deafened"] = deafened,
-            ["quality"] = audio.Quality,
-            ["sample_rate_hz"] = audio.SampleRateHz,
-            ["channels"] = audio.Channels,
-            ["bitrate_bps"] = audio.BitrateBps,
-            ["frame_ms"] = audio.FrameMs,
-            ["dtx"] = audio.Dtx,
-            ["fec"] = audio.Fec
-        }, cancellationToken);
+        return true;
     }
 
-    public Task SetMutedAsync(bool muted, CancellationToken cancellationToken)
-        => SendAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "mute", ["muted"] = muted }, cancellationToken);
-    public Task SetDeafenedAsync(bool deafened, CancellationToken cancellationToken)
-        => SendAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "deafen", ["deafened"] = deafened }, cancellationToken);
-    public Task SetQualityAsync(AudioCaptureOptions audio, CancellationToken cancellationToken)
-        => SendAsync(new Dictionary<string, object?>
-        {
-            ["id"] = _nextId++,
-            ["op"] = "quality",
-            ["quality"] = audio.Quality,
-            ["sample_rate_hz"] = audio.SampleRateHz,
-            ["channels"] = audio.Channels,
-            ["bitrate_bps"] = audio.BitrateBps,
-            ["frame_ms"] = audio.FrameMs,
-            ["dtx"] = audio.Dtx,
-            ["fec"] = audio.Fec
-        }, cancellationToken);
-
-    public async Task LeaveAsync(CancellationToken cancellationToken)
+    private async Task StopAsync()
     {
         var process = _process;
         _process = null;
@@ -84,8 +131,12 @@ public sealed class WorkerMediaService : IMediaService
         {
             if (!process.HasExited)
             {
-                await process.StandardInput.WriteLineAsync("{\"id\":0,\"op\":\"leave\"}");
-                await process.StandardInput.FlushAsync();
+                try
+                {
+                    await process.StandardInput.WriteLineAsync("{\"id\":0,\"op\":\"leave\"}");
+                    await process.StandardInput.FlushAsync();
+                }
+                catch (Exception) { }
                 process.Kill(entireProcessTree: true);
             }
         }
@@ -93,18 +144,48 @@ public sealed class WorkerMediaService : IMediaService
         process.Dispose();
     }
 
-    private async Task SendAsync(Dictionary<string, object?> payload, CancellationToken cancellationToken)
+    private async Task SendDiscardAsync(Dictionary<string, object?> payload, CancellationToken cancellationToken)
     {
-        var process = _process ?? throw new InvalidOperationException("Media worker is not running.");
-        var json = JsonSerializer.Serialize(payload);
-        await process.StandardInput.WriteLineAsync(json.AsMemory(), cancellationToken);
-        await process.StandardInput.FlushAsync(cancellationToken);
-        var line = await process.StandardOutput.ReadLineAsync(cancellationToken)
-            ?? throw new InvalidOperationException("Media worker closed.");
-        using var doc = JsonDocument.Parse(line);
-        if (doc.RootElement.TryGetProperty("ok", out var ok) && !ok.GetBoolean())
-            throw new InvalidOperationException(doc.RootElement.TryGetProperty("error", out var error)
-                ? error.GetString() ?? "Media worker failed." : "Media worker failed.");
+        using var _ = await SendAsync(payload, cancellationToken);
+    }
+
+    private async Task<JsonDocument> SendAsync(Dictionary<string, object?> payload, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var process = _process ?? throw new InvalidOperationException("Media worker is not running.");
+            var json = JsonSerializer.Serialize(payload);
+            await process.StandardInput.WriteLineAsync(json.AsMemory(), cancellationToken);
+            await process.StandardInput.FlushAsync(cancellationToken);
+            var line = await process.StandardOutput.ReadLineAsync(cancellationToken)
+                ?? throw new InvalidOperationException("Media worker closed.");
+            var doc = JsonDocument.Parse(line);
+            if (doc.RootElement.TryGetProperty("ok", out var ok) && !ok.GetBoolean())
+            {
+                var message = doc.RootElement.TryGetProperty("error", out var error)
+                    ? error.GetString() ?? "Media worker failed." : "Media worker failed.";
+                doc.Dispose();
+                throw new InvalidOperationException(message);
+            }
+            return doc;
+        }
+        finally { _gate.Release(); }
+    }
+
+    private static AudioDevice[] ReadDevices(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var array) || array.ValueKind != JsonValueKind.Array)
+            return [];
+        var items = new List<AudioDevice>();
+        foreach (var element in array.EnumerateArray())
+        {
+            var id = element.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+            var label = element.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(label)) continue;
+            items.Add(new(id, label));
+        }
+        return [.. items];
     }
 
     private static async Task DrainAsync(Process process, CancellationToken cancellationToken)

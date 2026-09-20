@@ -1,24 +1,71 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:instances="using:Chat.UI.Instances" xmlns:channels="using:Chat.UI.Channels"
   xmlns:auth="using:Chat.UI.Auth" xmlns:chat="using:Chat.UI.Chat" xmlns:voice="using:Chat.UI.Voice"
-  xmlns:settings="using:Chat.UI.Settings"
+  xmlns:settings="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Shell.MainWindow" x:DataType="vm:ShellViewModel"
-  Title="{Binding ProductName}" Width="1100" Height="720" MinWidth="860" MinHeight="560">
-  <Grid ColumnDefinitions="64,224,*">
-    <instances:InstanceRail />
-    <channels:ChannelSidebar Grid.Column="1" />
-    <Grid Grid.Column="2" RowDefinitions="64,*" IsVisible="{Binding !ShowSettings}">
-      <Border BorderThickness="0,0,0,1" BorderBrush="#2A2F2D" Padding="28,0">
-        <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontWeight="Medium" />
+  Title="{Binding ProductName}" Width="1200" Height="820" MinWidth="980" MinHeight="640"
+  ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="42"
+  Classes.reduceMotion="{Binding ReduceMotion}">
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Meta+F" Command="{Binding ToggleSearch}" />
+    <KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearch}" />
+    <KeyBinding Gesture="Escape" Command="{Binding DismissPresentation}" />
+  </Window.KeyBindings>
+  <Grid ColumnDefinitions="72,220,*" RowDefinitions="42,*,66">
+    <Border Grid.ColumnSpan="2" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
+      <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding InstanceHost}">
+        <Grid ColumnDefinitions="*,16" ColumnSpacing="8"><TextBlock Text="{Binding InstanceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></Grid>
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <StackPanel Width="260" Spacing="10">
+              <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" />
+              <Button Content="{i18n:T AddInstance}" Command="{Binding OpenAddInstance}" HorizontalAlignment="Stretch" />
+              <StackPanel IsVisible="{Binding IsSignedIn}" Spacing="9">
+                <TextBlock Text="{Binding InviteHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
+                <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" />
+                <Button Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
+                <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" />
+                <Button Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
+                <StackPanel Spacing="8" IsVisible="{Binding CanModerate}">
+                  <TextBlock Text="{i18n:T Moderation}" Classes="muted" FontSize="12" />
+                  <TextBox Text="{Binding ModerationWords}" AcceptsReturn="True" TextWrapping="Wrap"
+                    MinHeight="56" MaxHeight="96" FontSize="12" PlaceholderText="{i18n:T BlockedWordsHint}"
+                    AutomationProperties.Name="{i18n:T BlockedWordsHint}" />
+                  <TextBox Text="{Binding CooldownInput}" PlaceholderText="{i18n:T CooldownSeconds}"
+                    AutomationProperties.Name="{i18n:T CooldownSeconds}" />
+                  <Button Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="{i18n:T SaveModeration}" />
+                </StackPanel>
+                <Button Content="{i18n:T SignOut}" Command="{Binding SignOut}" HorizontalAlignment="Stretch" />
+              </StackPanel>
+            </StackPanel>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+    </Border>
+    <channels:LiveChannelTabs Grid.Column="2" />
+    <instances:InstanceRail Grid.Row="1" Grid.RowSpan="2" />
+    <channels:ChannelSidebar Grid.Row="1" Grid.Column="1" />
+    <chat:LiveAccountBar Grid.Row="2" Grid.Column="1" />
+    <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" RowDefinitions="52,*" IsVisible="{Binding !ShowSettings}">
+      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" IsVisible="{Binding ShowChat}">
+            <Button Classes="icon" Classes.active="{Binding SearchOpen}" Command="{Binding ToggleSearch}" ToolTip.Tip="{i18n:T SearchShortcut}" AutomationProperties.Name="{i18n:T SearchMessages}"><PathIcon Data="{StaticResource IconSearch}" /></Button>
+            <Button Classes="icon" Classes.active="{Binding ParticipantsOpen}" Command="{Binding ToggleParticipants}" ToolTip.Tip="{i18n:T PageParticipants}" AutomationProperties.Name="{i18n:T ToggleMembers}"><PathIcon Data="{StaticResource IconPeople}" /></Button>
+          </StackPanel>
+        </Grid>
       </Border>
       <Panel Grid.Row="1">
         <instances:AddInstanceView IsVisible="{Binding ShowAddInstance}" />
         <auth:AuthView IsVisible="{Binding ShowAuth}" />
         <chat:ChatView IsVisible="{Binding ShowChat}" />
         <voice:VoiceView IsVisible="{Binding ShowVoice}" />
+        <TextBlock Text="{i18n:T SelectChannel}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowChannelEmpty}" />
       </Panel>
     </Grid>
-    <Panel Grid.Column="2" IsVisible="{Binding ShowSettings}">
+    <Panel Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding ShowSettings}">
       <settings:SettingsView DataContext="{Binding Settings}" />
     </Panel>
   </Grid>

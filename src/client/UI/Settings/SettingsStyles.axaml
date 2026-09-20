@@ -1,0 +1,86 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="TextBlock.settingsTitle">
+    <Setter Property="FontSize" Value="26" /><Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,0,0,30" />
+  </Style>
+  <Style Selector="TextBlock.settingsHeading">
+    <Setter Property="FontSize" Value="14" /><Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+  <Style Selector="Button.settingsNav">
+    <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="14,10" />
+    <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+  </Style>
+  <Style Selector="Button.settingsNav.selected">
+    <Setter Property="Background" Value="{StaticResource SelectedBrush}" /><Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" /><Setter Property="BorderThickness" Value="2,0,0,0" />
+  </Style>
+  <Style Selector="Border.settingsPage.active.animated">
+    <Style.Animations>
+      <Animation Duration="0:0:0.12" Easing="CubicEaseOut">
+        <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0" /></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+  <Style Selector="RadioButton.settingsChoice">
+    <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="MinHeight" Value="46" /><Setter Property="Margin" Value="0,0,0,4" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="ChoiceFrame" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2" Padding="14,12">
+          <Grid ColumnDefinitions="*,18" ColumnSpacing="16">
+            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+              VerticalAlignment="Center" RecognizesAccessKey="True" />
+            <Grid Grid.Column="1" Width="18" Height="18" VerticalAlignment="Center">
+              <Ellipse Name="ChoiceRing" Stroke="{StaticResource QuietTextBrush}" StrokeThickness="1.5" />
+              <Ellipse Name="ChoiceDot" Width="8" Height="8" Fill="{StaticResource AccentBrush}" IsVisible="False" />
+            </Grid>
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.settingsChoice:pointerover /template/ Border#ChoiceFrame"><Setter Property="Background" Value="{StaticResource HoverBrush}" /></Style>
+  <Style Selector="RadioButton.settingsChoice:checked /template/ Border#ChoiceFrame"><Setter Property="Background" Value="{StaticResource SelectedBrush}" /></Style>
+  <Style Selector="RadioButton.settingsChoice:checked /template/ Ellipse#ChoiceRing"><Setter Property="Stroke" Value="{StaticResource AccentBrush}" /></Style>
+  <Style Selector="RadioButton.settingsChoice:checked /template/ Ellipse#ChoiceDot"><Setter Property="IsVisible" Value="True" /></Style>
+  <Style Selector="RadioButton.settingsChoice:focus-visible /template/ Border#ChoiceFrame"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" /></Style>
+  <Style Selector="ToggleSwitch.settingsToggle">
+    <Setter Property="MinWidth" Value="0" /><Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="SwitchFocus" Padding="4" BorderThickness="1" BorderBrush="Transparent" CornerRadius="2">
+          <Border Name="SwitchTrack" Width="38" Height="22" Background="#44414B" CornerRadius="2">
+            <Canvas Name="PART_SwitchKnob" Width="16" Height="16" Margin="3" HorizontalAlignment="Left">
+              <Grid Name="PART_MovingKnobs" Width="16" Height="16">
+                <Border Name="SwitchThumb" Background="#E4E0EB" CornerRadius="1" />
+              </Grid>
+            </Canvas>
+          </Border>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ToggleSwitch.settingsToggle:checked /template/ Border#SwitchTrack"><Setter Property="Background" Value="{StaticResource AccentBrush}" /></Style>
+  <Style Selector="ToggleSwitch.settingsToggle:checked /template/ Border#SwitchThumb"><Setter Property="Background" Value="#211C2C" /></Style>
+  <Style Selector="ToggleSwitch.settingsToggle:pointerover /template/ Border#SwitchTrack"><Setter Property="Opacity" Value="0.85" /></Style>
+  <Style Selector="ToggleSwitch.settingsToggle:focus-visible /template/ Border#SwitchFocus"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" /></Style>
+  <Style Selector="TextBox.settingsField">
+    <Setter Property="Height" Value="44" /><Setter Property="Padding" Value="12,10" />
+    <Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="BorderBrush" Value="#36343D" />
+  </Style>
+  <Style Selector="TextBox.settingsField:focus /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" /><Setter Property="Background" Value="{StaticResource RaisedBrush}" /></Style>
+  <Style Selector="Button.settingsSecondary">
+    <Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="Padding" Value="14,9" />
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" /><Setter Property="BorderBrush" Value="#36343D" /><Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.settingsPrimary">
+    <Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="MinWidth" Value="104" /><Setter Property="Height" Value="42" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="Button.settingsPrimary:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#CAB9F2" /><Setter Property="Foreground" Value="#211C2C" /></Style>
+  <Style Selector="Button.settingsPrimary:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#A590D5" /><Setter Property="Foreground" Value="#211C2C" /></Style>
+</Styles>

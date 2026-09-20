@@ -1,4 +1,4 @@
-use chat_domain::voice::VoiceState;
+use chat_domain::voice::{AudioQuality, VoiceState};
 use std::collections::HashMap;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -42,6 +42,23 @@ impl VoiceRoster {
             .cloned()
             .collect()
     }
+
+    pub async fn clamp_channel(&self, channel_id: Uuid, max: AudioQuality) -> Vec<VoiceState> {
+        let mut inner = self.inner.lock().await;
+        let mut changed = Vec::new();
+        for state in inner.values_mut() {
+            if state.channel_id != channel_id {
+                continue;
+            }
+            let next = state.audio_quality.clamp(max);
+            if next == state.audio_quality {
+                continue;
+            }
+            state.audio_quality = next;
+            changed.push(state.clone());
+        }
+        changed
+    }
 }
 
 #[cfg(test)]
@@ -79,5 +96,14 @@ mod tests {
             .await;
         assert!(roster.list_channel(first).await.is_empty());
         assert!(roster.list_channel(second).await[0].self_mute);
+        let changed = roster
+            .clamp_channel(second, AudioQuality::High)
+            .await;
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].audio_quality, AudioQuality::High);
+        assert!(roster
+            .clamp_channel(second, AudioQuality::Studio)
+            .await
+            .is_empty());
     }
 }

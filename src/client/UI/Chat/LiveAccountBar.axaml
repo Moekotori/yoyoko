@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
+ x:Class="Chat.UI.Chat.LiveAccountBar" x:DataType="vm:ShellViewModel">
+  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,1,0" Padding="12,10">
+    <Grid ColumnDefinitions="30,*,Auto" ColumnSpacing="8">
+      <c:Avatar Width="30" Height="30" Playback="{Binding AccountPlayback}" VerticalAlignment="Center" />
+      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+        <TextBlock Text="{Binding AccountName}" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsSignedIn}" />
+        <TextBlock Text="{i18n:T SignedOut}" FontSize="12" IsVisible="{Binding ShowGuest}" />
+        <TextBlock Text="{Binding AccountHandle}" Classes="muted" FontSize="10" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsSignedIn}" />
+      </StackPanel>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Classes="icon" Width="26" Padding="5" Command="{Binding ToggleMute}" IsEnabled="{Binding InVoice}" ToolTip.Tip="{Binding MuteLabel}" AutomationProperties.Name="{i18n:T Mic}"><PathIcon Data="{StaticResource IconMic}" Width="16" Height="16" /></Button>
+        <Button Classes="icon" Width="26" Padding="5" Command="{Binding ToggleDeaf}" IsEnabled="{Binding InVoice}" ToolTip.Tip="{Binding DeafLabel}" AutomationProperties.Name="{i18n:T Headphones}"><PathIcon Data="{StaticResource IconHeadphones}" Width="16" Height="16" /></Button>
+        <Button Classes="icon" Width="26" Padding="5" Command="{Binding OpenSettings}" ToolTip.Tip="{i18n:T Settings}" AutomationProperties.Name="{i18n:T Settings}"><PathIcon Data="{StaticResource IconSettings}" Width="16" Height="16" /></Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

@@ -1,64 +1,44 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
-  x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel" x:Name="Root">
+  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" />
+  </UserControl.Styles>
   <Grid RowDefinitions="52,*">
-    <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0">
+    <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
       <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{i18n:T Settings}" VerticalAlignment="Center" FontSize="14" />
-        <Button Grid.Column="1" Classes="icon" Command="{Binding Close}" AutomationProperties.Name="{i18n:T CloseSettings}">
+        <TextBlock Text="{i18n:T Settings}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" />
+        <Button Grid.Column="1" Classes="icon" Command="{Binding Close}" ToolTip.Tip="{i18n:T CloseSettings}"
+          AutomationProperties.Name="{i18n:T CloseSettings}">
           <PathIcon Data="{StaticResource IconClose}" />
         </Button>
       </Grid>
     </Border>
-    <StackPanel MaxWidth="480" Margin="40,28" Spacing="12" HorizontalAlignment="Left">
-      <StackPanel Spacing="12" IsVisible="{Binding Profile.IsSignedIn}">
-        <TextBlock Text="{i18n:T Profile}" FontSize="13" />
-        <StackPanel Orientation="Horizontal" Spacing="14">
-          <c:Avatar Width="72" Height="72" Playback="{Binding Profile.Playback}" />
-          <StackPanel VerticalAlignment="Center" Spacing="6">
-            <Button Content="{i18n:T ChangeAvatar}" Command="{Binding Profile.ChangeAvatar}" HorizontalAlignment="Left" Padding="12,8"
-              AutomationProperties.Name="{i18n:T ChangeAvatar}" />
-            <Button Content="{i18n:T RemoveAvatar}" Command="{Binding Profile.RemoveAvatar}" HorizontalAlignment="Left" Padding="12,8"
-              IsVisible="{Binding Profile.HasAvatar}" AutomationProperties.Name="{i18n:T RemoveAvatar}" />
-          </StackPanel>
+    <Grid Grid.Row="1" ColumnDefinitions="156,*">
+      <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+        <StackPanel Margin="12,26" Spacing="4">
+          <Button Classes="settingsNav" Classes.selected="{Binding ShowGeneral}" Content="{i18n:T GeneralSettings}"
+            Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.General}" />
+          <Button Classes="settingsNav" Classes.selected="{Binding ShowAppearance}" Content="{i18n:T Appearance}"
+            Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Appearance}" />
+          <Border Height="1" Background="{StaticResource DividerBrush}" Margin="10,14" />
+          <Button Classes="settingsNav" Classes.selected="{Binding ShowProfile}" Content="{i18n:T Profile}"
+            Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Profile}" />
         </StackPanel>
-        <TextBlock Text="{i18n:T Username}" FontSize="13" />
-        <TextBox Text="{Binding Profile.Username}" AutomationProperties.Name="{i18n:T Username}" />
-        <TextBlock Text="{i18n:T DisplayNameField}" FontSize="13" />
-        <TextBox Text="{Binding Profile.DisplayName}" AutomationProperties.Name="{i18n:T DisplayNameField}" />
-        <Button Classes="primary" Content="{i18n:T SaveProfile}" Command="{Binding Profile.Save}" HorizontalAlignment="Left"
-          AutomationProperties.Name="{i18n:T SaveProfile}" />
-        <TextBlock Text="{Binding Profile.Status}" Classes="muted" FontSize="12" IsVisible="{Binding Profile.HasStatus}" />
-      </StackPanel>
-      <TextBlock Text="{i18n:T ChatBehavior}" FontSize="13" Margin="0,16,0,0" />
-      <Button Classes="channel" Classes.selected="{Binding EnterToSend}" Command="{Binding ToggleEnterToSend}"
-        AutomationProperties.Name="{i18n:T EnterToSend}">
-        <TextBlock Text="{i18n:T EnterToSend}" FontSize="14" />
-      </Button>
-      <Button Classes="channel" Classes.selected="{Binding !EnterToSend}" Command="{Binding ToggleEnterToSend}"
-        AutomationProperties.Name="{i18n:T CtrlEnterToSend}">
-        <TextBlock Text="{i18n:T CtrlEnterToSend}" FontSize="14" />
-      </Button>
-      <Button Classes="channel" Classes.selected="{Binding Compact}" Command="{Binding ToggleCompact}"
-        AutomationProperties.Name="{i18n:T CompactLayout}">
-        <TextBlock Text="{i18n:T CompactLayout}" FontSize="14" />
-      </Button>
-      <Button Classes="channel" Classes.selected="{Binding ReduceMotion}" Command="{Binding ToggleReduceMotion}"
-        AutomationProperties.Name="{i18n:T ReduceMotion}">
-        <TextBlock Text="{i18n:T ReduceMotion}" FontSize="14" />
-      </Button>
-      <TextBlock Text="{i18n:T Language}" FontSize="13" Margin="0,16,0,0" />
-      <ItemsControl ItemsSource="{Binding Languages}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:LanguageOption">
-            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Margin="0,0,0,3"
-              Command="{Binding #Root.((vm:SettingsViewModel)DataContext).Select}" CommandParameter="{Binding}"
-              AutomationProperties.Name="{Binding NativeName}">
-              <TextBlock Text="{Binding NativeName}" FontSize="14" />
-            </Button>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </StackPanel>
+      </Border>
+      <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Panel MaxWidth="600" Margin="32,32,32,40" VerticalAlignment="Top">
+          <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowGeneral}">
+            <vm:GeneralSettingsView />
+          </Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowAppearance}">
+            <vm:AppearanceSettingsView />
+          </Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowProfile}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowProfile}">
+            <vm:ProfileSettingsView />
+          </Border>
+        </Panel>
+      </ScrollViewer>
+    </Grid>
   </Grid>
 </UserControl>

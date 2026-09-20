@@ -7,9 +7,9 @@
 | 表 | 所属业务与约束 |
 | --- | --- |
 | users / sessions | 实例内账号、Argon2id PHC、refresh hash 与过期/撤销时间；`avatar_id` 指向未绑定消息的附件，`avatar_animated` 标记 GIF/动态 WebP/APNG |
-| servers / members | 社区与成员；owner、membership 外键 |
+| servers / members | 社区与成员；owner、membership 外键；`0005_moderation.sql` 增加 `blocked_words` JSONB 与 `cooldown_seconds`（0–600） |
 | roles / member_roles | u64 permission 使用 NUMERIC(20,0)，server 范围复合外键 |
-| channels | text/voice、server 索引、显示顺序 |
+| channels | text/voice、server 索引、显示顺序；语音频道 `audio_quality` 上限（standard/high/very_high/studio，默认 studio） |
 | channel_role_overrides / channel_member_overrides | allow/deny 位，禁止跨 server 引用 |
 | messages | UUIDv7、kind、content、reply、edit/delete、JSON embed/encrypted envelope |
 | message_mentions / reactions | 标准化关联、复合唯一键 |

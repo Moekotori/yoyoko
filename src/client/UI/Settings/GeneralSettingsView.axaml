@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Settings.GeneralSettingsView" x:DataType="vm:SettingsViewModel" x:Name="Root">
+  <StackPanel>
+    <TextBlock Text="{i18n:T GeneralSettings}" Classes="settingsTitle" />
+    <TextBlock Text="{i18n:T Language}" Classes="settingsHeading" />
+    <ItemsControl ItemsSource="{Binding Languages}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:LanguageOption">
+          <RadioButton Classes="settingsChoice" GroupName="SettingsLanguage" Content="{Binding NativeName}"
+            IsChecked="{Binding IsSelected, Mode=OneWay}"
+            Command="{Binding #Root.((vm:SettingsViewModel)DataContext).Select}" CommandParameter="{Binding}"
+            AutomationProperties.Name="{Binding NativeName}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Border Height="1" Background="{StaticResource DividerBrush}" Margin="0,28" />
+    <TextBlock Text="{i18n:T ChatBehavior}" Classes="settingsHeading" />
+    <RadioButton Classes="settingsChoice" GroupName="SettingsSendKey" Content="{i18n:T EnterToSend}"
+      IsChecked="{Binding EnterToSend, Mode=OneWay}" Command="{Binding UseEnterToSend}" />
+    <RadioButton Classes="settingsChoice" GroupName="SettingsSendKey" Content="{i18n:T CtrlEnterToSend}"
+      IsChecked="{Binding !EnterToSend, Mode=OneWay}" Command="{Binding UseModifiedEnterToSend}" />
+  </StackPanel>
+</UserControl>

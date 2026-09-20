@@ -34,7 +34,7 @@ impl AudioQuality {
         match self {
             Self::Standard => 64_000,
             Self::High => 128_000,
-            Self::VeryHigh => 256_000,
+            Self::VeryHigh => 384_000,
             Self::Studio => 510_000,
         }
     }
@@ -90,6 +90,7 @@ mod tests {
 
     #[test]
     fn studio_is_opus_maximum_and_clamps() {
+        assert_eq!(AudioQuality::VeryHigh.bitrate_bps(), 384_000);
         assert_eq!(AudioQuality::Studio.bitrate_bps(), 510_000);
         assert_eq!(AudioQuality::Studio.channels(), 2);
         assert_eq!(

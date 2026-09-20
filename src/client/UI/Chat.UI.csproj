@@ -1,11 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault></PropertyGroup>
+  <PropertyGroup>
+    <HotAvaloniaIncludeXamlLoader>false</HotAvaloniaIncludeXamlLoader>
+    <HotAvaloniaRemote>false</HotAvaloniaRemote>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/Chat.Core.csproj" />
     <ProjectReference Include="../Domain/Chat.Domain.csproj" />
     <ProjectReference Include="../Protocol/Chat.Protocol.csproj" />
     <ProjectReference Include="../Localization/Chat.Localization.csproj" />
     <PackageReference Include="Avalonia" />
+    <PackageReference Include="HotAvalonia" PrivateAssets="All" />
+    <PackageReference Include="Avalonia.Markup.Xaml.Loader" PrivateAssets="All" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="SkiaSharp" />
   </ItemGroup>
