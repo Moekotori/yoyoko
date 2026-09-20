@@ -3,15 +3,22 @@ using Chat.Protocol;
 
 namespace Chat.Core.Messaging;
 
-// Account scope prevents cached private content leaking when switching accounts.
 public readonly record struct CacheScope(InstanceId InstanceId, Guid AccountId);
 public sealed record MessagePage(IReadOnlyList<MessageDto> Items, Guid? Before);
+public sealed record CommunitySnapshot(IReadOnlyList<ServerDto> Servers, IReadOnlyList<ChannelDto> Channels, IReadOnlyList<UserDto> Users);
 public interface IMessageCache
 {
     Task UpsertAsync(CacheScope scope, MessageDto message, CancellationToken cancellationToken);
     Task<MessagePage> ReadPageAsync(CacheScope scope, Guid channelId, Guid? before, int limit,
         CancellationToken cancellationToken);
     Task PurgeAsync(CacheScope scope, CancellationToken cancellationToken);
+    Task SaveCommunityAsync(CacheScope scope, CommunitySnapshot snapshot, CancellationToken cancellationToken);
+    Task<CommunitySnapshot> LoadCommunityAsync(CacheScope scope, CancellationToken cancellationToken);
+    Task SaveCursorAsync(CacheScope scope, string? sessionId, long seq, CancellationToken cancellationToken);
+    Task<(string? SessionId, long Seq)> LoadCursorAsync(CacheScope scope, CancellationToken cancellationToken);
+    Task SaveAccountAsync(CacheScope scope, string displayName, CancellationToken cancellationToken);
+    Task SetSettingAsync(string key, string value, CancellationToken cancellationToken);
+    Task<string?> GetSettingAsync(string key, CancellationToken cancellationToken);
 }
 public static class MemoryBudget
 {

@@ -14,7 +14,31 @@ pub struct Channel {
     pub kind: ChannelKind,
 }
 
+#[derive(Debug, Clone)]
+pub struct Server {
+    pub id: Uuid,
+    pub name: String,
+    pub owner_id: Uuid,
+    pub invite_code: String,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Actor {
     pub user_id: Uuid,
+}
+
+impl ChannelKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Text => "text",
+            Self::Voice => "voice",
+        }
+    }
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "text" => Some(Self::Text),
+            "voice" => Some(Self::Voice),
+            _ => None,
+        }
+    }
 }

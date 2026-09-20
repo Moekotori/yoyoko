@@ -1,16 +1,20 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:instances="using:Chat.UI.Instances" xmlns:channels="using:Chat.UI.Channels"
+  xmlns:auth="using:Chat.UI.Auth" xmlns:chat="using:Chat.UI.Chat"
   x:Class="Chat.UI.Shell.MainWindow" x:DataType="vm:ShellViewModel"
   Title="{Binding ProductName}" Width="1100" Height="720" MinWidth="860" MinHeight="560">
   <Grid ColumnDefinitions="64,224,*">
     <instances:InstanceRail />
     <channels:ChannelSidebar Grid.Column="1" />
-    <Grid Grid.Column="2" RowDefinitions="64,*,44">
+    <Grid Grid.Column="2" RowDefinitions="64,*">
       <Border BorderThickness="0,0,0,1" BorderBrush="#2A2F2D" Padding="28,0">
-        <TextBlock Text="{Binding ProductName}" VerticalAlignment="Center" FontWeight="Medium" />
+        <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontWeight="Medium" />
       </Border>
-      <instances:AddInstanceView Grid.Row="1" />
-      <TextBlock Grid.Row="2" Text="架构预览 · Phase 0" Classes="muted" FontSize="12" Margin="28,0" VerticalAlignment="Center" />
+      <Panel Grid.Row="1">
+        <instances:AddInstanceView IsVisible="{Binding ShowAddInstance}" />
+        <auth:AuthView IsVisible="{Binding ShowAuth}" />
+        <chat:ChatView IsVisible="{Binding ShowChat}" />
+      </Panel>
     </Grid>
   </Grid>
 </Window>

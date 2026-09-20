@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components"
+  x:Class="Chat.UI.Workspace.AccountBar" x:DataType="vm:WorkspaceViewModel">
+  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,1,0" Padding="16,12">
+    <Grid ColumnDefinitions="34,*,Auto" ColumnSpacing="10">
+      <c:Avatar Width="34" Height="34" Source="{Binding AccountAvatar}" VerticalAlignment="Center" />
+      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+        <TextBlock Text="{Binding AccountName}" FontSize="13" FontWeight="Medium" />
+        <TextBlock Text="{Binding AccountStatus}" Classes="muted" FontSize="10" />
+      </StackPanel>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="2">
+        <Button Classes="icon" Command="{Binding Unavailable}" ToolTip.Tip="麦克风 · Not implemented yet" AutomationProperties.Name="麦克风"><PathIcon Data="{StaticResource IconMic}" Width="17" Height="17" /></Button>
+        <Button Classes="icon" Command="{Binding Unavailable}" ToolTip.Tip="耳机 · Not implemented yet" AutomationProperties.Name="耳机"><PathIcon Data="{StaticResource IconHeadphones}" Width="17" Height="17" /></Button>
+        <Button Classes="icon" Command="{Binding Unavailable}" ToolTip.Tip="设置 · Not implemented yet" AutomationProperties.Name="设置"><PathIcon Data="{StaticResource IconSettings}" Width="17" Height="17" /></Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

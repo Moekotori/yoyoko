@@ -1,0 +1,747 @@
+use crate::{
+    error::{ApiErr, ApiResult},
+    identity::TokenService,
+    objects::{display_name, sniff_image},
+    realtime::Hub,
+    state::AppState,
+    store::{OutboxEvent, SessionRecord, Store},
+};
+use argon2::{
+    Argon2, Params,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+};
+use axum::http::StatusCode;
+use chat_domain::{
+    channel::{Channel, ChannelKind, Server},
+    message::{Attachment, Message},
+    permission::Permissions,
+    user::User,
+};
+use chat_protocol::{
+    AuthResponse, DEFAULT_PAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, MAX_CONTENT_BYTES, MAX_PAGE_SIZE,
+};
+use chrono::Utc;
+use rand::rngs::OsRng;
+use std::sync::Arc;
+use uuid::Uuid;
+
+pub fn argon2() -> Argon2<'static> {
+    Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        Params::new(16_384, 2, 1, None).expect("argon2 params"),
+    )
+}
+
+pub fn invite_code() -> String {
+    const ALPH: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    (0..8)
+        .map(|_| ALPH[rng.gen_range(0..ALPH.len())] as char)
+        .collect()
+}
+
+fn to_protocol_user(user: User) -> chat_protocol::User {
+    chat_protocol::User {
+        id: user.id,
+        username: user.username,
+        display_name: user.display_name,
+    }
+}
+
+fn to_protocol_server(server: Server) -> chat_protocol::Server {
+    chat_protocol::Server {
+        id: server.id,
+        name: server.name,
+        owner_id: server.owner_id,
+        invite_code: server.invite_code,
+    }
+}
+
+fn to_protocol_channel(channel: Channel) -> chat_protocol::Channel {
+    chat_protocol::Channel {
+        id: channel.id,
+        server_id: channel.server_id,
+        name: channel.name,
+        kind: channel.kind.as_str().into(),
+    }
+}
+
+pub fn attachment_dto(
+    tokens: &TokenService,
+    api: &str,
+    attachment: &Attachment,
+) -> chat_protocol::Attachment {
+    let exp = Utc::now().timestamp() + 3600;
+    let content = tokens.sign_attachment(attachment.id, exp, "content");
+    let thumb = attachment.thumbnail_key.map(|_| {
+        let sig = tokens.sign_attachment(attachment.id, exp, "thumb");
+        format!(
+            "{api}/attachments/{}/thumbnail?exp={exp}&sig={sig}",
+            attachment.id
+        )
+    });
+    chat_protocol::Attachment {
+        id: attachment.id,
+        file_name: attachment.file_name.clone(),
+        mime_type: attachment.mime_type.clone(),
+        size: attachment.size,
+        download_url: format!(
+            "{api}/attachments/{}/content?exp={exp}&sig={content}",
+            attachment.id
+        ),
+        thumbnail_url: thumb,
+    }
+}
+
+pub fn message_dto(tokens: &TokenService, api: &str, message: &Message) -> chat_protocol::Message {
+    chat_protocol::Message {
+        id: message.id,
+        channel_id: message.channel_id,
+        author_id: message.author_id,
+        kind: message.kind.clone(),
+        content: message.content.clone(),
+        created_at: message.created_at.clone(),
+        edited_at: message.edited_at.clone(),
+        reply_to: message.reply_to,
+        mentions: vec![],
+        attachments: message
+            .attachments
+            .iter()
+            .map(|item| attachment_dto(tokens, api, item))
+            .collect(),
+        embeds: vec![],
+        reactions: vec![],
+        encrypted_payload: None,
+    }
+}
+
+async fn require(
+    store: &dyn Store,
+    user: Uuid,
+    channel: Uuid,
+    permission: Permissions,
+) -> ApiResult<Channel> {
+    let channel = store
+        .find_channel(channel)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    let snapshot = store.permissions(user, channel.id).await?;
+    let resolved = snapshot.resolve().ok_or_else(ApiErr::forbidden)?;
+    if !resolved.contains(permission) {
+        return Err(ApiErr::forbidden());
+    }
+    Ok(channel)
+}
+
+pub async fn register(
+    state: &AppState,
+    username: String,
+    display_name: String,
+    password: String,
+) -> ApiResult<AuthResponse> {
+    validate_username(&username)?;
+    validate_display(&display_name)?;
+    validate_password(&password)?;
+    let salt = SaltString::generate(&mut OsRng);
+    let hash = argon2()
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|_| ApiErr::unavailable())?
+        .to_string();
+    let user = state
+        .store
+        .create_user(Uuid::now_v7(), &username, &display_name, &hash)
+        .await?;
+    issue_session(state, user).await
+}
+
+pub async fn login(
+    state: &AppState,
+    username: String,
+    password: String,
+) -> ApiResult<AuthResponse> {
+    let (user, hash) = state
+        .store
+        .find_user_by_username(&username)
+        .await?
+        .ok_or_else(|| {
+            ApiErr::new(
+                StatusCode::UNAUTHORIZED,
+                "invalid_credentials",
+                "Invalid username or password.",
+            )
+        })?;
+    let parsed = PasswordHash::new(&hash).map_err(|_| ApiErr::unavailable())?;
+    argon2()
+        .verify_password(password.as_bytes(), &parsed)
+        .map_err(|_| {
+            ApiErr::new(
+                StatusCode::UNAUTHORIZED,
+                "invalid_credentials",
+                "Invalid username or password.",
+            )
+        })?;
+    issue_session(state, user).await
+}
+
+pub async fn refresh(state: &AppState, refresh_token: String) -> ApiResult<AuthResponse> {
+    let hash = TokenService::hash_refresh(&refresh_token);
+    let session = state
+        .store
+        .find_session_by_refresh(hash)
+        .await?
+        .ok_or_else(ApiErr::unauthorized)?;
+    if session.revoked || session.expires_at < Utc::now().timestamp() {
+        return Err(ApiErr::unauthorized());
+    }
+    let user = state
+        .store
+        .find_user(session.user_id)
+        .await?
+        .ok_or_else(ApiErr::unauthorized)?;
+    let (token, new_hash) = TokenService::random_refresh();
+    let expires = Utc::now().timestamp() + state.tokens.refresh_ttl_days as i64 * 86400;
+    state
+        .store
+        .rotate_session(session.id, new_hash, expires)
+        .await?;
+    Ok(AuthResponse {
+        access_token: state.tokens.issue_access(user.id, session.id),
+        refresh_token: token,
+        expires_in: state.tokens.access_ttl_seconds,
+        user: to_protocol_user(user),
+    })
+}
+
+pub async fn logout(state: &AppState, user: Uuid, session_id: Uuid) -> ApiResult<()> {
+    let _ = leave_voice(state, user).await;
+    state.store.revoke_session(session_id).await?;
+    Ok(())
+}
+
+async fn issue_session(state: &AppState, user: User) -> ApiResult<AuthResponse> {
+    let session_id = Uuid::now_v7();
+    let (refresh_token, hash) = TokenService::random_refresh();
+    let expires = Utc::now().timestamp() + state.tokens.refresh_ttl_days as i64 * 86400;
+    state
+        .store
+        .create_session(SessionRecord {
+            id: session_id,
+            user_id: user.id,
+            refresh_hash: hash,
+            expires_at: expires,
+            revoked: false,
+        })
+        .await?;
+    Ok(AuthResponse {
+        access_token: state.tokens.issue_access(user.id, session_id),
+        refresh_token,
+        expires_in: state.tokens.access_ttl_seconds,
+        user: to_protocol_user(user),
+    })
+}
+
+pub async fn create_server(
+    state: &AppState,
+    user: Uuid,
+    name: String,
+) -> ApiResult<chat_protocol::Server> {
+    validate_display(&name)?;
+    let server = Server {
+        id: Uuid::now_v7(),
+        name,
+        owner_id: user,
+        invite_code: invite_code(),
+    };
+    let channel = Channel {
+        id: Uuid::now_v7(),
+        server_id: server.id,
+        name: "general".into(),
+        kind: ChannelKind::Text,
+    };
+    let created = state
+        .store
+        .create_server(user, server, Uuid::now_v7(), Uuid::now_v7(), channel)
+        .await?;
+    let _ = state
+        .store
+        .add_channel(Channel {
+            id: Uuid::now_v7(),
+            server_id: created.server.id,
+            name: "语音".into(),
+            kind: ChannelKind::Voice,
+        })
+        .await?;
+    Ok(to_protocol_server(created.server))
+}
+
+pub async fn list_servers(state: &AppState, user: Uuid) -> ApiResult<Vec<chat_protocol::Server>> {
+    Ok(state
+        .store
+        .list_servers(user)
+        .await?
+        .into_iter()
+        .map(to_protocol_server)
+        .collect())
+}
+
+pub async fn list_channels(
+    state: &AppState,
+    user: Uuid,
+    server_id: Uuid,
+) -> ApiResult<Vec<chat_protocol::Channel>> {
+    let servers = state.store.list_servers(user).await?;
+    if !servers.iter().any(|s| s.id == server_id) {
+        return Err(ApiErr::forbidden());
+    }
+    Ok(state
+        .store
+        .list_channels(server_id)
+        .await?
+        .into_iter()
+        .map(to_protocol_channel)
+        .collect())
+}
+
+pub async fn create_channel(
+    state: &AppState,
+    user: Uuid,
+    server_id: Uuid,
+    name: String,
+    kind: String,
+) -> ApiResult<chat_protocol::Channel> {
+    validate_display(&name)?;
+    let kind = ChannelKind::parse(&kind)
+        .ok_or_else(|| ApiErr::bad("invalid_kind", "kind must be text or voice."))?;
+    let servers = state.store.list_servers(user).await?;
+    let server = servers
+        .iter()
+        .find(|s| s.id == server_id)
+        .ok_or_else(ApiErr::forbidden)?;
+    if server.owner_id != user {
+        return Err(ApiErr::forbidden());
+    }
+    let channel = state
+        .store
+        .add_channel(Channel {
+            id: Uuid::now_v7(),
+            server_id,
+            name,
+            kind,
+        })
+        .await?;
+    let members = state.store.list_members(server_id).await?;
+    let payload = serde_json::to_value(to_protocol_channel(channel.clone())).unwrap_or_default();
+    dispatch(state, &members, "CHANNEL_CREATE", payload).await?;
+    Ok(to_protocol_channel(channel))
+}
+
+pub async fn join_server(
+    state: &AppState,
+    user: Uuid,
+    code: String,
+) -> ApiResult<chat_protocol::Server> {
+    let code = code.trim().to_ascii_uppercase();
+    if code.len() < 6 || code.len() > 16 {
+        return Err(ApiErr::bad("invalid_invite", "Invalid invite code."));
+    }
+    let server = state.store.join_invite(user, &code).await?;
+    let members = state.store.list_members(server.id).await?;
+    let user_row = state
+        .store
+        .find_user(user)
+        .await?
+        .ok_or_else(ApiErr::unavailable)?;
+    let payload = serde_json::json!({
+        "server_id": server.id,
+        "user": to_protocol_user(user_row)
+    });
+    dispatch(state, &members, "MEMBER_JOIN", payload).await?;
+    Ok(to_protocol_server(server))
+}
+
+pub async fn page_messages(
+    state: &AppState,
+    user: Uuid,
+    channel_id: Uuid,
+    before: Option<Uuid>,
+    limit: Option<u32>,
+) -> ApiResult<chat_protocol::MessagePage> {
+    require(&*state.store, user, channel_id, Permissions::VIEW_CHANNEL).await?;
+    let limit = limit.unwrap_or(DEFAULT_PAGE_SIZE).clamp(1, MAX_PAGE_SIZE);
+    let (items, before) = state.store.page_messages(channel_id, before, limit).await?;
+    let api = state.settings.api_origin();
+    Ok(chat_protocol::MessagePage {
+        items: items
+            .iter()
+            .map(|item| message_dto(&state.tokens, &api, item))
+            .collect(),
+        before,
+    })
+}
+
+pub async fn send_message(
+    state: &AppState,
+    user: Uuid,
+    channel_id: Uuid,
+    content: Option<String>,
+    reply_to: Option<Uuid>,
+    attachment_ids: Vec<Uuid>,
+    idempotency: Option<String>,
+) -> ApiResult<chat_protocol::Message> {
+    require(&*state.store, user, channel_id, Permissions::SEND_MESSAGE).await?;
+    if let Some(key) = idempotency.as_deref() {
+        if !(8..=128).contains(&key.len()) {
+            return Err(ApiErr::bad(
+                "invalid_idempotency",
+                "Idempotency-Key must be 8-128 characters.",
+            ));
+        }
+        if let Some(existing) = state.store.find_idempotent(user, key).await? {
+            return Ok(message_dto(
+                &state.tokens,
+                &state.settings.api_origin(),
+                &existing,
+            ));
+        }
+    }
+    let content = content.and_then(|value| {
+        let trimmed = value.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
+    if let Some(text) = &content
+        && text.len() > MAX_CONTENT_BYTES
+    {
+        return Err(ApiErr::bad("too_long", "Message is too long."));
+    }
+    if attachment_ids.len() > MAX_ATTACHMENTS_PER_MESSAGE {
+        return Err(ApiErr::bad(
+            "too_many_files",
+            "At most 4 images per message.",
+        ));
+    }
+    if content.is_none() && attachment_ids.is_empty() {
+        return Err(ApiErr::bad(
+            "empty_message",
+            "Message needs text or an image.",
+        ));
+    }
+    let channel = state
+        .store
+        .find_channel(channel_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    let id = Uuid::now_v7();
+    let attachments = if attachment_ids.is_empty() {
+        vec![]
+    } else {
+        state
+            .store
+            .bind_attachments(id, user, &attachment_ids)
+            .await?
+    };
+    let message = Message {
+        id,
+        channel_id,
+        author_id: user,
+        kind: "text".into(),
+        content,
+        created_at: Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        edited_at: None,
+        reply_to,
+        attachments,
+    };
+    let api = state.settings.api_origin();
+    let dto = message_dto(&state.tokens, &api, &message);
+    let payload = serde_json::to_value(&dto).unwrap_or_default();
+    let members = state.store.list_members(channel.server_id).await?;
+    let (_, events) = state
+        .store
+        .insert_message(
+            message,
+            &members,
+            "MESSAGE_CREATE",
+            payload.clone(),
+            idempotency.as_deref(),
+        )
+        .await?;
+    fanout(&state.hub, events).await;
+    Ok(dto)
+}
+
+pub async fn upload(
+    state: &AppState,
+    user: Uuid,
+    file_name: String,
+    mime: String,
+    tmp: std::path::PathBuf,
+    size: u64,
+) -> ApiResult<chat_protocol::Attachment> {
+    let mime = sniff_image(&tmp, &mime, &file_name)?.to_string();
+    let id = Uuid::now_v7();
+    let object_key = Uuid::now_v7();
+    state.objects.commit(&tmp, object_key).await?;
+    let thumbnail_key = state
+        .objects
+        .thumbnail(object_key)
+        .await
+        .map(|_| object_key);
+    let attachment = Attachment {
+        id,
+        file_name: display_name(&file_name),
+        mime_type: mime,
+        size,
+        object_key,
+        thumbnail_key,
+    };
+    state
+        .store
+        .insert_attachment(attachment.clone(), user)
+        .await?;
+    Ok(attachment_dto(
+        &state.tokens,
+        &state.settings.api_origin(),
+        &attachment,
+    ))
+}
+
+pub async fn ready_payload(
+    state: &AppState,
+    user: Uuid,
+    session_id: Uuid,
+) -> ApiResult<chat_protocol::Ready> {
+    let me = state
+        .store
+        .find_user(user)
+        .await?
+        .ok_or_else(ApiErr::unauthorized)?;
+    let servers = state.store.list_servers(user).await?;
+    let mut channels = Vec::new();
+    for server in &servers {
+        channels.extend(state.store.list_channels(server.id).await?);
+    }
+    let users = state.store.list_visible_users(user).await?;
+    let server_ids: Vec<Uuid> = servers.iter().map(|server| server.id).collect();
+    let voice_states = state
+        .voice
+        .for_servers(&server_ids)
+        .await
+        .into_iter()
+        .map(to_protocol_voice)
+        .collect();
+    Ok(chat_protocol::Ready {
+        session_id: session_id.to_string(),
+        user: to_protocol_user(me),
+        servers: servers.into_iter().map(to_protocol_server).collect(),
+        channels: channels.into_iter().map(to_protocol_channel).collect(),
+        users: users.into_iter().map(to_protocol_user).collect(),
+        heartbeat_interval_ms: 30_000,
+        voice_states,
+    })
+}
+
+fn to_protocol_voice(state: chat_domain::voice::VoiceState) -> chat_protocol::VoiceState {
+    chat_protocol::VoiceState {
+        user_id: state.user_id,
+        server_id: state.server_id,
+        channel_id: Some(state.channel_id),
+        self_mute: state.self_mute,
+        self_deaf: state.self_deaf,
+        display_name: state.display_name,
+    }
+}
+
+pub async fn join_voice(
+    state: &AppState,
+    user: Uuid,
+    channel_id: Uuid,
+    mut self_mute: bool,
+    self_deaf: bool,
+) -> ApiResult<chat_protocol::VoiceJoin> {
+    if self_deaf {
+        self_mute = true;
+    }
+    let channel = require(&*state.store, user, channel_id, Permissions::CONNECT_VOICE).await?;
+    if channel.kind != ChannelKind::Voice {
+        return Err(ApiErr::bad("invalid_channel", "Not a voice channel."));
+    }
+    let can_speak = require(&*state.store, user, channel_id, Permissions::SPEAK)
+        .await
+        .is_ok();
+    let display_name = state
+        .store
+        .find_user(user)
+        .await?
+        .map(|row| row.display_name)
+        .unwrap_or_else(|| user.to_string());
+    let previous = state.voice.get(user).await;
+    let voice = chat_domain::voice::VoiceState {
+        user_id: user,
+        server_id: channel.server_id,
+        channel_id,
+        self_mute,
+        self_deaf,
+        display_name,
+    };
+    state.voice.put(voice.clone()).await;
+    if let Some(prev) = previous.filter(|prev| prev.channel_id != channel_id) {
+        publish_voice(state, &prev, true).await?;
+    }
+    publish_voice(state, &voice, false).await?;
+    let token = crate::rtc::mint_voice_token(
+        &state.settings.rtc,
+        &user.to_string(),
+        &voice.display_name,
+        &chat_domain::voice::VoiceState::room_name(channel_id),
+        can_speak,
+        std::time::Duration::from_secs(300),
+    )
+    .map_err(|_| ApiErr::unavailable())?;
+    Ok(chat_protocol::VoiceJoin {
+        rtc: chat_protocol::RtcToken {
+            token: token.jwt,
+            url: token.url,
+            room: token.room,
+            expires_at: crate::rtc::rfc3339_unix(token.expires_at_unix),
+        },
+        state: to_protocol_voice(voice),
+    })
+}
+
+pub async fn patch_voice(
+    state: &AppState,
+    user: Uuid,
+    self_mute: bool,
+    self_deaf: bool,
+) -> ApiResult<chat_protocol::VoiceState> {
+    let current = state
+        .voice
+        .get(user)
+        .await
+        .ok_or_else(|| ApiErr::conflict("Not connected to a voice channel."))?;
+    Ok(
+        join_voice(state, user, current.channel_id, self_mute, self_deaf)
+            .await?
+            .state,
+    )
+}
+
+pub async fn leave_voice(
+    state: &AppState,
+    user: Uuid,
+) -> ApiResult<Option<chat_protocol::VoiceState>> {
+    let Some(state_row) = state.voice.remove(user).await else {
+        return Ok(None);
+    };
+    publish_voice(state, &state_row, true).await?;
+    Ok(Some(to_protocol_voice(state_row)))
+}
+
+pub async fn list_voice(
+    state: &AppState,
+    user: Uuid,
+    channel_id: Uuid,
+) -> ApiResult<Vec<chat_protocol::VoiceState>> {
+    require(&*state.store, user, channel_id, Permissions::VIEW_CHANNEL).await?;
+    Ok(state
+        .voice
+        .list_channel(channel_id)
+        .await
+        .into_iter()
+        .map(to_protocol_voice)
+        .collect())
+}
+
+async fn publish_voice(
+    state: &AppState,
+    voice: &chat_domain::voice::VoiceState,
+    left: bool,
+) -> ApiResult<()> {
+    let members = state.store.list_members(voice.server_id).await?;
+    let payload = serde_json::to_value(chat_protocol::VoiceState {
+        user_id: voice.user_id,
+        server_id: voice.server_id,
+        channel_id: if left { None } else { Some(voice.channel_id) },
+        self_mute: voice.self_mute,
+        self_deaf: voice.self_deaf,
+        display_name: voice.display_name.clone(),
+    })
+    .unwrap_or_default();
+    dispatch(state, &members, "VOICE_STATE_UPDATE", payload).await
+}
+
+async fn dispatch(
+    state: &AppState,
+    members: &[Uuid],
+    event: &str,
+    payload: serde_json::Value,
+) -> ApiResult<()> {
+    let events = state.store.enqueue(members, event, payload).await?;
+    fanout(&state.hub, events).await;
+    Ok(())
+}
+
+pub async fn fanout(hub: &Hub, events: Vec<OutboxEvent>) {
+    for event in events {
+        hub.send(
+            event.user_id,
+            chat_protocol::GatewayEnvelope {
+                op: "dispatch".into(),
+                event: Some(event.event),
+                seq: Some(event.seq.to_string()),
+                data: event.payload,
+            },
+        )
+        .await;
+    }
+}
+
+fn validate_username(value: &str) -> ApiResult<()> {
+    if (2..=64).contains(&value.len())
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        Ok(())
+    } else {
+        Err(ApiErr::bad(
+            "invalid_username",
+            "Username must be 2-64 letters, numbers, _ or -.",
+        ))
+    }
+}
+
+fn validate_display(value: &str) -> ApiResult<()> {
+    let trimmed = value.trim();
+    if (1..=100).contains(&trimmed.len()) {
+        Ok(())
+    } else {
+        Err(ApiErr::bad(
+            "invalid_name",
+            "Name must be 1-100 characters.",
+        ))
+    }
+}
+
+fn validate_password(value: &str) -> ApiResult<()> {
+    if (8..=128).contains(&value.len()) {
+        Ok(())
+    } else {
+        Err(ApiErr::bad(
+            "invalid_password",
+            "Password must be 8-128 characters.",
+        ))
+    }
+}
+
+pub async fn trim_loop(store: Arc<dyn Store>) {
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        let _ = store.trim_outbox(15 * 60, 10_000).await;
+    }
+}

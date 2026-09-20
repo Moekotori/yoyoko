@@ -1,28 +1,82 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Styles.Resources>
-    <SolidColorBrush x:Key="CanvasBrush">#161819</SolidColorBrush>
-    <SolidColorBrush x:Key="SidebarBrush">#1C1F20</SolidColorBrush>
-    <SolidColorBrush x:Key="RailBrush">#111314</SolidColorBrush>
-    <SolidColorBrush x:Key="PrimaryTextBrush">#E6E9E7</SolidColorBrush>
-    <SolidColorBrush x:Key="MutedTextBrush">#959E99</SolidColorBrush>
-    <SolidColorBrush x:Key="AccentBrush">#A8D8BE</SolidColorBrush>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Chat.UI/Styles/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+      <SolidColorBrush x:Key="CanvasBrush">#1A1A1C</SolidColorBrush>
+      <SolidColorBrush x:Key="SidebarBrush">#171719</SolidColorBrush>
+      <SolidColorBrush x:Key="RailBrush">#121214</SolidColorBrush>
+      <SolidColorBrush x:Key="ChromeBrush">#151517</SolidColorBrush>
+      <SolidColorBrush x:Key="RaisedBrush">#222225</SolidColorBrush>
+      <SolidColorBrush x:Key="HoverBrush">#262629</SolidColorBrush>
+      <SolidColorBrush x:Key="SelectedBrush">#2B2833</SolidColorBrush>
+      <SolidColorBrush x:Key="PrimaryTextBrush">#DDDDE2</SolidColorBrush>
+      <SolidColorBrush x:Key="MutedTextBrush">#96969F</SolidColorBrush>
+      <SolidColorBrush x:Key="QuietTextBrush">#777780</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentBrush">#B7A4E6</SolidColorBrush>
+      <SolidColorBrush x:Key="DividerBrush">#29292D</SolidColorBrush>
+      <SolidColorBrush x:Key="FocusBrush">#75658E</SolidColorBrush>
+    </ResourceDictionary>
   </Styles.Resources>
   <Style Selector="Window">
     <Setter Property="Background" Value="{StaticResource CanvasBrush}" />
     <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="FontFamily" Value="Inter, .AppleSystemUIFont, PingFang SC, Microsoft YaHei UI, Noto Sans CJK SC, sans-serif" />
     <Setter Property="FontSize" Value="14" />
+    <Setter Property="UseLayoutRounding" Value="True" />
   </Style>
   <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
-  <Style Selector="Button"><Setter Property="CornerRadius" Value="2" /><Setter Property="BorderThickness" Value="0" /></Style>
-  <Style Selector="Button.primary">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-    <Setter Property="Foreground" Value="#17271E" />
-    <Setter Property="Padding" Value="18,11" />
+  <Style Selector="TextBlock.quiet"><Setter Property="Foreground" Value="{StaticResource QuietTextBrush}" /></Style>
+  <Style Selector="TextBlock.section"><Setter Property="FontSize" Value="11" /><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+  <Style Selector="PathIcon"><Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" /></Style>
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="Transitions">
+      <Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /><BrushTransition Property="Foreground" Duration="0:0:0.12" /></Transitions>
+    </Setter>
   </Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{StaticResource HoverBrush}" /></Style>
+  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#35313F" /></Style>
+  <Style Selector="Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="BorderBrush" Value="{StaticResource FocusBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
+  <Style Selector="Button.icon">
+    <Setter Property="Width" Value="30" /><Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="6" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+  </Style>
+  <Style Selector="Button.icon.active"><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="Background" Value="#292530" /></Style>
+  <Style Selector="Button.channel">
+    <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Height" Value="34" /><Setter Property="Padding" Value="10,0" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+  </Style>
+  <Style Selector="Button.channel.selected"><Setter Property="Background" Value="{StaticResource SelectedBrush}" /><Setter Property="Foreground" Value="#ECE8F5" /></Style>
+  <Style Selector="Button.tab"><Setter Property="Height" Value="41" /><Setter Property="Padding" Value="16,0,8,0" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+  <Style Selector="Button.tab.selected"><Setter Property="Foreground" Value="#ECE8F5" /></Style>
+  <Style Selector="Grid.channelTab.selected"><Setter Property="Background" Value="{StaticResource CanvasBrush}" /></Style>
+  <Style Selector="Button.tabClose"><Setter Property="Opacity" Value="0" /><Setter Property="Width" Value="22" /><Setter Property="Height" Value="24" /><Setter Property="Padding" Value="5" /></Style>
+  <Style Selector="Grid.channelTab:pointerover Button.tabClose"><Setter Property="Opacity" Value="1" /></Style>
+  <Style Selector="Grid.channelTab.selected Button.tabClose"><Setter Property="Opacity" Value="0.6" /></Style>
+  <Style Selector="Button.tabClose:focus-visible"><Setter Property="Opacity" Value="1" /></Style>
+  <Style Selector="Button.primary"><Setter Property="Background" Value="{StaticResource AccentBrush}" /><Setter Property="Foreground" Value="#211C2C" /><Setter Property="Padding" Value="16,10" /></Style>
+  <Style Selector="Button.send"><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="Background" Value="#332C40" /></Style>
+  <Style Selector="Button.send:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#696472" /></Style>
   <Style Selector="TextBox">
-    <Setter Property="CornerRadius" Value="2" /><Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="Background" Value="#202425" /><Setter Property="Padding" Value="12,11" />
+    <Setter Property="CornerRadius" Value="2" /><Setter Property="FontSize" Value="14" />
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" /><Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+    <Setter Property="Padding" Value="10,8" /><Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" /><Setter Property="SelectionBrush" Value="#665C79" />
   </Style>
-  <Style Selector="ListBox"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
+  <Style Selector="TextBox.composer">
+    <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="4,7" />
+    <Setter Property="FontSize" Value="15" /><Setter Property="MinHeight" Value="34" />
+    <Setter Property="PlaceholderForeground" Value="#8B8994" />
+  </Style>
+  <Style Selector="Border.composerFrame:focus-within"><Setter Property="BorderBrush" Value="{StaticResource FocusBrush}" /></Style>
+  <Style Selector="ListBox"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="0" /></Style>
   <Style Selector="ListBoxItem"><Setter Property="CornerRadius" Value="2" /></Style>
+  <Style Selector="ToolTip"><Setter Property="FontSize" Value="12" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Background" Value="#29282E" /><Setter Property="Padding" Value="9,6" /></Style>
 </Styles>

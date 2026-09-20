@@ -12,7 +12,8 @@ license = "LicenseRef-Proprietary"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v7", "serde"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time", "net"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time", "net", "fs", "io-util", "sync"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [profile.release]
 lto = "thin"

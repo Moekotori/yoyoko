@@ -18,7 +18,22 @@ public sealed record GatewayHello(int ProtocolVersion, int HeartbeatIntervalMs);
 public sealed record GatewayIdentify(int ProtocolVersion, string AccessToken);
 public sealed record GatewayResume(int ProtocolVersion, string AccessToken, string SessionId, [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)] long LastSeq);
 public sealed record ApiError(string Code, string Message);
-// Permission bitsets and gateway sequence counters are decimal strings on the wire.
+public sealed record UserDto(Guid Id, string Username, string DisplayName);
+public sealed record RegisterRequest(string Username, string DisplayName, string Password);
+public sealed record LoginRequest(string Username, string Password);
+public sealed record RefreshRequest(string RefreshToken);
+public sealed record AuthResponse(string AccessToken, string RefreshToken, ulong ExpiresIn, UserDto User);
+public sealed record ServerDto(Guid Id, string Name, Guid OwnerId, string InviteCode);
+public sealed record ChannelDto(Guid Id, Guid ServerId, string Name, string Kind);
+public sealed record CreateServerRequest(string Name);
+public sealed record CreateChannelRequest(string Name, string Kind);
+public sealed record JoinRequest(string InviteCode);
+public sealed record VoiceFlags(bool SelfMute, bool SelfDeaf);
+public sealed record VoiceStateDto(Guid UserId, Guid ServerId, Guid? ChannelId, bool SelfMute, bool SelfDeaf, string DisplayName);
+public sealed record RtcTokenDto(string Token, Uri Url, string Room, DateTimeOffset ExpiresAt);
+public sealed record VoiceJoinDto(RtcTokenDto Rtc, VoiceStateDto State);
+public sealed record GatewayReady(string SessionId, UserDto User, ServerDto[] Servers, ChannelDto[] Channels,
+    UserDto[] Users, int HeartbeatIntervalMs, VoiceStateDto[] VoiceStates);
 public sealed record MessageDto(Guid Id, Guid ChannelId, Guid AuthorId, string Kind,
     string? Content, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, Guid? ReplyTo,
     Guid[] Mentions, AttachmentDto[] Attachments, JsonElement[] Embeds,
@@ -33,6 +48,24 @@ public sealed record AttachmentDto(Guid Id, string FileName, string MimeType, lo
 [JsonSerializable(typeof(GatewayIdentify))]
 [JsonSerializable(typeof(GatewayResume))]
 [JsonSerializable(typeof(ApiError))]
+[JsonSerializable(typeof(UserDto))]
+[JsonSerializable(typeof(RegisterRequest))]
+[JsonSerializable(typeof(LoginRequest))]
+[JsonSerializable(typeof(RefreshRequest))]
+[JsonSerializable(typeof(AuthResponse))]
+[JsonSerializable(typeof(ServerDto))]
+[JsonSerializable(typeof(ServerDto[]))]
+[JsonSerializable(typeof(ChannelDto))]
+[JsonSerializable(typeof(ChannelDto[]))]
+[JsonSerializable(typeof(CreateServerRequest))]
+[JsonSerializable(typeof(CreateChannelRequest))]
+[JsonSerializable(typeof(JoinRequest))]
+[JsonSerializable(typeof(VoiceFlags))]
+[JsonSerializable(typeof(VoiceStateDto))]
+[JsonSerializable(typeof(VoiceStateDto[]))]
+[JsonSerializable(typeof(RtcTokenDto))]
+[JsonSerializable(typeof(VoiceJoinDto))]
+[JsonSerializable(typeof(GatewayReady))]
 [JsonSerializable(typeof(MessageDto))]
 [JsonSerializable(typeof(MessageDto[]))]
 public partial class ProtocolJson : JsonSerializerContext;

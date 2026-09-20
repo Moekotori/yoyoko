@@ -6,20 +6,28 @@ listen = "127.0.0.1:8080"
 public_url = "http://localhost:8080"
 allowed_origins = ["http://localhost:8080"]
 
+[auth]
+# HMAC secret for access tokens. Replace before any real deployment.
+token_secret = "local-development-only-change-me-32b"
+access_ttl_seconds = 43200
+refresh_ttl_days = 30
+
 [database]
-url = "postgres://chat:chat_dev@localhost:5432/chat"
+# Local file store for machines without Postgres. Compose/CI override to postgres://.
+url = "local:data/chat.json"
 max_connections = 8
 
 [redis]
 url = "redis://localhost:6379"
 
 [storage]
-provider = "s3"
+provider = "local"
 endpoint = "http://localhost:9000"
-public_url = "http://localhost:9000/chat"
+public_url = "http://localhost:8080/api/v1"
 bucket = "chat"
 access_key = "chat_dev"
 secret_key = "local-development-only"
+local_dir = "data/objects"
 
 [rtc]
 provider = "livekit"

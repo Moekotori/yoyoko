@@ -1,5 +1,16 @@
 pub mod api;
-pub mod channel;
 pub mod configuration;
 pub mod database;
+pub mod error;
 pub mod gateway;
+pub mod identity;
+pub mod local;
+pub mod objects;
+pub mod postgres;
+pub mod rate_limit;
+pub mod realtime;
+pub mod rtc;
+pub mod services;
+pub mod state;
+pub mod store;
+pub mod voice;

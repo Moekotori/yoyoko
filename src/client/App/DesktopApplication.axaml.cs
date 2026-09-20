@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Chat.Core.Instances;
 using Chat.Networking.Http;
+using Chat.Networking.WebSocket;
 using Chat.Storage;
 using Chat.UI.Shell;
 
@@ -21,11 +22,12 @@ public partial class DesktopApplication : Application
             var settings = AppSettings.Load();
             _http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
             var cache = new SqliteCache(settings.CachePath);
+            var vault = new FileCredentialVault(Path.GetDirectoryName(settings.CachePath)!);
             _instances = new(cache, new HttpInstanceDiscovery(_http));
-            var shell = new ShellViewModel(_instances, settings.ProductName, _lifetime.Token);
+            var shell = new ShellViewModel(_instances, cache, vault, new HttpInstanceDiscovery(_http),
+                new ChatApiFactory(), () => new WebSocketConnection(), settings.ProductName, _lifetime.Token);
             var window = new MainWindow { DataContext = shell };
             desktop.MainWindow = window;
-            // Show first; hydrate SQLite without blocking the first paint or depending on network.
             window.Opened += async (_, _) => await shell.InitializeAsync(cache.InitializeAsync);
             desktop.Exit += (_, _) =>
             {

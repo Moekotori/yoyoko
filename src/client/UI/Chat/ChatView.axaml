@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat"
+  x:Class="Chat.UI.Chat.ChatView" x:DataType="vm:ShellViewModel">
+  <Grid RowDefinitions="*,Auto">
+    <ListBox x:Name="Messages" ItemsSource="{Binding Messages}" Background="Transparent" Margin="8,4"
+      AutomationProperties.Name="消息">
+      <ListBox.ItemsPanel>
+        <ItemsPanelTemplate>
+          <VirtualizingStackPanel />
+        </ItemsPanelTemplate>
+      </ListBox.ItemsPanel>
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="chat:MessageRow">
+          <StackPanel Spacing="4" Margin="12,8">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="{Binding Author}" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding Time}" Classes="muted" FontSize="12" />
+              <TextBlock Text="发送中" Classes="muted" FontSize="12" IsVisible="{Binding IsPending}" />
+              <TextBlock Text="发送失败" Foreground="#D98980" FontSize="12" IsVisible="{Binding IsFailed}" />
+            </StackPanel>
+            <TextBlock Text="{Binding Content}" TextWrapping="Wrap" IsVisible="{Binding HasText}" />
+            <Image Source="{Binding Image}" MaxWidth="240" MaxHeight="180" Stretch="Uniform"
+              IsVisible="{Binding HasBitmap}" />
+            <TextBlock Text="图片" Classes="muted" IsVisible="{Binding ShowImagePlaceholder}" />
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <Border Grid.Row="1" BorderThickness="0,1,0,0" BorderBrush="#2A2F2D" Padding="16,10">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+        <Button Content="图片" Command="{Binding AttachImage}" Padding="12,10" />
+        <TextBox Grid.Column="1" Text="{Binding Draft}" PlaceholderText="发送消息"
+          MinHeight="36" AutomationProperties.Name="消息输入">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding Send}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+        <Button Grid.Column="2" Classes="primary" Content="发送" Command="{Binding Send}" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

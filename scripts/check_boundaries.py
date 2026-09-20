@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[1]
 allowed = {
     "Domain": set(), "Protocol": set(), "Core": {"Domain", "Protocol"},
     "Networking": {"Core", "Protocol"}, "Storage": {"Core", "Domain", "Protocol"},
-    "Media": set(), "UI": {"Core", "Domain"},
+    "Media": set(), "UI": {"Core", "Domain", "Protocol"},
     "App": {"Core", "Networking", "Storage", "Media", "UI"},
 }
 for path in (root / "src/client").glob("*/*.csproj"):

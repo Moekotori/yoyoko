@@ -1,0 +1,6 @@
+{
+  "token":"header.payload.signature",
+  "url":"ws://localhost:7880",
+  "room":"voice:01950000-0000-7000-8000-000000000040",
+  "expires_at":"2026-09-20T10:15:00Z"
+}

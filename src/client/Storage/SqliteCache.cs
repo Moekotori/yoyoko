@@ -29,18 +29,22 @@ public sealed class SqliteCache : IInstanceStore, IMessageCache
         command.ExecuteNonQuery();
         command.CommandText = "PRAGMA user_version;";
         var version = Convert.ToInt32(command.ExecuteScalar());
-        if (version > 1) throw new InvalidDataException("Cache schema newer than this client.");
-        if (version == 0)
-        {
-            using var stream = typeof(SqliteCache).Assembly.GetManifestResourceStream("Chat.Storage.Migrations.001_cache.sql")!;
-            using var reader = new StreamReader(stream);
-            using var transaction = connection.BeginTransaction();
-            command.Transaction = transaction;
-            command.CommandText = reader.ReadToEnd();
-            command.ExecuteNonQuery();
-            transaction.Commit();
-        }
+        if (version > 2) throw new InvalidDataException("Cache schema newer than this client.");
+        if (version < 1) Apply(connection, "Chat.Storage.Migrations.001_cache.sql");
+        if (version < 2) Apply(connection, "Chat.Storage.Migrations.002_sync.sql");
     }, cancellationToken);
+
+    private static void Apply(SqliteConnection connection, string resource)
+    {
+        using var stream = typeof(SqliteCache).Assembly.GetManifestResourceStream(resource)!;
+        using var reader = new StreamReader(stream);
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = reader.ReadToEnd();
+        command.ExecuteNonQuery();
+        transaction.Commit();
+    }
 
     public Task<IReadOnlyList<InstanceDescriptor>> LoadAsync(CancellationToken cancellationToken) => Task.Run<IReadOnlyList<InstanceDescriptor>>(() =>
     {
@@ -104,11 +108,130 @@ public sealed class SqliteCache : IInstanceStore, IMessageCache
     public Task PurgeAsync(CacheScope scope, CancellationToken cancellationToken) => Task.Run(() =>
     {
         using var connection = Open();
+        using var transaction = connection.BeginTransaction();
         using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account";
+        command.Transaction = transaction;
         Scope(command, scope);
+        foreach (var table in new[] { "messages", "servers", "channels", "users", "sync_state" })
+        {
+            command.CommandText = $"DELETE FROM {table} WHERE instance_id=$instance AND account_id=$account";
+            command.ExecuteNonQuery();
+        }
+        transaction.Commit();
+    }, cancellationToken);
+
+    public Task SaveCommunityAsync(CacheScope scope, CommunitySnapshot snapshot, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        Scope(command, scope);
+        foreach (var table in new[] { "servers", "channels", "users" })
+        {
+            command.CommandText = $"DELETE FROM {table} WHERE instance_id=$instance AND account_id=$account";
+            command.ExecuteNonQuery();
+        }
+        foreach (var server in snapshot.Servers)
+        {
+            command.CommandText = "INSERT INTO servers VALUES ($instance,$account,$id,$payload)";
+            command.Parameters.Clear();
+            Scope(command, scope);
+            command.Parameters.AddWithValue("$id", server.Id.ToString());
+            command.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(server, ProtocolJson.Default.ServerDto));
+            command.ExecuteNonQuery();
+        }
+        foreach (var channel in snapshot.Channels)
+        {
+            command.CommandText = "INSERT INTO channels VALUES ($instance,$account,$id,$server,$payload)";
+            command.Parameters.Clear();
+            Scope(command, scope);
+            command.Parameters.AddWithValue("$id", channel.Id.ToString());
+            command.Parameters.AddWithValue("$server", channel.ServerId.ToString());
+            command.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(channel, ProtocolJson.Default.ChannelDto));
+            command.ExecuteNonQuery();
+        }
+        foreach (var user in snapshot.Users)
+        {
+            command.CommandText = "INSERT INTO users VALUES ($instance,$account,$id,$payload)";
+            command.Parameters.Clear();
+            Scope(command, scope);
+            command.Parameters.AddWithValue("$id", user.Id.ToString());
+            command.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(user, ProtocolJson.Default.UserDto));
+            command.ExecuteNonQuery();
+        }
+        transaction.Commit();
+    }, cancellationToken);
+
+    public Task<CommunitySnapshot> LoadCommunityAsync(CacheScope scope, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        return new CommunitySnapshot(ReadAll(connection, scope, "servers", ProtocolJson.Default.ServerDto),
+            ReadAll(connection, scope, "channels", ProtocolJson.Default.ChannelDto),
+            ReadAll(connection, scope, "users", ProtocolJson.Default.UserDto));
+    }, cancellationToken);
+
+    public Task SaveCursorAsync(CacheScope scope, string? sessionId, long seq, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO sync_state VALUES ($instance,$account,$session,$seq) ON CONFLICT(instance_id,account_id) DO UPDATE SET session_id=$session, last_committed_seq=$seq";
+        Scope(command, scope);
+        command.Parameters.AddWithValue("$session", (object?)sessionId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$seq", seq);
         command.ExecuteNonQuery();
     }, cancellationToken);
+
+    public Task<(string? SessionId, long Seq)> LoadCursorAsync(CacheScope scope, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT session_id, last_committed_seq FROM sync_state WHERE instance_id=$instance AND account_id=$account";
+        Scope(command, scope);
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? (reader.IsDBNull(0) ? null : reader.GetString(0), reader.GetInt64(1)) : ((string?)null, 0L);
+    }, cancellationToken);
+
+    public Task SaveAccountAsync(CacheScope scope, string displayName, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO accounts VALUES ($instance,$id,$name) ON CONFLICT(instance_id,id) DO UPDATE SET display_name=$name";
+        command.Parameters.AddWithValue("$instance", scope.InstanceId.Value.ToString());
+        command.Parameters.AddWithValue("$id", scope.AccountId.ToString());
+        command.Parameters.AddWithValue("$name", displayName);
+        command.ExecuteNonQuery();
+    }, cancellationToken);
+
+    public Task SetSettingAsync(string key, string value, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO settings VALUES ($key,$value) ON CONFLICT(key) DO UPDATE SET value=$value";
+        command.Parameters.AddWithValue("$key", key);
+        command.Parameters.AddWithValue("$value", value);
+        command.ExecuteNonQuery();
+    }, cancellationToken);
+
+    public Task<string?> GetSettingAsync(string key, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT value FROM settings WHERE key=$key";
+        command.Parameters.AddWithValue("$key", key);
+        return command.ExecuteScalar() as string;
+    }, cancellationToken);
+
+    private static List<T> ReadAll<T>(SqliteConnection connection, CacheScope scope, string table, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> info)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT payload FROM {table} WHERE instance_id=$instance AND account_id=$account";
+        Scope(command, scope);
+        using var reader = command.ExecuteReader();
+        var items = new List<T>();
+        while (reader.Read()) items.Add(JsonSerializer.Deserialize(reader.GetString(0), info)!);
+        return items;
+    }
 
     private SqliteConnection Open()
     {

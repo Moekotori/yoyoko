@@ -1,0 +1,13 @@
+{
+  "op":"dispatch",
+  "event":"VOICE_STATE_UPDATE",
+  "seq":"9007199254740993",
+  "data":{
+    "user_id":"01950000-0000-7000-8000-000000000030",
+    "server_id":"01950000-0000-7000-8000-000000000050",
+    "channel_id":"01950000-0000-7000-8000-000000000040",
+    "self_mute":false,
+    "self_deaf":false,
+    "display_name":"Ada"
+  }
+}

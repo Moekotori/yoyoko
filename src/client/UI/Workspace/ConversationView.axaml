@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components"
+  x:Class="Chat.UI.Workspace.ConversationView" x:DataType="vm:WorkspaceViewModel" x:Name="Conversation">
+  <UserControl.Styles>
+    <Style Selector="ListBoxItem"><Setter Property="Padding" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Focusable" Value="False" /></Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#1E1E21" /></Style>
+    <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector="Grid.messageRow:pointerover Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
+    <Style Selector="Grid.messageRow:focus-within Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
+  </UserControl.Styles>
+  <Grid ColumnDefinitions="*,Auto">
+    <Grid RowDefinitions="52,Auto,*,Auto">
+      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+            <PathIcon Data="{StaticResource IconHash}" Foreground="{StaticResource QuietTextBrush}" Width="19" Height="19" />
+            <TextBlock Text="{Binding ChannelName}" FontSize="15" FontWeight="Medium" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="5">
+            <Button Classes="icon" Classes.active="{Binding SearchVisible}" Command="{Binding ToggleSearch}" ToolTip.Tip="搜索消息 · ⌘ F / Ctrl F" AutomationProperties.Name="搜索消息"><PathIcon Data="{StaticResource IconSearch}" /></Button>
+            <Button Classes="icon" Classes.active="{Binding MembersVisible}" Command="{Binding ToggleMembers}" ToolTip.Tip="成员" AutomationProperties.Name="切换成员栏"><PathIcon Data="{StaticResource IconPeople}" /></Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Grid Grid.Row="1" ColumnDefinitions="*,30" Margin="24,12,24,0" IsVisible="{Binding SearchVisible}">
+        <TextBox x:Name="SearchInput" Text="{Binding Query}" PlaceholderText="搜索此频道" AutomationProperties.Name="搜索消息内容" />
+        <Button Grid.Column="1" Classes="icon" Command="{Binding ToggleSearch}" AutomationProperties.Name="关闭搜索"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button>
+      </Grid>
+      <Grid Grid.Row="2" x:Name="TimelineSurface">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9" IsVisible="{Binding HasNoMessages}">
+          <PathIcon Data="{StaticResource IconHash}" Width="28" Height="28" Foreground="#57535F" Margin="0,0,0,5" />
+          <TextBlock Text="{Binding EmptyTitle}" HorizontalAlignment="Center" FontSize="15" Foreground="{StaticResource MutedTextBrush}" />
+          <TextBlock Text="{Binding EmptyDetail}" HorizontalAlignment="Center" FontSize="12" Foreground="{StaticResource QuietTextBrush}" />
+        </StackPanel>
+        <ListBox x:Name="Timeline" ItemsSource="{Binding Messages}" Margin="0,22,0,12" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="消息时间线">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:MessageItem">
+              <Grid Classes="messageRow" ColumnDefinitions="24,36,13,*,24" Margin="0,0,0,12">
+                <Grid.ContextMenu><ContextMenu><MenuItem Header="复制文本" Click="CopyMessage" /></ContextMenu></Grid.ContextMenu>
+                <c:Avatar Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top" Source="{Binding Avatar}" Margin="0,12,0,0" />
+                <StackPanel Grid.Column="3" Spacing="4" Margin="0,11,0,9">
+                  <StackPanel Orientation="Horizontal" Spacing="9">
+                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="#E3E1E8" />
+                    <TextBlock Text="{Binding Time}" Foreground="{StaticResource QuietTextBrush}" FontSize="11" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="16" LineHeight="25" Foreground="#C7C7CF" />
+                  <Button IsVisible="{Binding HasReaction}" Background="#2D2639" BorderBrush="#4A3E5D" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" HorizontalAlignment="Left" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="回应（尚未实现）">
+                    <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{StaticResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="#C7B6E7" /></StackPanel>
+                  </Button>
+                </StackPanel>
+                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
+                  <Button Classes="icon" Click="CopyMessage" AutomationProperties.Name="复制消息" ToolTip.Tip="复制文本"><PathIcon Data="{StaticResource IconCopy}" Width="16" Height="16" /></Button>
+                </Border>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+      <Border Grid.Row="3" Classes="composerFrame" Background="{StaticResource RaisedBrush}" BorderBrush="#323137" BorderThickness="1" CornerRadius="2" Margin="24,0,24,22" MinHeight="60" Padding="10,10">
+        <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+        <Grid ColumnDefinitions="30,*,30,1,30" ColumnSpacing="9">
+          <Button Classes="icon" Command="{Binding Unavailable}" ToolTip.Tip="添加附件" AutomationProperties.Name="添加附件"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
+          <TextBox x:Name="Composer" Grid.Column="1" Classes="composer" Text="{Binding Draft}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" IsEnabled="{Binding HasChannel}" AutomationProperties.Name="消息输入">
+            <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding Send}" /></TextBox.KeyBindings>
+          </TextBox>
+          <Button Grid.Column="2" Classes="icon" Command="{Binding Unavailable}" ToolTip.Tip="表情" AutomationProperties.Name="表情"><PathIcon Data="{StaticResource IconEmoji}" Width="19" Height="19" /></Button>
+          <Border Grid.Column="3" Background="{StaticResource DividerBrush}" Margin="0,7" />
+          <Button Grid.Column="4" Classes="icon send" Command="{Binding Send}" IsEnabled="{Binding CanAttemptSend}" ToolTip.Tip="发送" AutomationProperties.Name="发送"><PathIcon Data="{StaticResource IconSendFilled}" Width="18" Height="18" /></Button>
+        </Grid>
+      </Border>
+    </Grid>
+    <vm:MemberSidebar Grid.Column="1" IsVisible="{Binding MembersVisible}" />
+  </Grid>
+</UserControl>

@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components"
+  x:Class="Chat.UI.Workspace.MemberSidebar" x:DataType="vm:WorkspaceViewModel">
+  <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0" Width="208">
+    <Grid RowDefinitions="52,*">
+      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,0"><TextBlock Text="成员" FontSize="13" Classes="muted" VerticalAlignment="Center" /></Border>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="16,20" Spacing="12">
+          <TextBlock Text="{Binding MemberHeading}" Classes="section" Margin="4,0,0,3" />
+          <ItemsControl ItemsSource="{Binding Members}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MemberItem">
+                <Grid ColumnDefinitions="32,*" ColumnSpacing="10" Margin="4,0,0,18">
+                  <c:Avatar Width="32" Height="32" Source="{Binding Avatar}" IsOnline="True" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2"><TextBlock Text="{Binding Name}" FontSize="13" /><TextBlock Text="在线" Classes="muted" FontSize="11" /></StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Border>
+</UserControl>

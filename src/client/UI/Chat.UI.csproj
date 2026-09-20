@@ -3,7 +3,9 @@
   <ItemGroup>
     <ProjectReference Include="../Core/Chat.Core.csproj" />
     <ProjectReference Include="../Domain/Chat.Domain.csproj" />
+    <ProjectReference Include="../Protocol/Chat.Protocol.csproj" />
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
   </ItemGroup>
+  <ItemGroup><AvaloniaResource Include="Assets/*.png" /></ItemGroup>
 </Project>

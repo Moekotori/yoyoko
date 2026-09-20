@@ -9,3 +9,5 @@
 *.db-wal
 .DS_Store
 config.local.toml
+/data/
+node_modules/

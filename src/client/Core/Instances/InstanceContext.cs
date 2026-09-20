@@ -1,25 +1,28 @@
-using Chat.Domain.Instances;
 using Chat.Core.Realtime;
+using Chat.Core.Sessions;
+using Chat.Domain.Instances;
 
 namespace Chat.Core.Instances;
 
-// One owner per independent instance. No global account or global gateway.
 public sealed class InstanceContext(InstanceDescriptor descriptor) : IAsyncDisposable
 {
     public InstanceDescriptor Descriptor { get; } = descriptor;
-    public Account? Account { get; private set; }
-    public IGatewayConnection? Gateway { get; private set; }
-    public void AttachSession(Account account, IGatewayConnection gateway)
+    public InstanceSession? Session { get; private set; }
+    public Account? Account => Session?.Account;
+    public IGatewayConnection? Gateway => null;
+    public void AttachSession(InstanceSession session)
     {
-        if (account.Key.InstanceId != Descriptor.Id) throw new ArgumentException("Instance mismatch.");
-        if (Gateway is not null) throw new InvalidOperationException("Dispose the previous session first.");
-        Account = account;
-        Gateway = gateway;
+        if (session.Descriptor.Id != Descriptor.Id) throw new ArgumentException("Instance mismatch.");
+        if (Session is not null) throw new InvalidOperationException("Dispose the previous session first.");
+        Session = session;
+    }
+    public void AttachSessionClear()
+    {
+        Session = null;
     }
     public async ValueTask DisposeAsync()
     {
-        if (Gateway is not null) await Gateway.DisposeAsync();
-        Gateway = null;
-        Account = null;
+        if (Session is not null) await Session.DisposeAsync();
+        Session = null;
     }
 }

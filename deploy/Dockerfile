@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /app
 COPY --from=builder /workspace/target/release/chat-server /usr/local/bin/chat-server
 COPY config.toml /app/config.toml
+RUN mkdir -p /app/data/objects && chown -R 65532:65532 /app/data
 USER 65532:65532
 EXPOSE 8080
 ENTRYPOINT ["chat-server"]

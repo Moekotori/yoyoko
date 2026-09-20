@@ -1,27 +1,51 @@
-name: foundation
-on: [push, pull_request]
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
+env:
+  CARGO_TERM_COLOR: always
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/ci.mjs protocol
   desktop-native:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
       - run: dotnet restore Chat.sln --locked-mode
       - run: dotnet build Chat.sln -c Release --no-restore
       - run: dotnet run --project tests/client -c Release --no-build
-      - run: cmake -S native-media-core -B build/native
+      - run: cmake -S native-media-core -B build/native -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build/native --config Release
       - run: ctest --test-dir build/native -C Release --output-on-failure
   server:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17.6-alpine
@@ -31,37 +55,57 @@ jobs:
           POSTGRES_DB: chat
         ports: ["5432:5432"]
         options: --health-cmd "pg_isready -U chat -d chat" --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      CHAT_CONFIG: tests/node/config.toml
+      CHAT__DATABASE__URL: postgres://chat:chat_dev@localhost:5432/chat
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
       - run: cargo run --locked -p chat-server -- migrate
       - run: cargo run --locked -p chat-server -- migrate
       - run: cargo build --release --locked -p chat-server
+      - run: node scripts/ci.mjs live
+        env:
+          CHAT_SERVER_BIN: target/release/chat-server
   structure-format:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
       - run: dotnet restore Chat.sln --locked-mode
       - run: dotnet format whitespace Chat.sln --verify-no-changes --no-restore
       - run: python3 scripts/check_boundaries.py
       - run: docker compose config --quiet
   container:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - run: docker compose build api
       - run: docker compose up -d
       - run: |
           for i in $(seq 1 30); do
-            if curl --fail http://localhost:8080/health/live; then exit 0; fi
+            if curl --fail --silent http://127.0.0.1:8080/health/live; then
+              CHAT_BASE_URL=http://127.0.0.1:8080 node --test tests/node/live.test.mjs
+              exit $?
+            fi
             sleep 2
           done
           docker compose logs

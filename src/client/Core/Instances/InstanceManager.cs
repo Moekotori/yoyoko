@@ -37,12 +37,29 @@ public sealed class InstanceManager(IInstanceStore store, IInstanceDiscovery dis
     public static Uri NormalizeAddress(string address)
     {
         address = address.Trim();
-        if (!address.Contains("://", StringComparison.Ordinal)) address = "https://" + address;
+        if (!address.Contains("://", StringComparison.Ordinal))
+        {
+            var host = HostOfUnprefixed(address);
+            address = (LocalNetwork.IsTrustedDevelopmentHostName(host) ? "http://" : "https://") + address;
+        }
         if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != "https" && !(uri.Scheme == "http" && uri.IsLoopback)) ||
+            (uri.Scheme != Uri.UriSchemeHttps && !LocalNetwork.AllowsCleartext(uri)) ||
             uri.UserInfo.Length != 0 || uri.AbsolutePath != "/" || uri.Query.Length != 0 || uri.Fragment.Length != 0)
-            throw new ArgumentException("请输入实例域名或 HTTPS 地址；本机开发可使用 HTTP。");
+            throw new ArgumentException("请输入实例域名或 HTTPS 地址；本机和局域网开发可使用 HTTP。");
         return uri;
+    }
+
+    static string HostOfUnprefixed(string address)
+    {
+        if (address.StartsWith('['))
+        {
+            var end = address.IndexOf(']');
+            return end > 1 ? address[1..end] : address;
+        }
+        var slash = address.IndexOf('/');
+        if (slash >= 0) address = address[..slash];
+        var colon = address.IndexOf(':');
+        return colon < 0 ? address : address[..colon];
     }
 
     public async ValueTask DisposeAsync()
