@@ -259,6 +259,12 @@
           "Chat.Core": "[1.0.0, )"
         }
       },
+      "chat.motion": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )"
+        }
+      },
       "chat.networking": {
         "type": "Project",
         "dependencies": {
@@ -287,6 +293,7 @@
           "Chat.Core": "[1.0.0, )",
           "Chat.Domain": "[1.0.0, )",
           "Chat.Localization": "[1.0.0, )",
+          "Chat.Motion": "[1.0.0, )",
           "Chat.Protocol": "[1.0.0, )",
           "SkiaSharp": "[3.119.4, )"
         }

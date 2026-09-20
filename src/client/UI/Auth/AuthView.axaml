@@ -18,7 +18,7 @@
       <Setter Property="Height" Value="46" />
       <Setter Property="Padding" Value="14,11" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="BorderBrush" Value="#36343D" />
+      <Setter Property="BorderBrush" Value="#424242" />
       <Setter Property="PlaceholderForeground" Value="{StaticResource QuietTextBrush}" />
     </Style>
     <Style Selector="TextBox.authField:focus /template/ Border#PART_BorderElement">
@@ -26,12 +26,12 @@
       <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
     </Style>
     <Style Selector="Button.authSubmit:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#CAB9F2" />
-      <Setter Property="Foreground" Value="#211C2C" />
+      <Setter Property="Background" Value="#F0F0F0" />
+      <Setter Property="Foreground" Value="#212121" />
     </Style>
     <Style Selector="Button.authSubmit:pressed /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#A590D5" />
-      <Setter Property="Foreground" Value="#211C2C" />
+      <Setter Property="Background" Value="#CCCCCC" />
+      <Setter Property="Foreground" Value="#212121" />
     </Style>
   </UserControl.Styles>
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">

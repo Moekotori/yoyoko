@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
-  x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel">
-  <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" /></UserControl.Styles>
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel" Classes="settingsRoot" motion:Motion.ReduceMotion="{Binding ReduceMotion}">
+  <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" /><StyleInclude Source="avares://Chat.UI/Settings/SettingsMotion.axaml" /></UserControl.Styles>
   <Grid ColumnDefinitions="148,*">
     <Border Background="{StaticResource SidebarBrush}">
       <StackPanel Margin="12,30" Spacing="4">
@@ -25,12 +25,14 @@
         </Button>
       </Grid>
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Panel Margin="0,18,0,32" VerticalAlignment="Top">
-          <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
-          <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>
-          <Border Classes="settingsPage" Classes.active="{Binding ShowVoice}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowVoice}"><vm:VoiceSettingsView /></Border>
-          <Border Classes="settingsPage" Classes.active="{Binding ShowProfile}" Classes.animated="{Binding !ReduceMotion}" IsVisible="{Binding ShowProfile}"><vm:ProfileSettingsView /></Border>
+        <motion:MotionHost Margin="0,18,0,32" VerticalAlignment="Top" Trigger="{Binding Section}">
+        <Panel>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowVoice}" IsVisible="{Binding ShowVoice}"><vm:VoiceSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowProfile}" IsVisible="{Binding ShowProfile}"><vm:ProfileSettingsView /></Border>
         </Panel>
+        </motion:MotionHost>
       </ScrollViewer>
     </Grid>
   </Grid>

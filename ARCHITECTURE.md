@@ -38,6 +38,7 @@ src/
     Networking/      HTTP discovery、WebSocket transport
     Storage/         SQLite 实现、版本化迁移、分页缓存
     Media/           媒体契约、不可用实现、Native ABI 声明
+    Motion/          Avalonia 动画容器、预设、生命周期；无业务依赖
     UI/
       Shell/         窗口与轻量 ViewModel
       Instances/     实例栏与添加实例视图
@@ -75,6 +76,7 @@ benchmarks/          性能测量方法与当前结果
 ```text
 App (composition)
  ├─ UI → Core + Localization → Domain + Protocol
+ │    └─ Motion → Avalonia（独立表现层，不访问 Core/网络/存储）
  ├─ Networking → Core + Protocol + Localization
  ├─ Storage → Core + Domain + Protocol
  ├─ Localization（无 Avalonia）

@@ -1,0 +1,47 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Removing the motion class cancels active transitions and snaps to their bound state. -->
+  <Style Selector=".settingsRoot Button"><Setter Property="Transitions" Value="{x:Null}" /></Style>
+  <Style Selector=".settingsRoot.motion Button">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Foreground" Duration="0:0:0.12" /><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion Button.settingsNav /template/ Border#NavSurface">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion Button.settingsNav /template/ Border#ActiveLine">
+    <Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.14" /><DoubleTransition Property="Height" Duration="0:0:0.14" Easing="CubicEaseOut" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /><BrushTransition Property="Foreground" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Button.settingsPrimary, Button.settingsSecondary, Button.settingsClose"><Setter Property="RenderTransform" Value="scale(1)" /><Setter Property="RenderTransformOrigin" Value="50%,50%" /></Style>
+  <Style Selector=".settingsRoot.motion Button.settingsPrimary, .settingsRoot.motion Button.settingsSecondary, .settingsRoot.motion Button.settingsClose">
+    <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" Easing="CubicEaseOut" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion Button.settingsPrimary:pressed, .settingsRoot.motion Button.settingsSecondary:pressed, .settingsRoot.motion Button.settingsClose:pressed"><Setter Property="RenderTransform" Value="scale(0.97)" /></Style>
+  <Style Selector=".settingsRoot.motion ComboBox.settingsSelect /template/ Border#Background">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
+  <Style Selector="ComboBox.settingsSelect /template/ PathIcon#DropDownGlyph"><Setter Property="RenderTransform" Value="rotate(0deg)" /><Setter Property="RenderTransformOrigin" Value="50%,50%" /></Style>
+  <Style Selector="ComboBox.settingsSelect[IsDropDownOpen=true] /template/ PathIcon#DropDownGlyph"><Setter Property="RenderTransform" Value="rotate(180deg)" /></Style>
+  <Style Selector=".settingsRoot.motion ComboBox.settingsSelect /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion ComboBox.settingsSelect[IsDropDownOpen=true] /template/ Border#PopupBorder">
+    <Style.Animations><Animation Duration="0:0:0.12" Easing="CubicEaseOut">
+      <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.4" /><Setter Property="TranslateTransform.Y" Value="-3" /></KeyFrame>
+      <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /><Setter Property="TranslateTransform.Y" Value="0" /></KeyFrame>
+    </Animation></Style.Animations>
+  </Style>
+  <Style Selector=".settingsRoot.motion ToggleSwitch.settingsToggle">
+    <Setter Property="KnobTransitions"><Transitions><DoubleTransition Property="Canvas.Left" Duration="0:0:0.18" Easing="CubicEaseOut" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion ToggleSwitch.settingsToggle /template/ Border#SwitchTrack">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.16" /><BrushTransition Property="BorderBrush" Duration="0:0:0.16" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion ToggleSwitch.settingsToggle /template/ Border#SwitchThumb">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.16" /><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.09" Easing="CubicEaseOut" /></Transitions></Setter>
+  </Style>
+  <Style Selector=".settingsRoot.motion TextBox.settingsField /template/ Border#PART_BorderElement">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
+</Styles>

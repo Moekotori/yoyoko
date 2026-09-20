@@ -11,8 +11,9 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 | 能力 | 状态 |
 | --- | --- |
 | Avalonia 桌面外壳、轻量 MVVM、独立客户端项目 | 已实现 |
+| 轻量动画系统 `Chat.Motion` | 已实现入场/切换预设、可中断动画、隐藏/最小化清理与减少动效；[调用与验证](docs/ui/MOTION.md) |
 | 登录 / 注册表单 | 独立页签、居中等宽输入、密码框回车提交；视觉验收状态见 [UI 说明](docs/ui/README.md#authentication-form) |
-| 设置页面 | 侧边分类导航、语言 / 快捷键 / 设备下拉框、紧凑布局与动效开关；[离屏渲染与验证记录](docs/ui/README.md#settings) |
+| 设置页面 | 左下角入口，打开时动画收起频道栏；侧边分类导航、语言 / 快捷键 / 设备下拉框、紧凑布局与动效开关；[界面验证记录](docs/ui/README.md#settings) |
 | 客户端界面语言（中文 / English / 日本語），设置中切换 | 已实现；跟随系统，可覆盖并写入本地偏好 |
 | 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
 | 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
@@ -99,6 +100,7 @@ src/client/
   Networking/   HTTP discovery 与 WebSocket transport
   Storage/      SQLite、migration 与消息分页缓存
   Media/        媒体接口、能力声明、Native Bridge
+  Motion/       轻量动画容器、预设与生命周期；仅依赖 Avalonia
   UI/           Shell、Instances、Channels、Components、Styles
 src/server/
   domain/       独立领域 crate

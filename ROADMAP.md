@@ -8,6 +8,8 @@
 
 已纵向接通 1–6 的可运行切片：Auth、社区/频道、消息、图片附件、Gateway READY/heartbeat/resume、SQLite 同步、虚拟化时间线。社区可配置屏蔽词与发言冷却。本机默认 `local:` 存储；Postgres 适配与 migration 保留给 Compose/CI。
 
+UI 基础：独立 `Chat.Motion` 动画模块已接入页面/频道/设置切换，支持中断、减少动效及隐藏/最小化清理；调用方式和验证边界见 [动画系统](docs/ui/MOTION.md)。不改变协议和业务阶段，整进程性能对比尚未测量。
+
 尚未完成：
 
 - 系统凭据库（Keychain / Credential Manager）；当前 refresh 为 0600 文件

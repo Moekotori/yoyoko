@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:preview="using:Chat.UI.Preview" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:preview="using:Chat.UI.Preview" xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
  x:Class="Chat.UI.Preview.DesignPreviewWindow" x:DataType="vm:WorkspaceViewModel" Width="1200" Height="854" MinWidth="980" MinHeight="640" ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="42">
   <Window.KeyBindings><KeyBinding Gesture="Meta+F" Command="{Binding ToggleSearch}" /><KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearch}" /><KeyBinding Gesture="Escape" Command="{Binding Escape}" /></Window.KeyBindings>
   <Grid ColumnDefinitions="72,220,*" RowDefinitions="42,*,66">
@@ -16,13 +16,13 @@
             </Grid>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Button Width="40" Height="40" CornerRadius="20" Background="#202023" HorizontalAlignment="Center" Command="{Binding Unavailable}" AutomationProperties.Name="{i18n:T AddInstance}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
+        <Button Width="40" Height="40" CornerRadius="20" Background="#292929" HorizontalAlignment="Center" Command="{Binding Unavailable}" AutomationProperties.Name="{i18n:T AddInstance}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
       </StackPanel>
     </Border>
     <preview:PreviewChannelSidebar Grid.Row="1" Grid.Column="1" />
     <vm:AccountBar Grid.Row="2" Grid.ColumnSpan="2" />
-    <vm:ConversationView Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" />
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Background="#292530" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" IsVisible="{Binding HasNotice}" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="280" Padding="14,6" Margin="20,0,20,106">
+    <motion:MotionHost Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Preset="Fade" Trigger="{Binding SelectedChannel}"><vm:ConversationView /></motion:MotionHost>
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Background="#333333" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" IsVisible="{Binding HasNotice}" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="280" Padding="14,6" Margin="20,0,20,106">
       <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
     </Border>
   </Grid>

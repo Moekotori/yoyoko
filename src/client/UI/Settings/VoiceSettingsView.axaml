@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization" xmlns:voice="using:Chat.UI.Voice"
   x:Class="Chat.UI.Settings.VoiceSettingsView" x:DataType="vm:SettingsViewModel">
+  <Border Classes="settingsGroup">
   <StackPanel>
     <Grid Classes="settingsRow" ColumnDefinitions="*,220" ColumnSpacing="20">
       <TextBlock Text="{i18n:T InputDevice}" Classes="settingsLabel" />
@@ -20,4 +21,5 @@
     <Border Classes="settingsRowDivider" />
     <TextBlock Text="{Binding Devices.Error}" Classes="muted" Margin="0,16,0,0" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" />
   </StackPanel>
+  </Border>
 </UserControl>

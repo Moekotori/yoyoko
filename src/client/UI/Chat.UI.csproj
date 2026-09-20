@@ -5,6 +5,7 @@
     <HotAvaloniaRemote>false</HotAvaloniaRemote>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../Motion/Chat.Motion.csproj" />
     <ProjectReference Include="../Core/Chat.Core.csproj" />
     <ProjectReference Include="../Domain/Chat.Domain.csproj" />
     <ProjectReference Include="../Protocol/Chat.Protocol.csproj" />

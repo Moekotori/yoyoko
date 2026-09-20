@@ -1,11 +1,17 @@
 # Desktop UI — selected dark direction
 
+共享页面动画的调用方式、预算与生命周期见 [轻量动画系统](MOTION.md)。
+
 ## Settings
+
+The settings button is fixed at the bottom of the instance rail. Opening settings collapses the channel/account column from 220px to zero over 200ms (CubicEaseOut), reclaiming its width for settings; closing or Escape expands it again. The fixed-width channel contents are clipped and faded during the transition, with input disabled while collapsed. Rapid reversals continue from the current width. Reduced motion removes these transitions. The community header and channel tabs are hidden in settings. This layout update does not change the protocol or roadmap phase.
+
+Shell layout verification (2026-09-21): Release build passed with zero warnings/errors using a separate artifacts directory to avoid concurrent builds. A real macOS window verified the bottom-left entry, collapsed settings layout, Escape restoring the channel/account column, and repeated open/close ending in the correct state. This checks native layout and input, not frame pacing or other desktop platforms.
 
 Settings has a compact 148px sidebar for General, Appearance, Voice and Profile. The content area has a fixed section header and independently scrolling body. Labels and controls align in 72px rows; the sidebar remains visible while changing categories.
 
 - General: language and send shortcut are collapsed 220×36 dropdowns, with styled dark popup menus. Two-way selection updates the existing preferences; changing locale preserves option identity and updates the section title.
-- Appearance: compact layout and reduced motion use compact switches. Expanded radio tiles, keyboard illustrations and density diagrams have been removed. Category transitions fade for 120ms unless reduced motion is enabled.
+- Appearance: compact layout and reduced motion use compact switches. Expanded radio tiles, keyboard illustrations and density diagrams have been removed. Category transitions use the shared MotionHost for a 160ms fade with an 8px entry offset, unless reduced motion is enabled.
 - Voice: existing input/output device selectors use the same dropdown dimensions; device errors remain visible. This is presentation of existing device controls, not new media functionality.
 - Profile: avatar actions, aligned username/display-name inputs, save/status footer and signed-out entry remain intact. Close and Escape return to the previous content.
 
@@ -14,6 +20,14 @@ Verification (2026-09-21): Release build passed with zero warnings/errors. An Av
 Native macOS window reads timed out in the preceding verification attempt. The images below establish offscreen rendering, not live OS input, hardware device routing or server profile-save acceptance. No protocol or roadmap phase changes are part of this work.
 
 Rendered evidence: [general](settings/general.png), [language dropdown](settings/general-dropdown.png), [appearance](settings/appearance.png), [general at minimum pane size](settings/general-small.png), [profile fixture at minimum pane size](settings/profile-small.png).
+
+### Settings motion and switches
+
+Settings control feedback is scoped in `SettingsMotion.axaml`. Switches use a 42×24 track, a 20px light thumb, subtle edge/shadow separation, an 18px travel over 180ms with CubicEaseOut, 160ms track/colour blending and 90ms press feedback. Sidebar selection markers animate opacity/height; dropdown arrows rotate, menus fade/slide in, buttons respond to press, and field focus/hover colours blend over 100–140ms.
+
+`SettingsMotionScope` enables these transitions only while the settings view and ancestors are visible, the window is not minimized, and reduced motion is off. It unsubscribes on detach; removing the motion class cancels control transitions and snaps to the bound state. Rapid toggles retarget the ongoing transition. Page motion is owned by the shared MotionHost, so the old per-page fade is removed to avoid double animation. There are no looping UI animations or dedicated timers.
+
+Verification (2026-09-21): Release build passed with zero warnings/errors. A focused offscreen rendering check recorded 102 real frames, confirmed intermediate thumb positions and final values after rapid reversal, a single visible page after rapid navigation, and transition removal when hidden/minimized or reduced motion is enabled. Intermediate frames were visually checked; a transparent-colour interpolation flash in sidebar selection was fixed. This does not establish native OS input acceptance. [Animated rendering](settings/motion.gif).
 
 ## Authentication form
 

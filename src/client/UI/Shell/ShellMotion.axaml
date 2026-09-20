@@ -1,0 +1,19 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.channelSlot">
+    <Setter Property="Width" Value="220" />
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <Style Selector="Border.channelSlot.motion">
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Width" Duration="0:0:0.2" Easing="CubicEaseOut" />
+        <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Border.channelSlot.collapsed">
+    <Setter Property="Width" Value="0" />
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+</Styles>

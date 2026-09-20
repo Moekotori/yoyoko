@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.GeneralSettingsView" x:DataType="vm:SettingsViewModel">
+  <Border Classes="settingsGroup">
   <StackPanel>
     <Grid Classes="settingsRow" ColumnDefinitions="*,220" ColumnSpacing="20">
       <TextBlock Text="{i18n:T Language}" Classes="settingsLabel" />
@@ -17,6 +18,6 @@
         <ComboBoxItem><TextBlock Text="{i18n:T CtrlEnterToSend}" /></ComboBoxItem>
       </ComboBox>
     </Grid>
-    <Border Classes="settingsRowDivider" />
   </StackPanel>
+  </Border>
 </UserControl>

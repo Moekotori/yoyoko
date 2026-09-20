@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:Chat.UI.Components"
   x:Class="Chat.UI.Components.Avatar" x:DataType="local:Avatar" x:Name="Root">
   <Grid>
-    <Ellipse Fill="#343139" />
+    <Ellipse Fill="#404040" />
     <Ellipse><Ellipse.Fill><ImageBrush Source="{Binding Source, ElementName=Root}" Stretch="UniformToFill" /></Ellipse.Fill></Ellipse>
     <Ellipse Stroke="#18FFFFFF" StrokeThickness="1" />
-    <Ellipse Width="10" Height="10" Fill="#81C6A5" Stroke="{StaticResource SidebarBrush}" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding IsOnline, ElementName=Root}" />
+    <Ellipse Width="10" Height="10" Fill="#3FA267" Stroke="{StaticResource SidebarBrush}" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding IsOnline, ElementName=Root}" />
   </Grid>
 </UserControl>

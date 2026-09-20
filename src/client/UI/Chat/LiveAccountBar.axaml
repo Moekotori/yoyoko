@@ -11,7 +11,6 @@
       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
         <Button Classes="icon" Width="26" Padding="5" Command="{Binding ToggleMute}" IsEnabled="{Binding InVoice}" ToolTip.Tip="{Binding MuteLabel}" AutomationProperties.Name="{i18n:T Mic}"><PathIcon Data="{StaticResource IconMic}" Width="16" Height="16" /></Button>
         <Button Classes="icon" Width="26" Padding="5" Command="{Binding ToggleDeaf}" IsEnabled="{Binding InVoice}" ToolTip.Tip="{Binding DeafLabel}" AutomationProperties.Name="{i18n:T Headphones}"><PathIcon Data="{StaticResource IconHeadphones}" Width="16" Height="16" /></Button>
-        <Button Classes="icon" Width="26" Padding="5" Command="{Binding OpenSettings}" ToolTip.Tip="{i18n:T Settings}" AutomationProperties.Name="{i18n:T Settings}"><PathIcon Data="{StaticResource IconSettings}" Width="16" Height="16" /></Button>
       </StackPanel>
     </Grid>
   </Border>

@@ -9,7 +9,8 @@ allowed = {
     "Networking": {"Core", "Protocol", "Localization"},
     "Storage": {"Core", "Domain", "Protocol"},
     "Media": {"Core"},
-    "UI": {"Core", "Domain", "Protocol", "Localization"},
+    "Motion": set(),  # Avalonia-only presentation primitives, no business/infrastructure access.
+    "UI": {"Core", "Domain", "Protocol", "Localization", "Motion"},
     "App": {"Core", "Networking", "Storage", "Media", "UI", "Localization"},
 }
 for path in (root / "src/client").glob("*/*.csproj"):

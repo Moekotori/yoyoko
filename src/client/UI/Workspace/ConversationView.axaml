@@ -5,7 +5,7 @@
     <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /></Style>
-    <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#1E1E21" /></Style>
+    <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#232323" /></Style>
     <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /></Style>
     <Style Selector="Grid.messageRow:pointerover Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
     <Style Selector="Grid.messageRow:focus-within Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
@@ -30,7 +30,7 @@
       </Grid>
       <Grid Grid.Row="2" x:Name="TimelineSurface">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9" IsVisible="{Binding HasNoMessages}">
-          <PathIcon Data="{StaticResource IconHash}" Width="28" Height="28" Foreground="#57535F" Margin="0,0,0,5" />
+          <PathIcon Data="{StaticResource IconHash}" Width="28" Height="28" Foreground="#757575" Margin="0,0,0,5" />
           <TextBlock Text="{Binding EmptyTitle}" HorizontalAlignment="Center" FontSize="15" Foreground="{StaticResource MutedTextBrush}" />
           <TextBlock Text="{Binding EmptyDetail}" HorizontalAlignment="Center" FontSize="12" Foreground="{StaticResource QuietTextBrush}" />
         </StackPanel>
@@ -42,12 +42,12 @@
                 <c:Avatar Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top" Source="{Binding Avatar}" Margin="0,12,0,0" />
                 <StackPanel Grid.Column="3" Spacing="4" Margin="0,11,0,9">
                   <StackPanel Orientation="Horizontal" Spacing="9">
-                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="#E3E1E8" />
+                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
                     <TextBlock Text="{Binding Time}" Foreground="{StaticResource QuietTextBrush}" FontSize="11" VerticalAlignment="Center" />
                   </StackPanel>
-                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="16" LineHeight="25" Foreground="#C7C7CF" />
-                  <Button IsVisible="{Binding HasReaction}" Background="#2D2639" BorderBrush="#4A3E5D" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" HorizontalAlignment="Left" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="{i18n:T ReactionUnavailable}">
-                    <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{StaticResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="#C7B6E7" /></StackPanel>
+                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="16" LineHeight="25" Foreground="#CCCCCC" />
+                  <Button IsVisible="{Binding HasReaction}" Background="#343434" BorderBrush="#505050" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" HorizontalAlignment="Left" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="{i18n:T ReactionUnavailable}">
+                    <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{StaticResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="#D8D8D8" /></StackPanel>
                   </Button>
                 </StackPanel>
                 <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
@@ -58,7 +58,7 @@
           </ListBox.ItemTemplate>
         </ListBox>
       </Grid>
-      <Border Grid.Row="3" Classes="composerFrame" Background="{StaticResource RaisedBrush}" BorderBrush="#323137" BorderThickness="1" CornerRadius="2" Margin="24,0,24,22" MinHeight="60" Padding="10,10">
+      <Border Grid.Row="3" Classes="composerFrame" Background="{StaticResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" Margin="24,0,24,22" MinHeight="60" Padding="10,10">
         <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
         <Grid ColumnDefinitions="30,*,30,1,30" ColumnSpacing="9">
           <Button Classes="icon" Command="{Binding Unavailable}" ToolTip.Tip="{i18n:T AddAttachment}" AutomationProperties.Name="{i18n:T AddAttachment}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
