@@ -16,11 +16,17 @@ pub struct Hub {
     inner: Arc<Mutex<HashMap<Uuid, Vec<Client>>>>,
 }
 
-impl Hub {
-    pub fn new() -> Self {
+impl Default for Hub {
+    fn default() -> Self {
         Self {
             inner: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+}
+
+impl Hub {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub async fn subscribe(

@@ -16,9 +16,11 @@ internal sealed record AppSettings(string ProductName = "LightChat", string Cach
             CacheDirectory = Environment.GetEnvironmentVariable("CHAT_CACHE_DIRECTORY") ?? settings.CacheDirectory
         };
     }
-    public string CachePath => Path.Combine(string.IsNullOrWhiteSpace(CacheDirectory)
+    public string DataDirectory => string.IsNullOrWhiteSpace(CacheDirectory)
         ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "chat-desktop")
-        : CacheDirectory, "cache.db");
+        : CacheDirectory;
+    public string CachePath => Path.Combine(DataDirectory, "cache.db");
+    public string PreferencesPath => Path.Combine(DataDirectory, "preferences.json");
 }
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(AppSettings))]

@@ -1,0 +1,3 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_id UUID REFERENCES attachments(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_animated BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS users_avatar ON users(avatar_id) WHERE avatar_id IS NOT NULL;

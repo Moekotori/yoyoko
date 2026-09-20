@@ -1,12 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:instances="using:Chat.UI.Instances" xmlns:channels="using:Chat.UI.Channels"
-  xmlns:auth="using:Chat.UI.Auth" xmlns:chat="using:Chat.UI.Chat"
+  xmlns:auth="using:Chat.UI.Auth" xmlns:chat="using:Chat.UI.Chat" xmlns:voice="using:Chat.UI.Voice"
+  xmlns:settings="using:Chat.UI.Settings"
   x:Class="Chat.UI.Shell.MainWindow" x:DataType="vm:ShellViewModel"
   Title="{Binding ProductName}" Width="1100" Height="720" MinWidth="860" MinHeight="560">
   <Grid ColumnDefinitions="64,224,*">
     <instances:InstanceRail />
     <channels:ChannelSidebar Grid.Column="1" />
-    <Grid Grid.Column="2" RowDefinitions="64,*">
+    <Grid Grid.Column="2" RowDefinitions="64,*" IsVisible="{Binding !ShowSettings}">
       <Border BorderThickness="0,0,0,1" BorderBrush="#2A2F2D" Padding="28,0">
         <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontWeight="Medium" />
       </Border>
@@ -14,7 +15,11 @@
         <instances:AddInstanceView IsVisible="{Binding ShowAddInstance}" />
         <auth:AuthView IsVisible="{Binding ShowAuth}" />
         <chat:ChatView IsVisible="{Binding ShowChat}" />
+        <voice:VoiceView IsVisible="{Binding ShowVoice}" />
       </Panel>
     </Grid>
+    <Panel Grid.Column="2" IsVisible="{Binding ShowSettings}">
+      <settings:SettingsView DataContext="{Binding Settings}" />
+    </Panel>
   </Grid>
 </Window>

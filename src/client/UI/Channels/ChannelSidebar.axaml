@@ -1,14 +1,14 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
   x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel">
   <Grid RowDefinitions="Auto,*,Auto" Background="{StaticResource SidebarBrush}">
     <StackPanel Margin="22,23,16,0" Spacing="8">
       <TextBlock Text="{Binding InstanceName}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
       <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" TextTrimming="CharacterEllipsis" />
-      <TextBlock Text="频道" Classes="muted" FontSize="12" Margin="0,28,0,0" IsVisible="{Binding IsSignedIn}" />
+      <TextBlock Text="{i18n:T Channels}" Classes="muted" FontSize="12" Margin="0,28,0,0" IsVisible="{Binding IsSignedIn}" />
     </StackPanel>
     <ListBox Grid.Row="1" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel}"
-      Margin="12,16" AutomationProperties.Name="频道列表" IsVisible="{Binding IsSignedIn}">
+      Margin="12,16" AutomationProperties.Name="{i18n:T ChannelList}" IsVisible="{Binding IsSignedIn}">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="ch:ChannelItem">
           <TextBlock Text="{Binding Label}" Margin="4,6" TextTrimming="CharacterEllipsis" />
@@ -16,14 +16,20 @@
       </ListBox.ItemTemplate>
     </ListBox>
     <StackPanel Grid.Row="2" Margin="18,8,18,16" Spacing="8" IsVisible="{Binding IsSignedIn}">
-      <TextBlock Text="{Binding AccountName}" FontSize="13" TextTrimming="CharacterEllipsis" />
+      <Grid ColumnDefinitions="34,*" ColumnSpacing="10">
+        <c:Avatar Width="34" Height="34" Playback="{Binding AccountPlayback}" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="{Binding AccountName}" FontSize="13" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding AccountHandle}" Classes="muted" FontSize="11" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+      </Grid>
       <TextBlock Text="{Binding InviteHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-      <TextBox Text="{Binding CommunityName}" PlaceholderText="新社区名称" />
-      <Button Content="创建社区" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
-      <TextBox Text="{Binding InviteInput}" PlaceholderText="邀请码" />
-      <Button Content="加入社区" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
-      <Button Content="退出账号" Command="{Binding SignOut}" HorizontalAlignment="Stretch" />
+      <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" />
+      <Button Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
+      <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" />
+      <Button Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
+      <Button Content="{i18n:T SignOut}" Command="{Binding SignOut}" HorizontalAlignment="Stretch" />
     </StackPanel>
-    <TextBlock Grid.Row="2" Text="未登录" Classes="muted" Margin="22,20" IsVisible="{Binding ShowGuest}" />
+    <TextBlock Grid.Row="2" Text="{i18n:T SignedOut}" Classes="muted" Margin="22,20" IsVisible="{Binding ShowGuest}" />
   </Grid>
 </UserControl>

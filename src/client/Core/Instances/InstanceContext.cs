@@ -17,6 +17,10 @@ public sealed class InstanceContext(InstanceDescriptor descriptor) : IAsyncDispo
         if (Session is not null) throw new InvalidOperationException("Dispose the previous session first.");
         Session = session;
     }
+    public void AttachAccount(Account account)
+    {
+        if (account.Key.InstanceId != Descriptor.Id) throw new ArgumentException("Instance mismatch.");
+    }
     public void AttachSessionClear()
     {
         Session = null;

@@ -41,19 +41,27 @@
         "type": "Project",
         "dependencies": {
           "Chat.Domain": "[1.0.0, )",
+          "Chat.Localization": "[1.0.0, )",
           "Chat.Protocol": "[1.0.0, )"
         }
       },
       "chat.domain": {
         "type": "Project"
       },
-      "chat.media": {
+      "chat.localization": {
         "type": "Project"
+      },
+      "chat.media": {
+        "type": "Project",
+        "dependencies": {
+          "Chat.Core": "[1.0.0, )"
+        }
       },
       "chat.networking": {
         "type": "Project",
         "dependencies": {
           "Chat.Core": "[1.0.0, )",
+          "Chat.Localization": "[1.0.0, )",
           "Chat.Protocol": "[1.0.0, )"
         }
       },

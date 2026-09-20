@@ -1,6 +1,6 @@
 # Protocol v1
 
-状态：发现和未认证 Gateway 握手已实现；以下业务路由、READY、heartbeat、resume/replay 为 Phase 1 契约，**Not implemented yet**。
+状态：发现、认证 REST、社区/频道、消息分页与发送、图片上传、Gateway READY / heartbeat / resume 已实现。编辑/删除、mention、reaction 仍为 **Not implemented yet**。
 
 ## 标识和编码
 
@@ -16,7 +16,7 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 
 ## REST 边界
 
-已实现：`GET /health/live`、发现端点。`/health/live` 只证明 API 进程存活，不证明 Postgres/Redis/S3/RTC 可用；业务 readiness 将在 Phase 1 引入。
+发现响应含 `max_attachment_bytes` 与 `max_attachments_per_message`（默认 24 MiB、每条最多 4 个）。实例用 `storage.max_bytes`（64 KiB..=256 MiB，`CHAT__STORAGE__MAX_BYTES`）自定义上限。`/health/live` 只证明 API 进程存活，不证明 Postgres/Redis/S3/RTC 可用。
 
 计划 `/api/v1`：
 
@@ -24,18 +24,24 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 | --- | --- |
 | POST /auth/register, /auth/login, /auth/refresh, /auth/logout | 实例内账号与会话 |
 | GET /users/me | 当前实例身份 |
+| PATCH /users/me | 更新用户名、显示名、头像（avatar_id 或 clear_avatar） |
 | GET/POST /servers | 社区列表/创建 |
 | GET/POST /servers/{id}/channels | 频道列表/创建 |
 | GET/POST /channels/{id}/messages | before 游标分页/发送（Idempotency-Key） |
-| PATCH/DELETE /channels/{id}/messages/{message_id} | 编辑/删除 |
-| POST /attachments | 经校验的流式上传 / 授权对象存储流程 |
-| POST /channels/{id}/rtc-token | 校验 ConnectVoice/Speak/Stream 后签发短期 LiveKit token |
+| PATCH/DELETE /channels/{id}/messages/{message_id} | 编辑/删除（**Not implemented yet**） |
+| POST /attachments | 流式上传；校验大小、扩展名与 MIME；图片生成 256px 缩略图 |
+| GET /attachments/{id}/content | 签名 URL 或登录用户下载；存储 key 为随机 UUID |
+| GET /attachments/{id}/thumbnail | 图片 JPEG 缩略图 |
+| POST /channels/{id}/rtc-token | 校验 ConnectVoice 后签发短期 LiveKit token（已实现；可发布取决于 Speak） |
+| POST /channels/{id}/voice/join | 加入语音频道；可带 `audio_quality`（standard/high/very_high/studio），服务端按频道上限钳制 |
+| PATCH /channels/{id} | 频道所有者设置 `audio_quality` 上限 |
+| POST /voice/leave、PATCH /voice/state | 离开；更新 mute/deafen，以及可选的发送音质 |
 
 业务接口使用 Bearer access token；refresh rotation、Argon2id、限流、body/field limits 和服务端授权检查在 Phase 1 接入。错误 envelope `{ "code": "...", "message": "..." }`；不得泄露数据库或密钥。普通 WebSocket 不接管 CRUD、文件或媒体数据。
 
 ## Gateway
 
-当前：升级 WebSocket → `hello` → 最多等待 5 秒 identify → 关闭。版本不匹配 4406，认证未实现 4401，数据无效 4400，超时 4408。不会返回 READY 或假在线状态。最大帧/消息 64 KiB。
+当前：升级 WebSocket → `hello` → identify 或 resume。版本不匹配 4406，令牌无效 4401，数据无效 4400，超时 4408，resume 失效 4409。identify 成功后发 READY 并推送 MESSAGE_CREATE。最大帧/消息 64 KiB。
 
 ```json
 {"op":"hello","event":null,"seq":null,"data":{"protocol_version":1,"heartbeat_interval_ms":30000}}
@@ -58,6 +64,6 @@ Phase 1：验证 token 和 origin（原生无 Origin 的客户端仍需 token）
 - READY / outbox commit / replay ordering 原子语义、15 分钟或 10,000 事件的有界 retention 在 Phase 1 实现，不创建无界内存事件队列。
 - reconnect cursor 必须按实例和账号独立。Redis 驱逐造成 replay 缺失时走 invalid_session，不能谎称恢复成功。
 
-计划事件：READY、MESSAGE_CREATE/UPDATE/DELETE、CHANNEL_CREATE/UPDATE/DELETE、SERVER_CREATE/UPDATE、MEMBER_JOIN/LEAVE、PRESENCE_UPDATE、TYPING_START、VOICE_STATE_UPDATE。typing 不持久化；presence/voice 高频状态不写 PostgreSQL。消息含 text/system/encrypted、reply、mention、attachment、embed、reaction；见 Message DTO。
+计划事件：READY、MESSAGE_CREATE/UPDATE/DELETE、CHANNEL_CREATE/UPDATE/DELETE、SERVER_CREATE/UPDATE、MEMBER_JOIN/LEAVE、USER_UPDATE、PRESENCE_UPDATE、TYPING_START、VOICE_STATE_UPDATE。User 含可选 `avatar`（download/thumbnail URL、`animated`）；JPEG/PNG/GIF/WebP，GIF/APNG/动态 WebP 为 animated，上限 8 MiB、边长 4096。`VOICE_STATE_UPDATE` 已实现：`channel_id` 为 null 表示离开。语音状态含 `audio_quality`。音质档位：`standard` 48 kHz 单声道 64 kbps、`high` 立体声 128 kbps、`very_high` 256 kbps、`studio` 510 kbps（Opus 上限）。加入响应带 `audio` 编码参数与 `max_audio_quality`。typing 不持久化；presence/voice 高频状态不写 PostgreSQL。语音状态保存在 API 进程内存中；单进程模块化单体足够，多节点需 Redis。消息含 text/system/encrypted、reply、mention、attachment、embed、reaction；见 Message DTO。
 
 官方与自托管走同一套协议与版本协商；无官方专用权限后门。当前不做 federation；未来 Web/移动端不需依赖 C# 逻辑。

@@ -7,7 +7,7 @@
 - 构建类似 Discord 核心体验、但更轻量、低内存、启动快、响应快的聊天软件，目标平台为 Windows、macOS、Linux。
 - 用户能够自托管完整服务端；官方实例与自托管实例使用同一套协议，基本聊天、社区和自托管能力不设计成官方专属功能。
 - 暂用名为 LightChat；产品名集中于配置，不写死进业务模块、命名空间或存储路径。代码使用 `Chat` / `chat`，固定协议发现路径不随品牌改名。
-- 当前基线为 Phase 0：Architecture Foundation。按 [ROADMAP.md](ROADMAP.md) 分阶段开发，不在基础阶段扩写完整 Discord clone。用户明确要求推进后，直接按授权阶段执行并同步更新文档，不为例行实现反复索取确认。
+- 当前基线为 Phase 1：两个真实客户端文字聊天（含发图）。按 [ROADMAP.md](ROADMAP.md) 分阶段开发，不在当前阶段扩写完整 Discord clone。用户明确要求推进后，直接按授权阶段执行并同步更新文档，不为例行实现反复索取确认。
 - 近期目标是两个客户端真实聊天；完整聊天体验、角色管理、语音、共享和生产自托管逐步推进。
 - 不提前实现 Federation、全球统一账号、完整 E2EE、任意进程内插件或自研 SFU。未来移动端和 Web 复用协议，当前不开发其 UI。
 - 未实现能力必须明确标记 `Not implemented yet`。禁止用假消息、假在线状态、假媒体成功或大量空类冒充完成。
@@ -30,7 +30,7 @@
 ## 模块与文件必须拆清楚
 
 - 用独立项目/crate、公开契约和依赖方向落实模块化，不能只建文件夹、所有代码仍互相访问。
-- 当前客户端项目为 `App / Domain / Protocol / Core / Networking / Storage / Media / UI`。服务端划分 `domain / protocol / app`，app 内按业务能力分 service、repository port 和 adapter。
+- 当前客户端项目为 `App / Domain / Protocol / Localization / Core / Networking / Storage / Media / UI`。服务端划分 `domain / protocol / app`，app 内按业务能力分 service、repository port 和 adapter。界面语言是独立 Localization 模块：公开 Locale、ILocalePreference、ITextCatalog；Core/Networking 抛 `ClientFault` 键，不查文案表。语言是客户端级偏好，不是实例身份。
 - App 只负责组合、配置与生命周期；Domain 不依赖 UI/网络/存储；Core 定义业务与所需端口；基础设施实现端口；UI 通过 Core 操作业务。
 - Window/code-behind 只放视图装配与必要交互适配。禁止把业务、SQL、HTTP、媒体状态持续堆入 MainWindow、单个 ViewModel 或万能 Service。
 - 按职责拆文件，视图、ViewModel、契约、适配器、配置和迁移分开维护。相关的小型类型可以同文件，不为每个类型机械地创建项目，也不为未来可能用到的功能建空模块。

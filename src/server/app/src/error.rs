@@ -3,14 +3,13 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use chat_protocol::ApiError;
-
 pub type ApiResult<T> = Result<T, ApiErr>;
 
 pub struct ApiErr {
     pub status: StatusCode,
     pub code: &'static str,
     pub message: String,
+    pub retry_after_seconds: Option<u32>,
 }
 
 impl ApiErr {
@@ -19,7 +18,20 @@ impl ApiErr {
             status,
             code,
             message: message.into(),
+            retry_after_seconds: None,
         }
+    }
+    pub fn cooldown(seconds: u64) -> Self {
+        let seconds = seconds.max(1) as u32;
+        Self {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            code: "cooldown",
+            message: format!("Wait {seconds} more second(s) before sending."),
+            retry_after_seconds: Some(seconds),
+        }
+    }
+    pub fn blocked_word() -> Self {
+        Self::bad("blocked_word", "Message contains a blocked word.")
     }
     pub fn unauthorized() -> Self {
         Self::new(
@@ -58,13 +70,13 @@ impl ApiErr {
 
 impl IntoResponse for ApiErr {
     fn into_response(self) -> Response {
-        (
-            self.status,
-            Json(ApiError {
-                code: self.code.into(),
-                message: self.message,
-            }),
-        )
-            .into_response()
+        let mut body = serde_json::json!({
+            "code": self.code,
+            "message": self.message,
+        });
+        if let Some(seconds) = self.retry_after_seconds {
+            body["retry_after_seconds"] = seconds.into();
+        }
+        (self.status, Json(body)).into_response()
     }
 }

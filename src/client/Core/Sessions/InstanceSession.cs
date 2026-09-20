@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Chat.Core;
 using Chat.Core.Instances;
 using Chat.Core.Messaging;
 using Chat.Core.Realtime;
 using Chat.Core.Voice;
 using Chat.Domain.Instances;
+using Chat.Localization;
 using Chat.Protocol;
 
 namespace Chat.Core.Sessions;
@@ -21,11 +23,12 @@ public sealed class InstanceSession : IAsyncDisposable
     private readonly string _accessToken;
     private readonly string _refreshToken;
     private Task? _loop;
-    public InstanceSession(InstanceDescriptor descriptor, Account account, IChatApi api, IMessageCache cache,
+    public InstanceSession(InstanceDescriptor descriptor, UserDto me, IChatApi api, IMessageCache cache,
         ICredentialVault vault, Func<IGatewayConnection> gateways, IVoiceMedia media, string accessToken, string refreshToken)
     {
         Descriptor = descriptor;
-        Account = account;
+        Me = me;
+        Account = ToAccount(descriptor, me);
         _api = api;
         _cache = cache;
         _vault = vault;
@@ -33,17 +36,27 @@ public sealed class InstanceSession : IAsyncDisposable
         _accessToken = accessToken;
         _refreshToken = refreshToken;
         _api.SetAccessToken(accessToken);
-        Scope = new(descriptor.Id, account.Key.Id);
+        Scope = new(descriptor.Id, me.Id);
         Voice = new VoiceRuntime(api, media);
+        _users[me.Id] = me;
     }
     public InstanceDescriptor Descriptor { get; }
-    public Account Account { get; }
+    public Account Account { get; private set; }
+    public UserDto Me { get; private set; }
     public CacheScope Scope { get; }
     public IReadOnlyList<ServerDto> Servers { get; private set; } = [];
     public IReadOnlyList<ChannelDto> Channels { get; private set; } = [];
     public VoiceRuntime Voice { get; }
+    public long MaxAttachmentBytes { get; private set; } = ProtocolVersion.MaxAttachmentBytes;
+    public int MaxAttachments { get; private set; } = ProtocolVersion.MaxAttachmentsPerMessage;
     public event Action? CommunityChanged;
     public event Action<MessageDto>? MessageArrived;
+
+    public void ApplyDiscovery(InstanceDiscovery info)
+    {
+        MaxAttachmentBytes = FileKinds.EffectiveLimit(info.MaxAttachmentBytes);
+        MaxAttachments = FileKinds.EffectiveCount(info.MaxAttachmentsPerMessage);
+    }
 
     public static async Task<InstanceSession> SignInAsync(InstanceDescriptor descriptor, IChatApi api,
         IMessageCache cache, ICredentialVault vault, Func<IGatewayConnection> gateways, IVoiceMedia media,
@@ -52,8 +65,7 @@ public sealed class InstanceSession : IAsyncDisposable
         var auth = register
             ? await api.RegisterAsync(new(username, displayName ?? username, password), cancellationToken)
             : await api.LoginAsync(new(username, password), cancellationToken);
-        var account = new Account(new(descriptor.Id, auth.User.Id), auth.User.DisplayName);
-        var session = new InstanceSession(descriptor, account, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
+        var session = new InstanceSession(descriptor, auth.User, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
         await session.PersistAuthAsync(cancellationToken);
         session.Start();
         return session;
@@ -69,8 +81,7 @@ public sealed class InstanceSession : IAsyncDisposable
         try
         {
             var auth = await api.RefreshAsync(refresh, cancellationToken);
-            var account = new Account(new(descriptor.Id, auth.User.Id), auth.User.DisplayName);
-            var session = new InstanceSession(descriptor, account, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
+            var session = new InstanceSession(descriptor, auth.User, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
             await session.PersistAuthAsync(cancellationToken);
             var cached = await cache.LoadCommunityAsync(session.Scope, cancellationToken);
             session.ApplyCommunity(cached);
@@ -82,6 +93,29 @@ public sealed class InstanceSession : IAsyncDisposable
 
     public string AuthorName(Guid userId) =>
         _users.TryGetValue(userId, out var user) ? user.DisplayName : userId.ToString()[..8];
+
+    public UserDto? User(Guid userId) => _users.TryGetValue(userId, out var user) ? user : null;
+
+    public async Task<UserDto> PatchProfileAsync(string? username, string? displayName, Guid? avatarId, bool clearAvatar,
+        CancellationToken cancellationToken)
+    {
+        var user = await _api.PatchMeAsync(new(username, displayName, avatarId, clearAvatar), cancellationToken);
+        ApplyUser(user);
+        await PersistAuthAsync(cancellationToken);
+        await _cache.SaveCommunityAsync(Scope, new(Servers, Channels, [.. _users.Values]), cancellationToken);
+        CommunityChanged?.Invoke();
+        return user;
+    }
+
+    public async Task<UserDto> ChangeAvatarAsync(PickedFile file, CancellationToken cancellationToken)
+    {
+        if (file.Size <= 0 || file.Size > ProtocolVersion.MaxAvatarBytes)
+            throw new ClientFault(TextKey.FileTooLarge, file.FileName, FileKinds.SizeLabel(ProtocolVersion.MaxAvatarBytes));
+        if (!FileKinds.IsImage(file.MimeType))
+            throw new ClientFault(TextKey.InvalidAvatar);
+        var uploaded = await _api.UploadAsync(file, cancellationToken);
+        return await PatchProfileAsync(null, null, uploaded.Id, false, cancellationToken);
+    }
 
     public async Task<ServerDto> CreateServerAsync(string name, CancellationToken cancellationToken)
     {
@@ -96,11 +130,40 @@ public sealed class InstanceSession : IAsyncDisposable
         await RefreshCommunityAsync(cancellationToken);
     }
 
+    public async Task<ServerDto> PatchModerationAsync(Guid serverId, string[] words, int cooldownSeconds,
+        CancellationToken cancellationToken)
+    {
+        var server = await _api.PatchModerationAsync(serverId, new(words, cooldownSeconds), cancellationToken);
+        Servers = Servers.Select(item => item.Id == server.Id ? server : item).ToArray();
+        await _cache.SaveCommunityAsync(Scope, new(Servers, Channels, [.. _users.Values]), cancellationToken);
+        CommunityChanged?.Invoke();
+        return server;
+    }
+
     public ChannelTimeline OpenChannel(Guid channelId) =>
         new(Scope, channelId, Account.Key.Id, _api, _cache);
 
     public Task<byte[]?> DownloadAsync(Uri url, int maxBytes, CancellationToken cancellationToken) =>
         _api.DownloadAsync(url, maxBytes, cancellationToken);
+
+    public async Task DownloadToAsync(AttachmentDto attachment, Stream destination, CancellationToken cancellationToken)
+    {
+        var limit = Math.Max(attachment.Size, 1) + 65_536;
+        try
+        {
+            await _api.DownloadToAsync(attachment.DownloadUrl, destination, limit, cancellationToken);
+        }
+        catch
+        {
+            if (destination.CanSeek)
+            {
+                destination.Position = 0;
+                destination.SetLength(0);
+            }
+            var authed = new Uri(_api.ApiBase.AbsoluteUri.TrimEnd('/') + $"/attachments/{attachment.Id:D}/content");
+            await _api.DownloadToAsync(authed, destination, limit, cancellationToken);
+        }
+    }
 
     public async Task SignOutAsync()
     {
@@ -120,7 +183,7 @@ public sealed class InstanceSession : IAsyncDisposable
         await _vault.StoreAsync(Descriptor.Id, Account.Key.Id, _refreshToken, cancellationToken);
         await _cache.SaveAccountAsync(Scope, Account.DisplayName, cancellationToken);
         await _cache.SetSettingAsync("account:" + Descriptor.Id.Value, Account.Key.Id.ToString(), cancellationToken);
-        _users[Account.Key.Id] = new(Account.Key.Id, Account.DisplayName, Account.DisplayName);
+        _users[Me.Id] = Me;
     }
 
     private async Task RefreshCommunityAsync(CancellationToken cancellationToken)
@@ -138,8 +201,19 @@ public sealed class InstanceSession : IAsyncDisposable
     {
         Servers = snapshot.Servers;
         Channels = snapshot.Channels;
-        foreach (var user in snapshot.Users) _users[user.Id] = user;
+        foreach (var user in snapshot.Users) ApplyUser(user);
     }
+
+    private void ApplyUser(UserDto user)
+    {
+        _users[user.Id] = user;
+        if (user.Id != Me.Id) return;
+        Me = user;
+        Account = ToAccount(Descriptor, user);
+    }
+
+    private static Account ToAccount(InstanceDescriptor descriptor, UserDto user) =>
+        new(new(descriptor.Id, user.Id), user.Username, user.DisplayName);
 
     private async Task RunAsync(CancellationToken cancellationToken)
     {
@@ -223,10 +297,27 @@ public sealed class InstanceSession : IAsyncDisposable
         {
             var ready = envelope.Data.Deserialize(ProtocolJson.Default.ReadyDto) ?? throw new InvalidDataException("READY");
             ApplyCommunity(new(ready.Servers, ready.Channels, ready.Users));
+            ApplyUser(ready.User);
             Voice.Replace(ready.VoiceStates);
-            await _cache.SaveCommunityAsync(Scope, new(Servers, Channels, ready.Users), cancellationToken);
+            await _cache.SaveCommunityAsync(Scope, new(Servers, Channels, [.. _users.Values]), cancellationToken);
             await _cache.SaveCursorAsync(Scope, ready.SessionId, envelope.Seq ?? 0, cancellationToken);
             CommunityChanged?.Invoke();
+            return;
+        }
+        if (envelope.Event == "USER_UPDATE")
+        {
+            var user = envelope.Data.Deserialize(ProtocolJson.Default.UserDto);
+            if (user is not null)
+            {
+                ApplyUser(user);
+                await _cache.SaveCommunityAsync(Scope, new(Servers, Channels, [.. _users.Values]), cancellationToken);
+                CommunityChanged?.Invoke();
+            }
+            if (envelope.Seq is long userSeq)
+            {
+                var cursor = await _cache.LoadCursorAsync(Scope, cancellationToken);
+                await _cache.SaveCursorAsync(Scope, cursor.SessionId, userSeq, cancellationToken);
+            }
             return;
         }
         if (envelope.Event == "VOICE_STATE_UPDATE")
@@ -254,7 +345,7 @@ public sealed class InstanceSession : IAsyncDisposable
             MessageArrived?.Invoke(message);
             return;
         }
-        if (envelope.Event is "CHANNEL_CREATE" or "SERVER_CREATE" or "MEMBER_JOIN")
+        if (envelope.Event is "CHANNEL_CREATE" or "CHANNEL_UPDATE" or "SERVER_CREATE" or "MEMBER_JOIN")
         {
             try { await RefreshCommunityAsync(cancellationToken); } catch { /* next READY/resync */ }
             if (envelope.Seq is long seq)

@@ -33,6 +33,15 @@ test("voice-state fixture keeps the same seq encoding", () => {
   assert.equal(envelope.seq, SEQ);
 });
 
+test("user-update fixture carries an optional animated avatar", () => {
+  const envelope = JSON.parse(readFixture("user-update.json"));
+  assert.equal(envelope.event, "USER_UPDATE");
+  assert.equal(typeof envelope.seq, "string");
+  assert.equal(envelope.data.username, "ada");
+  assert.equal(envelope.data.avatar.animated, true);
+  assert.match(envelope.data.avatar.mime_type, /^image\//);
+});
+
 test("rtc-token fixture is a closed contract shape", () => {
   const token = JSON.parse(readFixture("rtc-token.json"));
   assert.equal(typeof token.token, "string");

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["src/server/domain", "src/server/protocol", "src/server/app"]
+members = ["src/server/domain", "src/server/protocol", "src/server/app", "src/media-worker"]
+default-members = ["src/server/domain", "src/server/protocol", "src/server/app"]
 
 [workspace.package]
 edition = "2024"

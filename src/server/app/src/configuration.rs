@@ -46,9 +46,14 @@ pub struct Storage {
     pub secret_key: String,
     #[serde(default = "default_local_dir")]
     pub local_dir: String,
+    #[serde(default = "default_max_bytes")]
+    pub max_bytes: u64,
 }
 fn default_local_dir() -> String {
     "data/objects".into()
+}
+fn default_max_bytes() -> u64 {
+    chat_protocol::MAX_ATTACHMENT_BYTES
 }
 #[derive(Clone, Deserialize)]
 pub struct Rtc {
@@ -133,6 +138,11 @@ impl Settings {
         }
         if self.storage.local_dir.trim().is_empty() {
             return Err("storage.local_dir required".into());
+        }
+        if !(64 * 1024..=chat_protocol::MAX_ATTACHMENT_BYTES_CEILING)
+            .contains(&self.storage.max_bytes)
+        {
+            return Err("storage.max_bytes must be 64 KiB..=256 MiB".into());
         }
         Ok(())
     }

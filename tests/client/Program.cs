@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Chat.Core.Instances;
+using Chat.Core;
+using Chat.Localization;
 using Chat.Core.Messaging;
 using Chat.Core.Realtime;
 using Chat.Domain.Instances;
@@ -21,16 +23,31 @@ var message = envelope.Data.Deserialize(ProtocolJson.Default.MessageDto)!;
 Check(envelope.Seq == 9007199254740993, "64-bit sequence survives wire decoding");
 Check(JsonSerializer.Serialize(envelope, ProtocolJson.Default.GatewayEnvelope).Contains("\"seq\":\"9007199254740993\""), "sequence encodes as decimal string");
 Check(discovery.ProtocolVersion == 1 && message.Kind == "text", "shared protocol fixtures");
+Check(discovery.MaxAttachmentBytes == ProtocolVersion.MaxAttachmentBytes && discovery.MaxAttachmentsPerMessage == ProtocolVersion.MaxAttachmentsPerMessage, "discovery advertises attachment limits");
+var voice = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/voice-state.json")), ProtocolJson.Default.GatewayEnvelope)!;
+Check(voice.Event == "VOICE_STATE_UPDATE", "voice state fixture");
+Check(voice.Data.Deserialize(ProtocolJson.Default.VoiceStateDto)!.DisplayName == "Ada", "voice state display name");
+var userUpdate = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/user-update.json")), ProtocolJson.Default.GatewayEnvelope)!;
+Check(userUpdate.Event == "USER_UPDATE", "user update fixture");
+Check(userUpdate.Data.Deserialize(ProtocolJson.Default.UserDto)!.Avatar!.Animated, "animated avatar flag");
 Check(InstanceManager.NormalizeAddress("friends.example.com").Scheme == "https", "discovery defaults to HTTPS");
 Check(InstanceManager.NormalizeAddress("localhost:8080").Scheme == "http", "loopback defaults to HTTP");
 Check(InstanceManager.NormalizeAddress("192.168.1.10:8080").Host == "192.168.1.10", "LAN IP defaults to HTTP");
 try { InstanceManager.NormalizeAddress("http://example.com"); throw new Exception("Insecure URL accepted"); }
-catch (ArgumentException) { Check(true, "remote cleartext URL rejected"); }
+catch (ClientFault fault) { Check(fault.Key == TextKey.InvalidInstanceAddress, "remote cleartext URL rejected"); }
 try { InstanceManager.NormalizeAddress("http://8.8.8.8"); throw new Exception("Public cleartext IP accepted"); }
-catch (ArgumentException) { Check(true, "public cleartext IP rejected"); }
+catch (ClientFault fault) { Check(fault.Key == TextKey.InvalidInstanceAddress, "public cleartext IP rejected"); }
 Check(!PermissionResolver.Resolve(Permission.SendMessage, [], default, [], new(0, Permission.SendMessage)).HasFlag(Permission.SendMessage), "member permission deny wins");
 Check(PermissionResolver.Resolve(Permission.Administrator, [], default, [], new(0, Permission.SendMessage)).HasFlag(Permission.SendMessage), "administrator override");
 Check(ReconnectPolicy.Delay(99, 1) <= TimeSpan.FromSeconds(37.5), "backoff remains bounded");
+var catalog = new TextCatalog();
+Check(catalog.SameKeys(), "zh/en/ja catalogs share keys");
+Check(Locale.Parse("zh-CN").Code == "zh-Hans", "zh-CN maps to simplified Chinese");
+Check(Locale.Parse("ja-JP").Code == "ja", "ja-JP maps to Japanese");
+Check(Locale.Parse("fr").Code == "en", "unsupported locale falls back to English");
+Check(catalog.Get(Locale.Chinese, TextKey.Settings) == "设置", "Chinese settings label");
+Check(catalog.Get(Locale.English, TextKey.Settings) == "Settings", "English settings label");
+Check(catalog.Get(Locale.Japanese, TextKey.Settings) == "設定", "Japanese settings label");
 await using var media = new UnavailableMediaService();
 Check(media.Capabilities == MediaCapabilities.None, "no false media capabilities");
 var directory = Path.Combine(Path.GetTempPath(), "chat-checks-" + Guid.NewGuid());

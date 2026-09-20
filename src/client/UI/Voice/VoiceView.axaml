@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Voice.VoiceView" x:DataType="vm:ShellViewModel">
+  <Grid RowDefinitions="*,Auto" Margin="28">
+    <StackPanel Spacing="10">
+      <TextBlock Text="{Binding PaneTitle}" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding VoiceStatus}" Classes="muted" TextWrapping="Wrap" />
+      <TextBlock Text="{i18n:T AudioQuality}" FontSize="13" Margin="0,12,0,0" />
+      <ComboBox ItemsSource="{Binding AudioQualityChoices}" SelectedItem="{Binding SelectedAudioQuality}"
+        HorizontalAlignment="Stretch" MinHeight="40" AutomationProperties.Name="{i18n:T AudioQuality}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:AudioQualityChoice">
+            <StackPanel Spacing="2" Margin="0,2">
+              <TextBlock Text="{Binding Title}" />
+              <TextBlock Text="{Binding Detail}" Classes="muted" FontSize="12" />
+            </StackPanel>
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <StackPanel Spacing="8" IsVisible="{Binding CanSetChannelQuality}">
+        <TextBlock Text="{i18n:T ChannelQualityCap}" FontSize="13" Margin="0,8,0,0" />
+        <ComboBox ItemsSource="{Binding ChannelQualityChoices}" SelectedItem="{Binding SelectedChannelQuality}"
+          HorizontalAlignment="Stretch" MinHeight="40" AutomationProperties.Name="{i18n:T ChannelQualityCap}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:AudioQualityChoice">
+              <StackPanel Spacing="2" Margin="0,2">
+                <TextBlock Text="{Binding Title}" />
+                <TextBlock Text="{Binding Detail}" Classes="muted" FontSize="12" />
+              </StackPanel>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+      <ItemsControl ItemsSource="{Binding VoiceMembers}" Margin="0,12,0,0">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding}" Margin="0,4" FontSize="16" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+      <Button Content="{Binding MuteLabel}" Command="{Binding ToggleMute}" Padding="16,10" />
+      <Button Content="{Binding DeafLabel}" Command="{Binding ToggleDeaf}" Padding="16,10" />
+      <Button Content="{i18n:T LeaveVoice}" Command="{Binding LeaveVoice}" Padding="16,10" />
+    </StackPanel>
+  </Grid>
+</UserControl>

@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="../Core/Chat.Core.csproj" />
     <ProjectReference Include="../Protocol/Chat.Protocol.csproj" />
+    <ProjectReference Include="../Localization/Chat.Localization.csproj" />
 
   </ItemGroup>
 </Project>

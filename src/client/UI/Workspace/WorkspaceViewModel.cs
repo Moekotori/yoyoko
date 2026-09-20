@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Chat.Localization;
 using Chat.UI.Components;
+using Chat.UI.Localization;
 
 namespace Chat.UI.Workspace;
 
@@ -17,24 +20,27 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     private string _query = "";
     private string _draft = "";
     private string _notice = "";
-    public WorkspaceViewModel(bool isPreview)
+    private readonly I18n _text;
+    public WorkspaceViewModel(bool isPreview, I18n? text = null)
     {
+        _text = text ?? I18n.Presenter;
         IsPreview = isPreview;
         SelectChannel = new(value => { if (value is ChannelItem channel) SelectedChannel = channel; });
         CloseTab = new(value => { if (value is ChannelItem channel) CloseChannel(channel); });
-        Send = new(_ => { if (CanAttemptSend) Notice = "Not implemented yet"; });
+        Send = new(_ => { if (CanAttemptSend) Notice = _text.Get(TextKey.NotImplemented); });
         Escape = new(_ => { if (HasNotice) Notice = ""; else if (SearchVisible) { SearchVisible = false; Query = ""; } });
         ToggleMembers = new(_ => { MembersVisible = !MembersVisible; });
         ToggleText = new(_ => { TextExpanded = !TextExpanded; });
         ToggleVoice = new(_ => { VoiceExpanded = !VoiceExpanded; });
         ToggleSearch = new(_ => { SearchVisible = !SearchVisible; Query = ""; });
-        Unavailable = new(_ => Notice = "Not implemented yet");
+        Unavailable = new(_ => Notice = _text.Get(TextKey.NotImplemented));
         DismissNotice = new(_ => Notice = "");
+        _text.PropertyChanged += OnLocaleChanged;
         if (isPreview) LoadPreview();
     }
     public bool IsPreview { get; }
-    public string AccountName => IsPreview ? "林" : "未登录";
-    public string AccountStatus => IsPreview ? "设计预览" : "离线";
+    public string AccountName => IsPreview ? "林" : _text.Get(TextKey.SignedOut);
+    public string AccountStatus => IsPreview ? _text.Get(TextKey.DesignPreview) : _text.Get(TextKey.Offline);
     public Bitmap? AccountAvatar => Members.FirstOrDefault()?.Avatar;
     public Bitmap? VoiceAvatar => Members.Skip(1).FirstOrDefault()?.Avatar;
     public ObservableCollection<ChannelItem> Channels { get; } = [];
@@ -71,12 +77,12 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
             RefreshMessages();
         }
     }
-    public string ChannelName => SelectedChannel?.Name ?? "频道";
-    public string ComposerPlaceholder => SelectedChannel is null ? "选择一个频道" : "发消息到 #" + ChannelName;
-    public string MemberHeading => IsPreview ? "在线 — 3" : "尚未登录";
+    public string ChannelName => SelectedChannel?.Name ?? _text.Get(TextKey.ChannelFallback);
+    public string ComposerPlaceholder => SelectedChannel is null ? _text.Get(TextKey.SelectChannel) : _text.Get(TextKey.MessageToChannel, ChannelName);
+    public string MemberHeading => IsPreview ? _text.Get(TextKey.OnlineCount, 3) : _text.Get(TextKey.NotSignedIn);
     public bool HasChannel => SelectedChannel is not null;
     public bool CanAttemptSend => HasChannel && !string.IsNullOrWhiteSpace(Draft);
-    public string EmptyTitle => Query.Length > 0 ? "没有匹配的消息" : HasChannel ? "这里还很安静" : "选择一个频道";
+    public string EmptyTitle => Query.Length > 0 ? _text.Get(TextKey.NoMatchingMessages) : HasChannel ? _text.Get(TextKey.StillQuiet) : _text.Get(TextKey.SelectChannel);
     public string EmptyDetail => Query.Length > 0 ? Query : HasChannel ? "# " + ChannelName : "";
     private void CloseChannel(ChannelItem channel)
     {
@@ -132,7 +138,21 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
         OpenTabs.Add(Channels[0]); OpenTabs.Add(Channels[1]);
         SelectedChannel = Channels[0];
     }
-    public void Dispose() { foreach (var image in _images) image.Dispose(); _images.Clear(); }
+    private void OnLocaleChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        Changed(nameof(AccountName));
+        Changed(nameof(AccountStatus));
+        Changed(nameof(ChannelName));
+        Changed(nameof(ComposerPlaceholder));
+        Changed(nameof(MemberHeading));
+        Changed(nameof(EmptyTitle));
+    }
+    public void Dispose()
+    {
+        _text.PropertyChanged -= OnLocaleChanged;
+        foreach (var image in _images) image.Dispose();
+        _images.Clear();
+    }
 }
 
 public sealed class ChannelItem(string name, IReadOnlyList<MessageItem> messages) : ObservableObject

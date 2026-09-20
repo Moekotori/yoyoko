@@ -28,7 +28,7 @@ async fn session(mut socket: WebSocket, state: Arc<AppState>) {
         seq: None,
         data: json!({"protocol_version":PROTOCOL_VERSION,"heartbeat_interval_ms":30000}),
     };
-    if send(&mut socket, &hello).await.is_err() {
+    if !send(&mut socket, &hello).await {
         return;
     }
     let frame = tokio::time::timeout(Duration::from_secs(5), socket.recv()).await;
@@ -61,7 +61,7 @@ async fn session(mut socket: WebSocket, state: Arc<AppState>) {
         seq: None,
         data: serde_json::to_value(ready).unwrap_or_else(|_| json!({})),
     };
-    if send(&mut socket, &ready).await.is_err() {
+    if !send(&mut socket, &ready).await {
         return;
     }
     for event in replay {
@@ -71,7 +71,7 @@ async fn session(mut socket: WebSocket, state: Arc<AppState>) {
             seq: Some(event.seq.to_string()),
             data: event.payload,
         };
-        if send(&mut socket, &envelope).await.is_err() {
+        if !send(&mut socket, &envelope).await {
             return;
         }
     }
@@ -93,7 +93,7 @@ async fn session(mut socket: WebSocket, state: Arc<AppState>) {
                                 seq: None,
                                 data: json!({}),
                             };
-                            if send(&mut socket, &ack).await.is_err() {
+                            if !send(&mut socket, &ack).await {
                                 break;
                             }
                         }
@@ -111,7 +111,7 @@ async fn session(mut socket: WebSocket, state: Arc<AppState>) {
                         if let Some(seq) = envelope.seq.as_deref().and_then(|s| s.parse().ok()) {
                             last_seq = seq;
                         }
-                        if send(&mut socket, envelope.as_ref()).await.is_err() {
+                        if !send(&mut socket, envelope.as_ref()).await {
                             break;
                         }
                     }
@@ -152,7 +152,7 @@ async fn identify(
     let claims = state
         .tokens
         .verify_access(&identify.access_token)
-        .map_err(|_| (4401, "Invalid access token"))?;
+        .ok_or((4401, "Invalid access token"))?;
     let session = state
         .store
         .create_gateway_session(
@@ -177,7 +177,7 @@ async fn resume(
     let claims = state
         .tokens
         .verify_access(&resume.access_token)
-        .map_err(|_| (4401, "Invalid access token"))?;
+        .ok_or((4401, "Invalid access token"))?;
     let session_id: Uuid = resume
         .session_id
         .parse()
@@ -200,12 +200,11 @@ async fn resume(
     Ok((claims.user_id, session.id, replay))
 }
 
-async fn send(socket: &mut WebSocket, envelope: &GatewayEnvelope) -> Result<(), ()> {
-    let text = serde_json::to_string(envelope).map_err(|_| ())?;
-    socket
-        .send(Message::Text(text.into()))
-        .await
-        .map_err(|_| ())
+async fn send(socket: &mut WebSocket, envelope: &GatewayEnvelope) -> bool {
+    let Ok(text) = serde_json::to_string(envelope) else {
+        return false;
+    };
+    socket.send(Message::Text(text.into())).await.is_ok()
 }
 
 async fn close(socket: &mut WebSocket, code: u16, reason: &'static str) {

@@ -5,6 +5,9 @@
       "chat.domain": {
         "type": "Project"
       },
+      "chat.localization": {
+        "type": "Project"
+      },
       "chat.protocol": {
         "type": "Project"
       }

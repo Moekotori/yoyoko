@@ -225,6 +225,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "chat-media-worker"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "chat-protocol"
 version = "0.1.0"
 dependencies = [
@@ -247,7 +254,6 @@ dependencies = [
  "config",
  "hex",
  "hmac",
- "http-body-util",
  "image",
  "password-hash",
  "rand 0.8.8",

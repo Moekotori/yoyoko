@@ -27,8 +27,8 @@ impl VoiceRoster {
             .await
             .values()
             .filter(|state| state.channel_id == channel_id)
-            .cloned()
             .take(256)
+            .cloned()
             .collect()
     }
 
@@ -38,8 +38,8 @@ impl VoiceRoster {
             .await
             .values()
             .filter(|state| server_ids.contains(&state.server_id))
-            .cloned()
             .take(256)
+            .cloned()
             .collect()
     }
 }
@@ -63,6 +63,7 @@ mod tests {
                 self_mute: false,
                 self_deaf: false,
                 display_name: "Ada".into(),
+                audio_quality: chat_domain::voice::AudioQuality::DEFAULT,
             })
             .await;
         roster
@@ -73,6 +74,7 @@ mod tests {
                 self_mute: true,
                 self_deaf: false,
                 display_name: "Ada".into(),
+                audio_quality: chat_domain::voice::AudioQuality::DEFAULT,
             })
             .await;
         assert!(roster.list_channel(first).await.is_empty());

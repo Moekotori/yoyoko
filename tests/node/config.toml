@@ -26,6 +26,7 @@ bucket = "chat"
 access_key = "chat_dev"
 secret_key = "local-development-only"
 local_dir = "data/objects"
+max_bytes = 25165824
 
 [rtc]
 provider = "livekit"

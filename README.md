@@ -6,19 +6,23 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 
 ## 当前状态
 
-当前处于 **Phase 0：Architecture Foundation**。本阶段建立长期可维护的工程与协议边界，不是完整聊天产品。
+当前处于 **Phase 1：两个真实客户端文字聊天**（含发图）。Phase 0 架构边界保留。
 
 | 能力 | 状态 |
 | --- | --- |
 | Avalonia 桌面外壳、轻量 MVVM、独立客户端项目 | 已实现 |
+| 客户端界面语言（中文 / English / 日本語），设置中切换 | 已实现；跟随系统，可覆盖并写入本地偏好 |
 | 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
-| 独立 InstanceContext、账号/实例隔离的数据契约 | 已建立；尚未接入真实登录会话 |
-| SQLite 消息分页缓存与账号隔离 | 已实现并有聚焦检查；尚未接入远程消息同步 |
-| Rust 健康检查、实例发现、Gateway 版本握手 | 已实现；认证未实现时明确拒绝连接 |
-| Domain、Service、Repository 与 PostgreSQL 适配边界 | 已建立；业务 API 尚未开放 |
+| 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
+| SQLite 消息分页缓存与账号隔离 | 已实现并接入远程同步 |
+| Rust 健康检查、发现、认证 Gateway READY | 已实现 |
+| Domain、Service、Repository | 已实现 VIEW_CHANNEL / SEND_MESSAGE 服务端检查 |
 | C++ Native Media C ABI | 骨架可编译，能力位为 0，媒体操作明确返回未实现 |
 | PostgreSQL migration、Docker Compose、CI | 本地 Node 管线已接通；容器/迁移及远程 GitHub Actions 运行尚未验收 |
-| 注册、登录、聊天、重连恢复、附件、语音、共享 | **Not implemented yet**，按后续阶段推进 |
+| 注册、登录、社区/频道、文字消息 | 已接通控制面；完整验收见路线图 |
+| 聊天附件（拖拽/选择图片与文件、可配置上限、对端下载） | 已实现；默认 24 MiB，服务端 `storage.max_bytes` 可改 |
+| 语音频道加入/离开、mute/deafen、LiveKit token | 已实现控制面；真实麦克风/听筒需 LiveKit 与媒体 worker |
+| 屏幕共享 | **Not implemented yet** |
 
 本机已通过 .NET Release 构建、Rust 聚焦测试与 Clippy、Native C ABI 检查，并验证了实例添加和离线恢复。Windows/Linux 的实际构建、GUI、安装包及媒体硬件尚未验证。
 
@@ -113,6 +117,8 @@ docs/                协议、数据库、ADR 与验证记录
 
 ## 快速开始
 
+macOS 上双击仓库根目录的 `start.command`，或在终端运行 `./start.command`，即可构建并打开桌面 UI。脚本会启动本地服务端；若 `http://localhost:8080` 已有可用的聊天服务则复用。关闭客户端时只停止脚本自己启动的服务。首次启动需要安装 .NET SDK 10 和 Rust，且需要联网下载构建依赖。
+
 需要 .NET SDK 10、Rust stable ≥ 1.90。构建原生骨架另需 CMake ≥ 3.24 和 C++20 编译器。协议 fixtures 与对本机 API 的 live 检查需要 Node.js ≥ 22（无 npm 依赖）。以下命令均在仓库根目录执行。
 
 终端一，启动本地服务端：
@@ -128,7 +134,11 @@ dotnet restore Chat.sln --locked-mode
 dotnet run --project src/client/App -c Release
 ```
 
-在客户端输入 `http://localhost:8080`，点击“添加实例”。成功后显示实例名称并保存到 SQLite，重启后可离线恢复。此流程不需要 PostgreSQL 或 Docker，也不会登录账号、创建频道或启用麦克风。
+在客户端输入 `http://localhost:8080`，添加实例后注册或登录。创建社区会得到邀请码；第二个客户端用同一地址登录并加入，即可互发文字和图片。本机 `cargo run` 默认使用 `local:data/chat.json` 与 `data/objects`，不需要 PostgreSQL、Docker 或 MinIO。两个客户端请用不同的 `CHAT_CACHE_DIRECTORY`，避免抢同一份 SQLite。
+
+```sh
+CHAT_CACHE_DIRECTORY=/tmp/chat-b dotnet run --project src/client/App -c Release
+```
 
 同一局域网里的其他设备请用 `npm run dev` 启动服务，再在客户端输入打印出的 `http://192.168.x.x:8080`。默认 `cargo run` 只绑回环地址，局域网连不上。`npm run lan` 与 `dev` 相同。
 

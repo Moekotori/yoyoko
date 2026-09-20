@@ -1,0 +1,3 @@
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS blocked_words JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE servers ADD COLUMN IF NOT EXISTS cooldown_seconds INTEGER NOT NULL DEFAULT 0
+    CHECK (cooldown_seconds BETWEEN 0 AND 600);

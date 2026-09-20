@@ -17,7 +17,7 @@ public sealed class ChatApiClient : IChatApi
 {
     private readonly HttpClient _http = new(new HttpClientHandler { AllowAutoRedirect = false })
     {
-        Timeout = TimeSpan.FromSeconds(30)
+        Timeout = TimeSpan.FromSeconds(120)
     };
     private string? _token;
     public ChatApiClient(Uri api, Uri gateway)
@@ -37,6 +37,10 @@ public sealed class ChatApiClient : IChatApi
         => Send(HttpMethod.Post, "auth/refresh", new RefreshRequest(refreshToken), ProtocolJson.Default.RefreshRequest, ProtocolJson.Default.AuthResponse, cancellationToken)!;
     public Task LogoutAsync(CancellationToken cancellationToken)
         => Send<object, object>(HttpMethod.Post, "auth/logout", null, null, null, cancellationToken);
+    public Task<UserDto> GetMeAsync(CancellationToken cancellationToken)
+        => Send(HttpMethod.Get, "users/me", (object?)null, null, ProtocolJson.Default.UserDto, cancellationToken)!;
+    public Task<UserDto> PatchMeAsync(PatchMeRequest request, CancellationToken cancellationToken)
+        => Send(HttpMethod.Patch, "users/me", request, ProtocolJson.Default.PatchMeRequest, ProtocolJson.Default.UserDto, cancellationToken)!;
     public Task<ServerDto> CreateServerAsync(string name, CancellationToken cancellationToken)
         => Send(HttpMethod.Post, "servers", new CreateServerRequest(name), ProtocolJson.Default.CreateServerRequest, ProtocolJson.Default.ServerDto, cancellationToken)!;
     public async Task<IReadOnlyList<ServerDto>> ListServersAsync(CancellationToken cancellationToken)
@@ -50,19 +54,25 @@ public sealed class ChatApiClient : IChatApi
             (object?)null, null, ProtocolJson.Default.MessagePageDto, cancellationToken)!;
     public Task<MessageDto> SendMessageAsync(Guid channelId, SendMessageRequest request, string idempotencyKey, CancellationToken cancellationToken)
         => Send(HttpMethod.Post, $"channels/{channelId}/messages", request, ProtocolJson.Default.SendMessageRequest, ProtocolJson.Default.MessageDto, cancellationToken, idempotencyKey)!;
-    public Task<VoiceJoinDto> JoinVoiceAsync(Guid channelId, bool mute, bool deaf, CancellationToken cancellationToken)
-        => Send(HttpMethod.Post, $"channels/{channelId}/voice/join", new VoiceFlags(mute, deaf), ProtocolJson.Default.VoiceFlags, ProtocolJson.Default.VoiceJoinDto, cancellationToken)!;
+    public Task<VoiceJoinDto> JoinVoiceAsync(Guid channelId, bool mute, bool deaf, string? quality, CancellationToken cancellationToken)
+        => Send(HttpMethod.Post, $"channels/{channelId}/voice/join", new VoiceFlags(mute, deaf, quality), ProtocolJson.Default.VoiceFlags, ProtocolJson.Default.VoiceJoinDto, cancellationToken)!;
     public Task LeaveVoiceAsync(CancellationToken cancellationToken)
         => Send<object, object>(HttpMethod.Post, "voice/leave", null, null, null, cancellationToken);
-    public Task<VoiceStateDto> PatchVoiceAsync(bool mute, bool deaf, CancellationToken cancellationToken)
-        => Send(HttpMethod.Patch, "voice/state", new VoiceFlags(mute, deaf), ProtocolJson.Default.VoiceFlags, ProtocolJson.Default.VoiceStateDto, cancellationToken)!;
+    public Task<VoiceStateDto> PatchVoiceAsync(bool mute, bool deaf, string? quality, CancellationToken cancellationToken)
+        => Send(HttpMethod.Patch, "voice/state", new VoiceFlags(mute, deaf, quality), ProtocolJson.Default.VoiceFlags, ProtocolJson.Default.VoiceStateDto, cancellationToken)!;
+    public Task<ChannelDto> PatchChannelAsync(Guid channelId, PatchChannelRequest request, CancellationToken cancellationToken)
+        => Send(HttpMethod.Patch, $"channels/{channelId}", request, ProtocolJson.Default.PatchChannelRequest, ProtocolJson.Default.ChannelDto, cancellationToken)!;
+    public Task<ServerDto> PatchModerationAsync(Guid serverId, PatchModerationRequest request, CancellationToken cancellationToken)
+        => Send(HttpMethod.Patch, $"servers/{serverId}/moderation", request, ProtocolJson.Default.PatchModerationRequest, ProtocolJson.Default.ServerDto, cancellationToken)!;
 
-    public async Task<AttachmentDto> UploadAsync(PickedImage image, CancellationToken cancellationToken)
+    public async Task<AttachmentDto> UploadAsync(PickedFile file, CancellationToken cancellationToken)
     {
+        if (file.Content.CanSeek) file.Content.Position = 0;
         using var content = new MultipartFormDataContent();
-        using var stream = new StreamContent(image.Content);
-        stream.Headers.ContentType = new MediaTypeHeaderValue(image.MimeType);
-        content.Add(stream, "file", image.FileName);
+        using var stream = new StreamContent(file.Content);
+        stream.Headers.ContentType = new MediaTypeHeaderValue(file.MimeType);
+        if (file.Size > 0) stream.Headers.ContentLength = file.Size;
+        content.Add(stream, "file", file.FileName);
         using var request = new HttpRequestMessage(HttpMethod.Post, Combine("attachments")) { Content = content };
         Authorize(request);
         using var response = await _http.SendAsync(request, cancellationToken);
@@ -75,10 +85,37 @@ public sealed class ChatApiClient : IChatApi
     public async Task<byte[]?> DownloadAsync(Uri url, int maxBytes, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        Authorize(request);
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (!response.IsSuccessStatusCode) return null;
         await response.Content.LoadIntoBufferAsync(maxBytes, cancellationToken);
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+    }
+
+    public async Task DownloadToAsync(Uri url, Stream destination, long maxBytes, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        Authorize(request);
+        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var json = await Read(response, 64 * 1024, cancellationToken);
+            Ensure(response, json);
+        }
+        if (response.Content.Headers.ContentLength is long length && length > maxBytes)
+            throw new ChatApiException("too_large", "File exceeds the download limit.");
+        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var buffer = new byte[32 * 1024];
+        long total = 0;
+        while (true)
+        {
+            var read = await source.ReadAsync(buffer, cancellationToken);
+            if (read == 0) break;
+            total += read;
+            if (total > maxBytes) throw new ChatApiException("too_large", "File exceeds the download limit.");
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+        }
+        await destination.FlushAsync(cancellationToken);
     }
 
     private async Task<TOut?> Send<TIn, TOut>(HttpMethod method, string path, TIn? body, JsonTypeInfo<TIn>? input,
@@ -116,7 +153,7 @@ public sealed class ChatApiClient : IChatApi
         if (response.IsSuccessStatusCode) return;
         ApiError? error = null;
         try { error = JsonSerializer.Deserialize(json, ProtocolJson.Default.ApiError); } catch (JsonException) { }
-        throw new ChatApiException(error?.Code ?? "http_error", error?.Message ?? $"HTTP {(int)response.StatusCode}");
+        throw new ChatApiException(error?.Code ?? "http_error", error?.Message ?? $"HTTP {(int)response.StatusCode}", error?.RetryAfterSeconds);
     }
 
     public void Dispose() => _http.Dispose();

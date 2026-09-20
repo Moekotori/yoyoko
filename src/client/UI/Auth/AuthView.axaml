@@ -1,17 +1,18 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" x:Class="Chat.UI.Auth.AuthView" x:DataType="vm:ShellViewModel">
+  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Auth.AuthView" x:DataType="vm:ShellViewModel">
   <StackPanel MaxWidth="420" Margin="40" Spacing="14" VerticalAlignment="Center" HorizontalAlignment="Center">
-    <TextBlock Text="登录" FontSize="30" FontWeight="SemiBold" />
+    <TextBlock Text="{i18n:T SignIn}" FontSize="30" FontWeight="SemiBold" />
     <TextBlock Text="{Binding InstanceHost}" Classes="muted" />
-    <TextBlock Text="用户名" FontSize="13" />
-    <TextBox Text="{Binding Username}" PlaceholderText="alice" AutomationProperties.Name="用户名" />
-    <TextBlock Text="显示名（注册）" FontSize="13" />
-    <TextBox Text="{Binding DisplayName}" PlaceholderText="Alice" AutomationProperties.Name="显示名" />
-    <TextBlock Text="密码" FontSize="13" />
-    <TextBox Text="{Binding Password}" PasswordChar="•" AutomationProperties.Name="密码" />
+    <TextBlock Text="{i18n:T Username}" FontSize="13" />
+    <TextBox Text="{Binding Username}" PlaceholderText="alice" AutomationProperties.Name="{i18n:T Username}" />
+    <TextBlock Text="{i18n:T DisplayName}" FontSize="13" />
+    <TextBox Text="{Binding DisplayName}" PlaceholderText="Alice" AutomationProperties.Name="{i18n:T DisplayNameField}" />
+    <TextBlock Text="{i18n:T Password}" FontSize="13" />
+    <TextBox Text="{Binding Password}" PasswordChar="•" AutomationProperties.Name="{i18n:T Password}" />
     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-      <Button Classes="primary" Content="登录" Command="{Binding SignIn}" />
-      <Button Grid.Column="1" Content="注册" Command="{Binding Register}" Padding="18,11" />
+      <Button Classes="primary" Content="{i18n:T SignIn}" Command="{Binding SignIn}" />
+      <Button Grid.Column="1" Content="{i18n:T Register}" Command="{Binding Register}" Padding="18,11" />
     </Grid>
     <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" MinHeight="36" />
   </StackPanel>

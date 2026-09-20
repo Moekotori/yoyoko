@@ -7,6 +7,8 @@ using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Chat.Localization;
+using Chat.UI.Localization;
 
 namespace Chat.UI.Workspace;
 
@@ -73,9 +75,9 @@ public partial class ConversationView : UserControl
     {
         if (sender is not Control { DataContext: MessageItem message }) return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-        if (clipboard is null) { _subscribed?.ShowNotice("剪贴板不可用"); return; }
+        if (clipboard is null) { _subscribed?.ShowNotice(I18n.Presenter.Get(TextKey.ClipboardUnavailable)); return; }
         try { await clipboard.SetTextAsync(message.Text); }
-        catch (Exception) { _subscribed?.ShowNotice("无法复制到剪贴板"); }
+        catch (Exception) { _subscribed?.ShowNotice(I18n.Presenter.Get(TextKey.ClipboardFailed)); }
         args.Handled = true;
     }
 }

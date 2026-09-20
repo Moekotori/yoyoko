@@ -1,7 +1,7 @@
 use crate::{
     error::{ApiErr, ApiResult},
     identity::TokenService,
-    objects::{display_name, sniff_image},
+    objects::{display_name, is_animated, sniff_file},
     realtime::Hub,
     state::AppState,
     store::{OutboxEvent, SessionRecord, Store},
@@ -18,11 +18,12 @@ use chat_domain::{
     user::User,
 };
 use chat_protocol::{
-    AuthResponse, DEFAULT_PAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, MAX_CONTENT_BYTES, MAX_PAGE_SIZE,
+    AuthResponse, DEFAULT_PAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, MAX_AVATAR_BYTES,
+    MAX_AVATAR_EDGE, MAX_CONTENT_BYTES, MAX_PAGE_SIZE, PatchMeRequest,
 };
 use chrono::Utc;
 use rand::rngs::OsRng;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc, time::Duration};
 use uuid::Uuid;
 
 pub fn argon2() -> Argon2<'static> {
@@ -42,11 +43,22 @@ pub fn invite_code() -> String {
         .collect()
 }
 
-fn to_protocol_user(user: User) -> chat_protocol::User {
+fn to_protocol_user(state: &AppState, user: &User) -> chat_protocol::User {
     chat_protocol::User {
         id: user.id,
-        username: user.username,
-        display_name: user.display_name,
+        username: user.username.clone(),
+        display_name: user.display_name.clone(),
+        avatar: user.avatar.as_ref().map(|att| {
+            let dto = attachment_dto(&state.tokens, &state.settings.api_origin(), att);
+            chat_protocol::Avatar {
+                id: dto.id,
+                mime_type: dto.mime_type,
+                size: dto.size,
+                download_url: dto.download_url,
+                thumbnail_url: dto.thumbnail_url,
+                animated: user.avatar_animated,
+            }
+        }),
     }
 }
 
@@ -56,7 +68,96 @@ fn to_protocol_server(server: Server) -> chat_protocol::Server {
         name: server.name,
         owner_id: server.owner_id,
         invite_code: server.invite_code,
+        blocked_words: server.blocked_words,
+        cooldown_seconds: server.cooldown_seconds,
     }
+}
+
+const MAX_BLOCKED_WORDS: usize = 200;
+const MAX_BLOCKED_WORD_LEN: usize = 32;
+const MAX_COOLDOWN_SECONDS: u32 = 600;
+
+fn normalize_blocked_words(words: Vec<String>) -> ApiResult<Vec<String>> {
+    if words.len() > MAX_BLOCKED_WORDS {
+        return Err(ApiErr::bad(
+            "too_many_words",
+            "At most 200 blocked words.",
+        ));
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    let mut out = Vec::new();
+    for word in words {
+        let trimmed = word.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.chars().count() > MAX_BLOCKED_WORD_LEN {
+            return Err(ApiErr::bad(
+                "invalid_word",
+                "Blocked words must be 1-32 characters.",
+            ));
+        }
+        let key = trimmed.to_lowercase();
+        if seen.insert(key.clone()) {
+            out.push(key);
+        }
+    }
+    Ok(out)
+}
+
+fn contains_blocked(text: &str, words: &[String]) -> bool {
+    if words.is_empty() {
+        return false;
+    }
+    let haystack = text.to_lowercase();
+    words.iter().any(|word| haystack.contains(word))
+}
+
+pub async fn patch_moderation(
+    state: &AppState,
+    user: Uuid,
+    server_id: Uuid,
+    words: Option<Vec<String>>,
+    cooldown: Option<u32>,
+) -> ApiResult<chat_protocol::Server> {
+    let server = state
+        .store
+        .find_server(server_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    if server.owner_id != user {
+        let channels = state.store.list_channels(server_id).await?;
+        let allowed = match channels.first() {
+            Some(channel) => state
+                .store
+                .permissions(user, channel.id)
+                .await?
+                .resolve()
+                .is_some_and(|bits| bits.contains(Permissions::MANAGE_MESSAGES)),
+            None => false,
+        };
+        if !allowed {
+            return Err(ApiErr::forbidden());
+        }
+    }
+    if let Some(seconds) = cooldown
+        && seconds > MAX_COOLDOWN_SECONDS
+    {
+        return Err(ApiErr::bad(
+            "invalid_cooldown",
+            "Cooldown must be 0-600 seconds.",
+        ));
+    }
+    let blocked_words = match words {
+        Some(list) => normalize_blocked_words(list)?,
+        None => server.blocked_words.clone(),
+    };
+    let cooldown_seconds = cooldown.unwrap_or(server.cooldown_seconds);
+    let updated = state
+        .store
+        .update_moderation(server_id, blocked_words, cooldown_seconds)
+        .await?;
+    Ok(to_protocol_server(updated))
 }
 
 fn to_protocol_channel(channel: Channel) -> chat_protocol::Channel {
@@ -65,6 +166,35 @@ fn to_protocol_channel(channel: Channel) -> chat_protocol::Channel {
         server_id: channel.server_id,
         name: channel.name,
         kind: channel.kind.as_str().into(),
+        audio_quality: if channel.kind == ChannelKind::Voice {
+            Some(channel.audio_quality.as_str().into())
+        } else {
+            None
+        },
+    }
+}
+
+fn parse_quality(value: Option<&str>) -> ApiResult<chat_domain::voice::AudioQuality> {
+    match value.map(str::trim).filter(|s| !s.is_empty()) {
+        None => Ok(chat_domain::voice::AudioQuality::DEFAULT),
+        Some(value) => chat_domain::voice::AudioQuality::parse(value).ok_or_else(|| {
+            ApiErr::bad(
+                "invalid_audio_quality",
+                "audio_quality must be standard, high, very_high, or studio.",
+            )
+        }),
+    }
+}
+
+fn audio_profile(quality: chat_domain::voice::AudioQuality) -> chat_protocol::AudioProfile {
+    chat_protocol::AudioProfile {
+        id: quality.as_str().into(),
+        sample_rate_hz: quality.sample_rate_hz(),
+        channels: quality.channels(),
+        bitrate_bps: quality.bitrate_bps(),
+        frame_ms: quality.frame_ms(),
+        dtx: quality.dtx(),
+        fec: quality.fec(),
     }
 }
 
@@ -133,6 +263,11 @@ async fn require(
         return Err(ApiErr::forbidden());
     }
     Ok(channel)
+}
+
+pub async fn require_view(state: &AppState, user: Uuid, channel: Uuid) -> ApiResult<()> {
+    require(&*state.store, user, channel, Permissions::VIEW_CHANNEL).await?;
+    Ok(())
 }
 
 pub async fn register(
@@ -210,8 +345,117 @@ pub async fn refresh(state: &AppState, refresh_token: String) -> ApiResult<AuthR
         access_token: state.tokens.issue_access(user.id, session.id),
         refresh_token: token,
         expires_in: state.tokens.access_ttl_seconds,
-        user: to_protocol_user(user),
+        user: to_protocol_user(state, &user),
     })
+}
+
+pub async fn me(state: &AppState, user: Uuid) -> ApiResult<chat_protocol::User> {
+    let user = state
+        .store
+        .find_user(user)
+        .await?
+        .ok_or_else(ApiErr::unauthorized)?;
+    Ok(to_protocol_user(state, &user))
+}
+
+pub async fn patch_me(
+    state: &AppState,
+    user_id: Uuid,
+    patch: PatchMeRequest,
+) -> ApiResult<chat_protocol::User> {
+    if patch.avatar_id.is_some() && patch.clear_avatar {
+        return Err(ApiErr::bad(
+            "invalid_profile",
+            "Cannot set and clear avatar together.",
+        ));
+    }
+    if !state
+        .limiter
+        .check(&format!("profile:{user_id}"), 20, Duration::from_secs(3600))
+        .await
+    {
+        return Err(ApiErr::too_many());
+    }
+    let current = state
+        .store
+        .find_user(user_id)
+        .await?
+        .ok_or_else(ApiErr::unauthorized)?;
+    let username = match patch.username {
+        Some(value) => {
+            validate_username(&value)?;
+            value
+        }
+        None => current.username.clone(),
+    };
+    let display_name = match patch.display_name {
+        Some(value) => {
+            let trimmed = value.trim().to_string();
+            validate_display(&trimmed)?;
+            trimmed
+        }
+        None => current.display_name.clone(),
+    };
+    let (avatar_id, animated) = if patch.clear_avatar {
+        (None, false)
+    } else if let Some(id) = patch.avatar_id {
+        let (att, uploader, message_id) = state
+            .store
+            .get_attachment(id)
+            .await?
+            .ok_or_else(ApiErr::not_found)?;
+        if uploader != user_id || message_id.is_some() {
+            return Err(ApiErr::bad(
+                "invalid_avatar",
+                "Avatar must be an unused image you uploaded.",
+            ));
+        }
+        if att.size > MAX_AVATAR_BYTES {
+            return Err(ApiErr::bad("too_large", "Avatar exceeds 8 MiB."));
+        }
+        if !att.mime_type.starts_with("image/") || att.mime_type == "image/svg+xml" {
+            return Err(ApiErr::bad(
+                "invalid_avatar",
+                "Avatar must be a JPEG, PNG, GIF, or WebP image.",
+            ));
+        }
+        let path = state.objects.path(att.object_key);
+        if let Ok((width, height)) = image::image_dimensions(&path)
+            && (width > MAX_AVATAR_EDGE || height > MAX_AVATAR_EDGE)
+        {
+            return Err(ApiErr::bad(
+                "invalid_avatar",
+                "Avatar must be 4096px or smaller.",
+            ));
+        }
+        (Some(id), is_animated(&path, &att.mime_type))
+    } else {
+        (
+            current.avatar.as_ref().map(|att| att.id),
+            current.avatar_animated,
+        )
+    };
+    let updated = state
+        .store
+        .update_user(user_id, &username, &display_name, avatar_id, animated)
+        .await?;
+    if let Some(mut voice) = state.voice.get(user_id).await
+        && voice.display_name != updated.display_name
+    {
+        voice.display_name = updated.display_name.clone();
+        state.voice.put(voice.clone()).await;
+        publish_voice(state, &voice, false).await?;
+    }
+    let dto = to_protocol_user(state, &updated);
+    let payload = serde_json::to_value(&dto).unwrap_or_default();
+    let mut recipients = HashSet::new();
+    recipients.insert(user_id);
+    for server in state.store.list_servers(user_id).await? {
+        recipients.extend(state.store.list_members(server.id).await?);
+    }
+    let members: Vec<Uuid> = recipients.into_iter().collect();
+    dispatch(state, &members, "USER_UPDATE", payload).await?;
+    Ok(dto)
 }
 
 pub async fn logout(state: &AppState, user: Uuid, session_id: Uuid) -> ApiResult<()> {
@@ -238,7 +482,7 @@ async fn issue_session(state: &AppState, user: User) -> ApiResult<AuthResponse> 
         access_token: state.tokens.issue_access(user.id, session_id),
         refresh_token,
         expires_in: state.tokens.access_ttl_seconds,
-        user: to_protocol_user(user),
+        user: to_protocol_user(state, &user),
     })
 }
 
@@ -253,12 +497,15 @@ pub async fn create_server(
         name,
         owner_id: user,
         invite_code: invite_code(),
+        blocked_words: vec![],
+        cooldown_seconds: 0,
     };
     let channel = Channel {
         id: Uuid::now_v7(),
         server_id: server.id,
         name: "general".into(),
         kind: ChannelKind::Text,
+        audio_quality: chat_domain::voice::AudioQuality::Standard,
     };
     let created = state
         .store
@@ -271,6 +518,7 @@ pub async fn create_server(
             server_id: created.server.id,
             name: "语音".into(),
             kind: ChannelKind::Voice,
+            audio_quality: chat_domain::voice::AudioQuality::DEFAULT,
         })
         .await?;
     Ok(to_protocol_server(created.server))
@@ -310,6 +558,7 @@ pub async fn create_channel(
     server_id: Uuid,
     name: String,
     kind: String,
+    audio_quality: Option<String>,
 ) -> ApiResult<chat_protocol::Channel> {
     validate_display(&name)?;
     let kind = ChannelKind::parse(&kind)
@@ -329,12 +578,41 @@ pub async fn create_channel(
             server_id,
             name,
             kind,
+            audio_quality: if kind == ChannelKind::Voice {
+                parse_quality(audio_quality.as_deref())?
+            } else {
+                chat_domain::voice::AudioQuality::Standard
+            },
         })
         .await?;
     let members = state.store.list_members(server_id).await?;
     let payload = serde_json::to_value(to_protocol_channel(channel.clone())).unwrap_or_default();
     dispatch(state, &members, "CHANNEL_CREATE", payload).await?;
     Ok(to_protocol_channel(channel))
+}
+
+pub async fn patch_channel(
+    state: &AppState,
+    user: Uuid,
+    channel_id: Uuid,
+    audio_quality: Option<String>,
+) -> ApiResult<chat_protocol::Channel> {
+    let channel = require(&*state.store, user, channel_id, Permissions::MANAGE_CHANNEL).await?;
+    if channel.kind != ChannelKind::Voice {
+        return Err(ApiErr::bad(
+            "invalid_channel",
+            "audio_quality only applies to voice channels.",
+        ));
+    }
+    let quality = parse_quality(audio_quality.as_deref())?;
+    let updated = state
+        .store
+        .set_channel_audio_quality(channel_id, quality)
+        .await?;
+    let members = state.store.list_members(updated.server_id).await?;
+    let payload = serde_json::to_value(to_protocol_channel(updated.clone())).unwrap_or_default();
+    dispatch(state, &members, "CHANNEL_UPDATE", payload).await?;
+    Ok(to_protocol_channel(updated))
 }
 
 pub async fn join_server(
@@ -355,7 +633,7 @@ pub async fn join_server(
         .ok_or_else(ApiErr::unavailable)?;
     let payload = serde_json::json!({
         "server_id": server.id,
-        "user": to_protocol_user(user_row)
+        "user": to_protocol_user(state, &user_row)
     });
     dispatch(state, &members, "MEMBER_JOIN", payload).await?;
     Ok(to_protocol_server(server))
@@ -391,6 +669,16 @@ pub async fn send_message(
     idempotency: Option<String>,
 ) -> ApiResult<chat_protocol::Message> {
     require(&*state.store, user, channel_id, Permissions::SEND_MESSAGE).await?;
+    let channel = state
+        .store
+        .find_channel(channel_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    let server = state
+        .store
+        .find_server(channel.server_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
     if let Some(key) = idempotency.as_deref() {
         if !(8..=128).contains(&key.len()) {
             return Err(ApiErr::bad(
@@ -422,20 +710,33 @@ pub async fn send_message(
     if attachment_ids.len() > MAX_ATTACHMENTS_PER_MESSAGE {
         return Err(ApiErr::bad(
             "too_many_files",
-            "At most 4 images per message.",
+            "At most 4 files per message.",
         ));
     }
     if content.is_none() && attachment_ids.is_empty() {
         return Err(ApiErr::bad(
             "empty_message",
-            "Message needs text or an image.",
+            "Message needs text or a file.",
         ));
     }
-    let channel = state
-        .store
-        .find_channel(channel_id)
-        .await?
-        .ok_or_else(ApiErr::not_found)?;
+    if let Some(text) = &content
+        && contains_blocked(text, &server.blocked_words)
+    {
+        return Err(ApiErr::blocked_word());
+    }
+    if server.cooldown_seconds > 0
+        && let Some(last) = state
+            .store
+            .last_user_message_at(channel_id, user)
+            .await?
+    {
+        let elapsed = Utc::now().timestamp().saturating_sub(last);
+        if elapsed < server.cooldown_seconds as i64 {
+            return Err(ApiErr::cooldown(
+                (server.cooldown_seconds as i64 - elapsed) as u64,
+            ));
+        }
+    }
     let id = Uuid::now_v7();
     let attachments = if attachment_ids.is_empty() {
         vec![]
@@ -482,15 +783,26 @@ pub async fn upload(
     tmp: std::path::PathBuf,
     size: u64,
 ) -> ApiResult<chat_protocol::Attachment> {
-    let mime = sniff_image(&tmp, &mime, &file_name)?.to_string();
+    let sniffed = match sniff_file(&tmp, &mime, &file_name) {
+        Ok(value) => value,
+        Err(err) => {
+            let _ = tokio::fs::remove_file(&tmp).await;
+            return Err(err);
+        }
+    };
     let id = Uuid::now_v7();
     let object_key = Uuid::now_v7();
     state.objects.commit(&tmp, object_key).await?;
-    let thumbnail_key = state
-        .objects
-        .thumbnail(object_key)
-        .await
-        .map(|_| object_key);
+    let thumbnail_key = if sniffed.raster {
+        state
+            .objects
+            .thumbnail(object_key)
+            .await
+            .map(|_| object_key)
+    } else {
+        None
+    };
+    let mime = sniffed.mime.to_string();
     let attachment = Attachment {
         id,
         file_name: display_name(&file_name),
@@ -536,10 +848,13 @@ pub async fn ready_payload(
         .collect();
     Ok(chat_protocol::Ready {
         session_id: session_id.to_string(),
-        user: to_protocol_user(me),
+        user: to_protocol_user(state, &me),
         servers: servers.into_iter().map(to_protocol_server).collect(),
         channels: channels.into_iter().map(to_protocol_channel).collect(),
-        users: users.into_iter().map(to_protocol_user).collect(),
+        users: users
+            .iter()
+            .map(|user| to_protocol_user(state, user))
+            .collect(),
         heartbeat_interval_ms: 30_000,
         voice_states,
     })
@@ -553,6 +868,7 @@ fn to_protocol_voice(state: chat_domain::voice::VoiceState) -> chat_protocol::Vo
         self_mute: state.self_mute,
         self_deaf: state.self_deaf,
         display_name: state.display_name,
+        audio_quality: state.audio_quality.as_str().into(),
     }
 }
 
@@ -562,6 +878,7 @@ pub async fn join_voice(
     channel_id: Uuid,
     mut self_mute: bool,
     self_deaf: bool,
+    requested_quality: Option<&str>,
 ) -> ApiResult<chat_protocol::VoiceJoin> {
     if self_deaf {
         self_mute = true;
@@ -580,6 +897,15 @@ pub async fn join_voice(
         .map(|row| row.display_name)
         .unwrap_or_else(|| user.to_string());
     let previous = state.voice.get(user).await;
+    let requested = match requested_quality {
+        Some(value) => parse_quality(Some(value))?,
+        None => previous
+            .as_ref()
+            .filter(|prev| prev.channel_id == channel_id)
+            .map(|prev| prev.audio_quality)
+            .unwrap_or(chat_domain::voice::AudioQuality::DEFAULT),
+    };
+    let quality = requested.clamp(channel.audio_quality);
     let voice = chat_domain::voice::VoiceState {
         user_id: user,
         server_id: channel.server_id,
@@ -587,6 +913,7 @@ pub async fn join_voice(
         self_mute,
         self_deaf,
         display_name,
+        audio_quality: quality,
     };
     state.voice.put(voice.clone()).await;
     if let Some(prev) = previous.filter(|prev| prev.channel_id != channel_id) {
@@ -599,6 +926,7 @@ pub async fn join_voice(
         &voice.display_name,
         &chat_domain::voice::VoiceState::room_name(channel_id),
         can_speak,
+        quality,
         std::time::Duration::from_secs(300),
     )
     .map_err(|_| ApiErr::unavailable())?;
@@ -609,7 +937,9 @@ pub async fn join_voice(
             room: token.room,
             expires_at: crate::rtc::rfc3339_unix(token.expires_at_unix),
         },
-        state: to_protocol_voice(voice),
+        state: to_protocol_voice(voice.clone()),
+        audio: audio_profile(voice.audio_quality),
+        max_audio_quality: channel.audio_quality.as_str().into(),
     })
 }
 
@@ -618,17 +948,23 @@ pub async fn patch_voice(
     user: Uuid,
     self_mute: bool,
     self_deaf: bool,
+    requested_quality: Option<&str>,
 ) -> ApiResult<chat_protocol::VoiceState> {
     let current = state
         .voice
         .get(user)
         .await
         .ok_or_else(|| ApiErr::conflict("Not connected to a voice channel."))?;
-    Ok(
-        join_voice(state, user, current.channel_id, self_mute, self_deaf)
-            .await?
-            .state,
+    Ok(join_voice(
+        state,
+        user,
+        current.channel_id,
+        self_mute,
+        self_deaf,
+        requested_quality,
     )
+    .await?
+    .state)
 }
 
 pub async fn leave_voice(
@@ -670,6 +1006,7 @@ async fn publish_voice(
         self_mute: voice.self_mute,
         self_deaf: voice.self_deaf,
         display_name: voice.display_name.clone(),
+        audio_quality: voice.audio_quality.as_str().into(),
     })
     .unwrap_or_default();
     dispatch(state, &members, "VOICE_STATE_UPDATE", payload).await

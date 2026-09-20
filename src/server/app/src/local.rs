@@ -24,6 +24,10 @@ struct UserRow {
     username: String,
     display_name: String,
     password_hash: String,
+    #[serde(default)]
+    avatar_id: Option<Uuid>,
+    #[serde(default)]
+    avatar_animated: bool,
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct SessionRow {
@@ -39,6 +43,10 @@ struct ServerRow {
     name: String,
     owner_id: Uuid,
     invite_code: String,
+    #[serde(default)]
+    blocked_words: Vec<String>,
+    #[serde(default)]
+    cooldown_seconds: u32,
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct RoleRow {
@@ -53,6 +61,11 @@ struct ChannelRow {
     server_id: Uuid,
     name: String,
     kind: String,
+    #[serde(default = "default_audio_quality")]
+    audio_quality: String,
+}
+fn default_audio_quality() -> String {
+    chat_domain::voice::AudioQuality::DEFAULT.as_str().into()
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct MessageRow {
@@ -235,10 +248,18 @@ impl Inner {
     }
 
     fn user(&self, id: Uuid) -> Option<User> {
-        self.users.get(&id).map(|u| User {
+        let u = self.users.get(&id)?;
+        let avatar = u.avatar_id.and_then(|aid| {
+            self.attachments
+                .get(&aid)
+                .map(|row| to_attachment(&row.attachment))
+        });
+        Some(User {
             id: u.id,
             username: u.username.clone(),
             display_name: u.display_name.clone(),
+            avatar_animated: u.avatar_animated && avatar.is_some(),
+            avatar,
         })
     }
 
@@ -248,6 +269,8 @@ impl Inner {
             name: s.name.clone(),
             owner_id: s.owner_id,
             invite_code: s.invite_code.clone(),
+            blocked_words: s.blocked_words.clone(),
+            cooldown_seconds: s.cooldown_seconds,
         })
     }
 
@@ -258,6 +281,8 @@ impl Inner {
                 server_id: c.server_id,
                 name: c.name.clone(),
                 kind: ChannelKind::parse(&c.kind)?,
+                audio_quality: chat_domain::voice::AudioQuality::parse(&c.audio_quality)
+                    .unwrap_or(chat_domain::voice::AudioQuality::DEFAULT),
             })
         })
     }
@@ -353,6 +378,8 @@ impl Store for LocalStore {
                 username: username.into(),
                 display_name: display_name.into(),
                 password_hash: password_hash.into(),
+                avatar_id: None,
+                avatar_animated: false,
             },
         );
         inner.username.insert(username.into(), id);
@@ -361,6 +388,8 @@ impl Store for LocalStore {
             id,
             username: username.into(),
             display_name: display_name.into(),
+            avatar: None,
+            avatar_animated: false,
         })
     }
 
@@ -374,17 +403,73 @@ impl Store for LocalStore {
     ) -> Result<Option<(User, String)>, StoreError> {
         let inner = self.0.lock().await;
         Ok(inner.username.get(username).and_then(|id| {
-            inner.users.get(id).map(|row| {
-                (
-                    User {
-                        id: row.id,
-                        username: row.username.clone(),
-                        display_name: row.display_name.clone(),
-                    },
-                    row.password_hash.clone(),
-                )
-            })
+            let hash = inner.users.get(id)?.password_hash.clone();
+            Some((inner.user(*id)?, hash))
         }))
+    }
+
+    async fn update_user(
+        &self,
+        id: Uuid,
+        username: &str,
+        display_name: &str,
+        avatar_id: Option<Uuid>,
+        avatar_animated: bool,
+    ) -> Result<User, StoreError> {
+        let mut inner = self.0.lock().await;
+        if inner
+            .username
+            .get(username)
+            .is_some_and(|other| *other != id)
+        {
+            return Err(StoreError::Conflict("Username already taken.".into()));
+        }
+        let old_name = inner
+            .users
+            .get(&id)
+            .ok_or(StoreError::NotFound)?
+            .username
+            .clone();
+        if old_name != username {
+            inner.username.remove(&old_name);
+            inner.username.insert(username.into(), id);
+        }
+        {
+            let row = inner.users.get_mut(&id).ok_or(StoreError::NotFound)?;
+            row.username = username.into();
+            row.display_name = display_name.into();
+            row.avatar_id = avatar_id;
+            row.avatar_animated = avatar_animated;
+        }
+        let user = inner.user(id).ok_or(StoreError::Unavailable)?;
+        inner.persist();
+        Ok(user)
+    }
+
+    async fn avatar_owner(&self, attachment_id: Uuid) -> Result<Option<Uuid>, StoreError> {
+        let inner = self.0.lock().await;
+        Ok(inner
+            .users
+            .values()
+            .find(|row| row.avatar_id == Some(attachment_id))
+            .map(|row| row.id))
+    }
+
+    async fn shares_community(&self, a: Uuid, b: Uuid) -> Result<bool, StoreError> {
+        if a == b {
+            return Ok(true);
+        }
+        let inner = self.0.lock().await;
+        let servers: HashSet<Uuid> = inner
+            .members
+            .iter()
+            .filter(|(_, user)| *user == a)
+            .map(|(server, _)| *server)
+            .collect();
+        Ok(inner
+            .members
+            .iter()
+            .any(|(server, user)| *user == b && servers.contains(server)))
     }
 
     async fn create_session(&self, session: SessionRecord) -> Result<(), StoreError> {
@@ -471,6 +556,8 @@ impl Store for LocalStore {
                 name: server.name.clone(),
                 owner_id: owner,
                 invite_code: server.invite_code.clone(),
+                blocked_words: server.blocked_words.clone(),
+                cooldown_seconds: server.cooldown_seconds,
             },
         );
         inner.members.insert((server.id, owner));
@@ -504,6 +591,7 @@ impl Store for LocalStore {
                 server_id: server.id,
                 name: channel.name.clone(),
                 kind: channel.kind.as_str().into(),
+                audio_quality: channel.audio_quality.as_str().into(),
             },
         );
         inner
@@ -541,6 +629,43 @@ impl Store for LocalStore {
         Ok(self.0.lock().await.server(id))
     }
 
+    async fn update_moderation(
+        &self,
+        id: Uuid,
+        blocked_words: Vec<String>,
+        cooldown_seconds: u32,
+    ) -> Result<Server, StoreError> {
+        let mut inner = self.0.lock().await;
+        let row = inner.servers.get_mut(&id).ok_or(StoreError::NotFound)?;
+        row.blocked_words = blocked_words;
+        row.cooldown_seconds = cooldown_seconds;
+        let server = inner.server(id).ok_or(StoreError::NotFound)?;
+        inner.persist();
+        Ok(server)
+    }
+
+    async fn last_user_message_at(
+        &self,
+        channel: Uuid,
+        user: Uuid,
+    ) -> Result<Option<i64>, StoreError> {
+        let inner = self.0.lock().await;
+        let Some(ids) = inner.by_channel.get(&channel) else {
+            return Ok(None);
+        };
+        for id in ids.keys().rev() {
+            if let Some(message) = inner.messages.get(id)
+                && message.author_id == user
+            {
+                let ts = chrono::DateTime::parse_from_rfc3339(&message.created_at)
+                    .map(|value| value.timestamp())
+                    .unwrap_or(0);
+                return Ok(Some(ts));
+            }
+        }
+        Ok(None)
+    }
+
     async fn add_channel(&self, channel: Channel) -> Result<Channel, StoreError> {
         let mut inner = self.0.lock().await;
         inner.channels.insert(
@@ -550,8 +675,24 @@ impl Store for LocalStore {
                 server_id: channel.server_id,
                 name: channel.name.clone(),
                 kind: channel.kind.as_str().into(),
+                audio_quality: channel.audio_quality.as_str().into(),
             },
         );
+        inner.persist();
+        Ok(channel)
+    }
+
+    async fn set_channel_audio_quality(
+        &self,
+        id: Uuid,
+        quality: chat_domain::voice::AudioQuality,
+    ) -> Result<Channel, StoreError> {
+        let mut inner = self.0.lock().await;
+        {
+            let row = inner.channels.get_mut(&id).ok_or(StoreError::NotFound)?;
+            row.audio_quality = quality.as_str().into();
+        }
+        let channel = inner.channel(id).ok_or(StoreError::NotFound)?;
         inner.persist();
         Ok(channel)
     }
@@ -678,6 +819,16 @@ impl Store for LocalStore {
         }))
     }
 
+    async fn message_channel(&self, message_id: Uuid) -> Result<Option<Uuid>, StoreError> {
+        Ok(self
+            .0
+            .lock()
+            .await
+            .messages
+            .get(&message_id)
+            .map(|row| row.channel_id))
+    }
+
     async fn bind_attachments(
         &self,
         message_id: Uuid,
@@ -687,8 +838,9 @@ impl Store for LocalStore {
         let mut inner = self.0.lock().await;
         let mut bound = Vec::new();
         for id in ids {
+            let in_use = inner.users.values().any(|user| user.avatar_id == Some(*id));
             let row = inner.attachments.get_mut(id).ok_or(StoreError::NotFound)?;
-            if row.uploader_id != uploader || row.message_id.is_some() {
+            if row.uploader_id != uploader || row.message_id.is_some() || in_use {
                 return Err(StoreError::Conflict("Attachment already used.".into()));
             }
             row.message_id = Some(message_id);

@@ -7,6 +7,7 @@
     <ProjectReference Include="../Storage/Chat.Storage.csproj" />
     <ProjectReference Include="../Media/Chat.Media.csproj" />
     <ProjectReference Include="../UI/Chat.UI.csproj" />
+    <ProjectReference Include="../Localization/Chat.Localization.csproj" />
     <PackageReference Include="Avalonia.Desktop" />
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

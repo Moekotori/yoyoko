@@ -8,11 +8,17 @@ pub struct RateLimiter {
     inner: Mutex<HashMap<String, Vec<Instant>>>,
 }
 
-impl RateLimiter {
-    pub fn new() -> Self {
+impl Default for RateLimiter {
+    fn default() -> Self {
         Self {
             inner: Mutex::new(HashMap::new()),
         }
+    }
+}
+
+impl RateLimiter {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub async fn check(&self, key: &str, max: usize, window: Duration) -> bool {

@@ -2,21 +2,24 @@
 
 ## 范围与状态
 
-本仓库只完成 Phase 0。建立可编译边界、可运行的最小外壳和必要契约，避免先写完整聊天再重构。
+本仓库正在交付 Phase 1 文字聊天切片。Phase 0 边界仍然有效。
 
 | 能力 | 当前状态 |
 | --- | --- |
 | Avalonia 桌面、简洁三栏布局、编译绑定 | 已实现 |
 | 实例发现、添加、SQLite 保存、离线恢复 | 已实现；最多 32 实例 |
-| 多实例上下文、独立账号/连接所有权 | 已实现抽象；尚无认证会话 |
-| HTTP / WebSocket 有界传输 | 已实现；重连编排待 Phase 1 |
+| 多实例上下文、独立账号/连接所有权 | 已实现登录会话 |
+| HTTP / WebSocket 有界传输、Gateway 恢复 | 已实现 |
 | 消息分页缓存、账号/实例隔离、注销清理端口 | 已实现并有聚焦检查 |
-| Rust 健康检查、发现、版本握手 | 已实现；无业务 API |
-| Domain / Service / Repository / PostgreSQL 适配边界 | 已实现；权限服务默认拒绝 |
+| Rust 健康检查、发现、认证业务 API | 已实现 |
+| Domain / Service / Repository | 已实现；VIEW_CHANNEL / SEND_MESSAGE 服务端检查 |
 | PostgreSQL 初始 migration | 已编写；运行状态见验证记录 |
 | Native C ABI 与句柄生命周期 | 已实现；能力位为 0 |
-| 账号、聊天、同步、语音、屏幕共享 | **Not implemented yet** |
-| Redis Presence、S3 上传、LiveKit token | **Not implemented yet**；配置和部署基础已准备 |
+| 账号、聊天、同步 | 已开始；以当前服务端 Store / Gateway 为准 |
+| 附件 | 已实现：multipart 流式上传、可配置 `storage.max_bytes`、签名或登录下载、图片 256px 缩略图；S3/MinIO 仍为后续 |
+| 语音控制面 | 已实现：CONNECT_VOICE/SPEAK、加入/离开、mute/deafen、Gateway `VOICE_STATE_UPDATE`、LiveKit JWT |
+| 语音媒体 | 按需 `chat-media-worker`；默认未链接 LiveKit 客户端，加入媒体失败时频道成员仍可见，不伪装接通 |
+| 屏幕共享 | **Not implemented yet** |
 
 ## Monorepo
 
@@ -28,6 +31,7 @@ src/
     App/             组合根、配置、窗口与应用生命周期
     Domain/          Instance / Account / Server / Channel / Message / Role / Permission
     Protocol/        JSON DTO、版本、source-generated serializer
+    Localization/    界面语言契约、文案目录、内存偏好
     Core/            Instances、Messaging、Realtime 业务端口与预算
     Networking/      HTTP discovery、WebSocket transport
     Storage/         SQLite 实现、版本化迁移、分页缓存
@@ -37,6 +41,7 @@ src/
       Instances/     实例栏与添加实例视图
       Channels/      频道栏
       Components/    轻量命令与属性通知
+      Settings/      客户端设置（当前为界面语言）
       Styles/        共享颜色、间距和控件规则
   server/
     domain/          独立 Rust 领域 crate
@@ -49,6 +54,7 @@ src/
       configuration.rs
 native-media-core/
   ffi/               C ABI 与 C++ 生命周期
+src/media-worker/    按需 RTC 进程，JSON 行控制协议
   audio/ video/ capture/ codec/ rtc/ platform/  明确标记未实现
   tests/             C 语言 ABI consumer
 protocol fixtures → docs/protocol/fixtures/
@@ -66,10 +72,11 @@ benchmarks/          性能测量方法与当前结果
 
 ```text
 App (composition)
- ├─ UI → Core → Domain + Protocol
- ├─ Networking → Core + Protocol
+ ├─ UI → Core + Localization → Domain + Protocol
+ ├─ Networking → Core + Protocol + Localization
  ├─ Storage → Core + Domain + Protocol
- └─ Media (control contract only)
+ ├─ Localization（无 Avalonia）
+ └─ Media → Core
 ```
 
 UI 不引用 SQLite、HTTP 或原生库；Domain 不依赖 Avalonia。每个模块是独立 csproj，新增引用必须通过边界检查。暂不引入反射 DI、全局消息总线、CQRS 或为每个类建一个项目。

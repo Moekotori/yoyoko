@@ -1,31 +1,33 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:items="using:Chat.UI.Instances" xmlns:workspace="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components"
-  x:Class="Chat.UI.Instances.InstanceRail" x:DataType="vm:ShellViewModel" x:Name="Rail">
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:items="using:Chat.UI.Instances" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Instances.InstanceRail" x:DataType="vm:ShellViewModel">
   <Border Background="{StaticResource RailBrush}">
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="0,14" Spacing="10">
-        <ItemsControl ItemsSource="{Binding Workspace.PreviewServers}" IsVisible="{Binding IsPreview}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="workspace:PreviewServerItem">
-              <Grid Height="58">
-                <Border Width="3" Height="28" Background="{StaticResource AccentBrush}" CornerRadius="1" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsSelected}" />
-                <Button Width="48" Height="48" Padding="2" CornerRadius="24" HorizontalAlignment="Center" Command="{Binding #Rail.((vm:ShellViewModel)DataContext).Workspace.Unavailable}" ToolTip.Tip="{Binding Name}" AutomationProperties.Name="{Binding Name}">
-                  <c:Avatar Width="42" Height="42" Source="{Binding Avatar}" />
-                </Button>
-              </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <ListBox ItemsSource="{Binding Instances}" SelectedItem="{Binding SelectedInstance}" Margin="8,0" AutomationProperties.Name="实例列表" IsVisible="{Binding !IsPreview}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="items:InstanceItem">
-              <Border Background="#2A2930" CornerRadius="21" Width="42" Height="42"><TextBlock Text="{Binding Initial}" ToolTip.Tip="{Binding Host}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-        <Button Width="40" Height="40" CornerRadius="20" Background="#202023" Foreground="{StaticResource MutedTextBrush}" HorizontalAlignment="Center" Command="{Binding ShowAddInstance}" AutomationProperties.Name="添加实例" ToolTip.Tip="添加实例">
-          <PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" />
-        </Button>
-      </StackPanel>
-    </ScrollViewer>
+    <Grid RowDefinitions="*,Auto">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="0,14" Spacing="10">
+          <ListBox ItemsSource="{Binding Instances}" SelectedItem="{Binding SelectedInstance}" Margin="8,0"
+            AutomationProperties.Name="{i18n:T Instances}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="items:InstanceItem">
+                <Border Background="#2A2930" CornerRadius="21" Width="42" Height="42">
+                  <TextBlock Text="{Binding Initial}" ToolTip.Tip="{Binding Host}" FontSize="16"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <Button Width="40" Height="40" CornerRadius="20" Background="#202023" Foreground="{StaticResource MutedTextBrush}"
+            HorizontalAlignment="Center" Command="{Binding OpenAddInstance}"
+            AutomationProperties.Name="{i18n:T AddInstance}" ToolTip.Tip="{i18n:T AddInstance}">
+            <PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" />
+          </Button>
+        </StackPanel>
+      </ScrollViewer>
+      <Button Grid.Row="1" Classes="icon" Classes.active="{Binding ShowSettings}" Width="40" Height="40"
+        HorizontalAlignment="Center" Margin="0,0,0,16" Command="{Binding OpenSettings}"
+        AutomationProperties.Name="{i18n:T Settings}" ToolTip.Tip="{i18n:T Settings}">
+        <PathIcon Data="{StaticResource IconSettings}" Width="18" Height="18" />
+      </Button>
+    </Grid>
   </Border>
 </UserControl>

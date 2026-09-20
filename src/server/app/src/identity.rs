@@ -35,10 +35,11 @@ impl TokenService {
         format!("{payload}.{}", hex::encode(mac))
     }
 
-    pub fn verify_access(&self, token: &str) -> Result<AccessClaims, ()> {
-        let (payload, mac_hex) = token.rsplit_once('.').ok_or(())?;
+    #[allow(clippy::result_unit_err)]
+    pub fn verify_access(&self, token: &str) -> Option<AccessClaims> {
+        let (payload, mac_hex) = token.rsplit_once('.')?;
         let expected = sign(&self.secret, payload.as_bytes());
-        let given = hex::decode(mac_hex).map_err(|_| ())?;
+        let given = hex::decode(mac_hex).ok()?;
         if given.len() != expected.len()
             || given
                 .iter()
@@ -46,19 +47,19 @@ impl TokenService {
                 .fold(0u8, |acc, (a, b)| acc | (a ^ b))
                 != 0
         {
-            return Err(());
+            return None;
         }
         let mut parts = payload.split('.');
         if parts.next() != Some("v1") {
-            return Err(());
+            return None;
         }
-        let user_id = parts.next().and_then(|v| v.parse().ok()).ok_or(())?;
-        let session_id = parts.next().and_then(|v| v.parse().ok()).ok_or(())?;
-        let exp: i64 = parts.next().and_then(|v| v.parse().ok()).ok_or(())?;
+        let user_id = parts.next()?.parse().ok()?;
+        let session_id = parts.next()?.parse().ok()?;
+        let exp: i64 = parts.next()?.parse().ok()?;
         if parts.next().is_some() || exp < Utc::now().timestamp() {
-            return Err(());
+            return None;
         }
-        Ok(AccessClaims {
+        Some(AccessClaims {
             user_id,
             session_id,
         })
@@ -117,6 +118,6 @@ mod tests {
         let claims = tokens.verify_access(&token).unwrap();
         assert_eq!(claims.user_id, user);
         assert_eq!(claims.session_id, session);
-        assert!(tokens.verify_access("v1.bad").is_err());
+        assert!(tokens.verify_access("v1.bad").is_none());
     }
 }

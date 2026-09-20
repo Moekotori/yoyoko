@@ -1,4 +1,5 @@
 using Chat.Domain.Instances;
+using Chat.Localization;
 using Chat.Protocol;
 
 namespace Chat.Core.Instances;
@@ -26,14 +27,14 @@ public sealed class InstanceManager(IInstanceStore store, IInstanceDiscovery dis
         var uri = NormalizeAddress(address);
         var info = await discovery.DiscoverAsync(uri, cancellationToken);
         if (info.ProtocolVersion != ProtocolVersion.Current || info.ApiVersion != 1)
-            throw new InvalidOperationException("实例协议版本不兼容。");
+            throw new ClientFault(TextKey.ProtocolIncompatible);
         var id = new InstanceId(info.InstanceId);
         if (_contexts.TryGetValue(id, out var existing))
         {
-            if (existing.Descriptor.BaseUrl != uri) throw new InvalidOperationException("此实例已通过另一个地址添加。");
+            if (existing.Descriptor.BaseUrl != uri) throw new ClientFault(TextKey.InstanceAddressConflict);
             return existing;
         }
-        if (_contexts.Count >= 32) throw new InvalidOperationException("最多可添加 32 个实例。");
+        if (_contexts.Count >= 32) throw new ClientFault(TextKey.TooManyInstances);
         var descriptor = new InstanceDescriptor(id, uri, info.Name);
         await store.SaveAsync(descriptor, cancellationToken);
         var context = new InstanceContext(descriptor);
@@ -53,7 +54,7 @@ public sealed class InstanceManager(IInstanceStore store, IInstanceDiscovery dis
         if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttps && !LocalNetwork.AllowsCleartext(uri)) ||
             uri.UserInfo.Length != 0 || uri.AbsolutePath != "/" || uri.Query.Length != 0 || uri.Fragment.Length != 0)
-            throw new ArgumentException("请输入实例域名或 HTTPS 地址；本机和局域网开发可使用 HTTP。");
+            throw new ClientFault(TextKey.InvalidInstanceAddress);
         return uri;
     }
 

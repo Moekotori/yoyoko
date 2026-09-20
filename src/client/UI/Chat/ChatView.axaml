@@ -1,42 +1,93 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat"
-  x:Class="Chat.UI.Chat.ChatView" x:DataType="vm:ShellViewModel">
+  xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
+  x:Class="Chat.UI.Chat.ChatView" x:DataType="vm:ShellViewModel" x:Name="ChatRoot">
   <Grid RowDefinitions="*,Auto">
-    <ListBox x:Name="Messages" ItemsSource="{Binding Messages}" Background="Transparent" Margin="8,4"
-      AutomationProperties.Name="消息">
-      <ListBox.ItemsPanel>
-        <ItemsPanelTemplate>
-          <VirtualizingStackPanel />
-        </ItemsPanelTemplate>
-      </ListBox.ItemsPanel>
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="chat:MessageRow">
-          <StackPanel Spacing="4" Margin="12,8">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Text="{Binding Author}" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding Time}" Classes="muted" FontSize="12" />
-              <TextBlock Text="发送中" Classes="muted" FontSize="12" IsVisible="{Binding IsPending}" />
-              <TextBlock Text="发送失败" Foreground="#D98980" FontSize="12" IsVisible="{Binding IsFailed}" />
+    <Panel>
+      <ListBox x:Name="Messages" ItemsSource="{Binding Messages}" Background="Transparent" Margin="8,4"
+        AutomationProperties.Name="{i18n:T Messages}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <VirtualizingStackPanel />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="chat:MessageRow">
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="12,8">
+              <c:Avatar Width="32" Height="32" Playback="{Binding Playback}" VerticalAlignment="Top" Margin="0,2,0,0" />
+              <StackPanel Spacing="4">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding Author}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Time}" Classes="muted" FontSize="12" />
+                <TextBlock Text="{i18n:T Sending}" Classes="muted" FontSize="12" IsVisible="{Binding IsPending}" />
+                <TextBlock Text="{i18n:T SendFailed}" Foreground="#D98980" FontSize="12" IsVisible="{Binding IsFailed}" />
+              </StackPanel>
+              <TextBlock Text="{Binding Content}" TextWrapping="Wrap" IsVisible="{Binding HasText}" />
+              <ItemsControl ItemsSource="{Binding Files}" IsVisible="{Binding HasFiles}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="chat:AttachmentRow">
+                    <StackPanel Spacing="4" Margin="0,6,0,0">
+                      <Button HorizontalAlignment="Left" Padding="0" Background="Transparent"
+                        Command="{Binding Save}" IsVisible="{Binding HasPreview}"
+                        ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
+                        <Image Source="{Binding Preview}" MaxWidth="240" MaxHeight="180" Stretch="Uniform" />
+                      </Button>
+                      <Button HorizontalAlignment="Left" Padding="10,6" Command="{Binding Save}"
+                        IsVisible="{Binding ShowChip}" ToolTip.Tip="{i18n:T DownloadLocal}"
+                        AutomationProperties.Name="{i18n:T DownloadFile}">
+                        <Panel>
+                          <TextBlock Text="{Binding Label}" IsVisible="{Binding !IsSaving}" />
+                          <TextBlock Text="{i18n:T Downloading}" IsVisible="{Binding IsSaving}" />
+                        </Panel>
+                      </Button>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              </StackPanel>
             </StackPanel>
-            <TextBlock Text="{Binding Content}" TextWrapping="Wrap" IsVisible="{Binding HasText}" />
-            <Image Source="{Binding Image}" MaxWidth="240" MaxHeight="180" Stretch="Uniform"
-              IsVisible="{Binding HasBitmap}" />
-            <TextBlock Text="图片" Classes="muted" IsVisible="{Binding ShowImagePlaceholder}" />
-          </StackPanel>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <Border Background="#CC1A1A1C" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False">
+        <TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" />
+      </Border>
+    </Panel>
     <Border Grid.Row="1" BorderThickness="0,1,0,0" BorderBrush="#2A2F2D" Padding="16,10">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-        <Button Content="图片" Command="{Binding AttachImage}" Padding="12,10" />
-        <TextBox Grid.Column="1" Text="{Binding Draft}" PlaceholderText="发送消息"
-          MinHeight="36" AutomationProperties.Name="消息输入">
-          <TextBox.KeyBindings>
-            <KeyBinding Gesture="Enter" Command="{Binding Send}" />
-          </TextBox.KeyBindings>
-        </TextBox>
-        <Button Grid.Column="2" Classes="primary" Content="发送" Command="{Binding Send}" />
-      </Grid>
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+        <ItemsControl ItemsSource="{Binding PendingFiles}" IsVisible="{Binding HasPending}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="chat:PendingFileItem">
+              <Border Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="1" CornerRadius="2" Padding="8,4" Margin="0,0,6,6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" />
+                  <Button Classes="icon" Width="22" Height="22" Padding="4" Command="{Binding Remove}"
+                    ToolTip.Tip="{i18n:T RemoveFile}" AutomationProperties.Name="{i18n:T RemoveFile}">
+                    <PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" />
+                  </Button>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+          <Button Content="{i18n:T File}" Command="{Binding AttachFile}" Padding="12,10"
+            ToolTip.Tip="{Binding FileLimitTip}" AutomationProperties.Name="{i18n:T AddFile}" />
+          <TextBox Grid.Column="1" Text="{Binding Draft}" PlaceholderText="{i18n:T SendMessageOrDrop}"
+            MinHeight="36" AutomationProperties.Name="{i18n:T MessageInput}">
+            <TextBox.KeyBindings>
+              <KeyBinding Gesture="Enter" Command="{Binding Send}" />
+            </TextBox.KeyBindings>
+          </TextBox>
+          <Button Grid.Column="2" Classes="primary" Content="{i18n:T Send}" Command="{Binding Send}" />
+        </Grid>
+      </StackPanel>
     </Border>
   </Grid>
 </UserControl>

@@ -28,6 +28,8 @@ bucket = "chat"
 access_key = "chat_dev"
 secret_key = "local-development-only"
 local_dir = "data/objects"
+# Per-instance upload cap. Range 64 KiB..=256 MiB. Override with CHAT__STORAGE__MAX_BYTES.
+max_bytes = 25165824
 
 [rtc]
 provider = "livekit"

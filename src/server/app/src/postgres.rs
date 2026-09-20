@@ -37,7 +37,34 @@ fn parse_bits(value: String) -> Permissions {
     Permissions(value.parse().unwrap_or(0))
 }
 
+const USER_SELECT: &str = "u.id, u.username, u.display_name, u.avatar_animated,
+       a.id AS avatar_att_id, a.file_name, a.mime_type, a.size_bytes, a.object_key, a.thumbnail_key";
+
 fn user_from(row: &PgRow) -> Result<User, StoreError> {
+    let avatar = match row
+        .try_get::<Option<Uuid>, _>("avatar_att_id")
+        .map_err(|_| StoreError::Unavailable)?
+    {
+        Some(id) => Some(Attachment {
+            id,
+            file_name: row
+                .try_get("file_name")
+                .map_err(|_| StoreError::Unavailable)?,
+            mime_type: row
+                .try_get("mime_type")
+                .map_err(|_| StoreError::Unavailable)?,
+            size: row
+                .try_get::<i64, _>("size_bytes")
+                .map_err(|_| StoreError::Unavailable)? as u64,
+            object_key: row
+                .try_get("object_key")
+                .map_err(|_| StoreError::Unavailable)?,
+            thumbnail_key: row
+                .try_get("thumbnail_key")
+                .map_err(|_| StoreError::Unavailable)?,
+        }),
+        None => None,
+    };
     Ok(User {
         id: row.try_get("id").map_err(|_| StoreError::Unavailable)?,
         username: row
@@ -46,11 +73,18 @@ fn user_from(row: &PgRow) -> Result<User, StoreError> {
         display_name: row
             .try_get("display_name")
             .map_err(|_| StoreError::Unavailable)?,
+        avatar,
+        avatar_animated: row
+            .try_get("avatar_animated")
+            .map_err(|_| StoreError::Unavailable)?,
     })
 }
 
 fn channel_from(row: &PgRow) -> Result<Channel, StoreError> {
     let kind: String = row.try_get("kind").map_err(|_| StoreError::Unavailable)?;
+    let quality: String = row
+        .try_get("audio_quality")
+        .unwrap_or_else(|_| chat_domain::voice::AudioQuality::DEFAULT.as_str().into());
     Ok(Channel {
         id: row.try_get("id").map_err(|_| StoreError::Unavailable)?,
         server_id: row
@@ -58,10 +92,15 @@ fn channel_from(row: &PgRow) -> Result<Channel, StoreError> {
             .map_err(|_| StoreError::Unavailable)?,
         name: row.try_get("name").map_err(|_| StoreError::Unavailable)?,
         kind: ChannelKind::parse(&kind).ok_or(StoreError::Unavailable)?,
+        audio_quality: chat_domain::voice::AudioQuality::parse(&quality)
+            .unwrap_or(chat_domain::voice::AudioQuality::DEFAULT),
     })
 }
 
 fn server_from(row: &PgRow) -> Result<Server, StoreError> {
+    let words: serde_json::Value = row
+        .try_get("blocked_words")
+        .unwrap_or_else(|_| serde_json::json!([]));
     Ok(Server {
         id: row.try_get("id").map_err(|_| StoreError::Unavailable)?,
         name: row.try_get("name").map_err(|_| StoreError::Unavailable)?,
@@ -71,6 +110,11 @@ fn server_from(row: &PgRow) -> Result<Server, StoreError> {
         invite_code: row
             .try_get("invite_code")
             .map_err(|_| StoreError::Unavailable)?,
+        blocked_words: serde_json::from_value(words).unwrap_or_default(),
+        cooldown_seconds: row
+            .try_get::<i32, _>("cooldown_seconds")
+            .unwrap_or(0)
+            .max(0) as u32,
     })
 }
 
@@ -194,6 +238,8 @@ impl Store for PgStore {
                 id,
                 username: username.into(),
                 display_name: display_name.into(),
+                avatar: None,
+                avatar_animated: false,
             }),
             Err(sqlx::Error::Database(db)) if db.constraint() == Some("users_username_key") => {
                 Err(StoreError::Conflict("Username already taken.".into()))
@@ -204,10 +250,12 @@ impl Store for PgStore {
 
     async fn find_user(&self, id: Uuid) -> Result<Option<User>, StoreError> {
         let row = map_db(
-            sqlx::query("SELECT id, username, display_name FROM users WHERE id=$1")
-                .bind(id)
-                .fetch_optional(&self.0)
-                .await,
+            sqlx::query(&format!(
+                "SELECT {USER_SELECT} FROM users u LEFT JOIN attachments a ON a.id=u.avatar_id WHERE u.id=$1"
+            ))
+            .bind(id)
+            .fetch_optional(&self.0)
+            .await,
         )?;
         row.as_ref().map(user_from).transpose()
     }
@@ -217,9 +265,9 @@ impl Store for PgStore {
         username: &str,
     ) -> Result<Option<(User, String)>, StoreError> {
         let row = map_db(
-            sqlx::query(
-                "SELECT id, username, display_name, password_hash FROM users WHERE username=$1",
-            )
+            sqlx::query(&format!(
+                "SELECT {USER_SELECT}, u.password_hash FROM users u LEFT JOIN attachments a ON a.id=u.avatar_id WHERE u.username=$1"
+            ))
             .bind(username)
             .fetch_optional(&self.0)
             .await,
@@ -232,6 +280,65 @@ impl Store for PgStore {
             ))
         })
         .transpose()
+    }
+
+    async fn update_user(
+        &self,
+        id: Uuid,
+        username: &str,
+        display_name: &str,
+        avatar_id: Option<Uuid>,
+        avatar_animated: bool,
+    ) -> Result<User, StoreError> {
+        let result = sqlx::query(
+            "UPDATE users SET username=$2, display_name=$3, avatar_id=$4, avatar_animated=$5 WHERE id=$1",
+        )
+        .bind(id)
+        .bind(username)
+        .bind(display_name)
+        .bind(avatar_id)
+        .bind(avatar_animated)
+        .execute(&self.0)
+        .await;
+        match result {
+            Ok(done) if done.rows_affected() == 0 => Err(StoreError::NotFound),
+            Ok(_) => self.find_user(id).await?.ok_or(StoreError::Unavailable),
+            Err(sqlx::Error::Database(db)) if db.constraint() == Some("users_username_key") => {
+                Err(StoreError::Conflict("Username already taken.".into()))
+            }
+            Err(_) => Err(StoreError::Unavailable),
+        }
+    }
+
+    async fn avatar_owner(&self, attachment_id: Uuid) -> Result<Option<Uuid>, StoreError> {
+        let row = map_db(
+            sqlx::query("SELECT id FROM users WHERE avatar_id=$1")
+                .bind(attachment_id)
+                .fetch_optional(&self.0)
+                .await,
+        )?;
+        row.map(|row| row.try_get("id").map_err(|_| StoreError::Unavailable))
+            .transpose()
+    }
+
+    async fn shares_community(&self, a: Uuid, b: Uuid) -> Result<bool, StoreError> {
+        if a == b {
+            return Ok(true);
+        }
+        let row = map_db(
+            sqlx::query(
+                "SELECT EXISTS(
+                    SELECT 1 FROM members mine
+                    JOIN members theirs ON theirs.server_id=mine.server_id
+                    WHERE mine.user_id=$1 AND theirs.user_id=$2
+                 )",
+            )
+            .bind(a)
+            .bind(b)
+            .fetch_one(&self.0)
+            .await,
+        )?;
+        row.try_get(0).map_err(|_| StoreError::Unavailable)
     }
 
     async fn create_session(&self, session: SessionRecord) -> Result<(), StoreError> {
@@ -326,10 +433,14 @@ impl Store for PgStore {
     ) -> Result<NewServer, StoreError> {
         let mut tx = map_db(self.0.begin().await)?;
         map_db(
-            sqlx::query("INSERT INTO servers (id, owner_id, name) VALUES ($1,$2,$3)")
+            sqlx::query(
+                "INSERT INTO servers (id, owner_id, name, blocked_words, cooldown_seconds) VALUES ($1,$2,$3,$4::jsonb,$5)",
+            )
                 .bind(server.id)
                 .bind(owner)
                 .bind(&server.name)
+                .bind(serde_json::to_value(&server.blocked_words).unwrap_or_else(|_| serde_json::json!([])))
+                .bind(server.cooldown_seconds as i32)
                 .execute(&mut *tx)
                 .await,
         )?;
@@ -378,12 +489,13 @@ impl Store for PgStore {
         )?;
         map_db(
             sqlx::query(
-                "INSERT INTO channels (id, server_id, name, kind, position) VALUES ($1,$2,$3,$4,0)",
+                "INSERT INTO channels (id, server_id, name, kind, position, audio_quality) VALUES ($1,$2,$3,$4,0,$5)",
             )
             .bind(channel.id)
             .bind(server.id)
             .bind(&channel.name)
             .bind(channel.kind.as_str())
+            .bind(channel.audio_quality.as_str())
             .execute(&mut *tx)
             .await,
         )?;
@@ -402,7 +514,7 @@ impl Store for PgStore {
     async fn list_servers(&self, user: Uuid) -> Result<Vec<Server>, StoreError> {
         let rows = map_db(
             sqlx::query(
-                "SELECT s.id, s.name, s.owner_id, i.code AS invite_code
+                "SELECT s.id, s.name, s.owner_id, i.code AS invite_code, s.blocked_words, s.cooldown_seconds
                  FROM members m
                  JOIN servers s ON s.id=m.server_id
                  JOIN invites i ON i.server_id=s.id
@@ -419,7 +531,7 @@ impl Store for PgStore {
     async fn list_channels(&self, server: Uuid) -> Result<Vec<Channel>, StoreError> {
         let rows = map_db(
             sqlx::query(
-                "SELECT id, server_id, name, kind FROM channels WHERE server_id=$1 ORDER BY position, id",
+                "SELECT id, server_id, name, kind, audio_quality FROM channels WHERE server_id=$1 ORDER BY position, id",
             )
             .bind(server)
             .fetch_all(&self.0)
@@ -430,10 +542,12 @@ impl Store for PgStore {
 
     async fn find_channel(&self, id: Uuid) -> Result<Option<Channel>, StoreError> {
         let row = map_db(
-            sqlx::query("SELECT id, server_id, name, kind FROM channels WHERE id=$1")
-                .bind(id)
-                .fetch_optional(&self.0)
-                .await,
+            sqlx::query(
+                "SELECT id, server_id, name, kind, audio_quality FROM channels WHERE id=$1",
+            )
+            .bind(id)
+            .fetch_optional(&self.0)
+            .await,
         )?;
         row.as_ref().map(channel_from).transpose()
     }
@@ -441,7 +555,7 @@ impl Store for PgStore {
     async fn find_server(&self, id: Uuid) -> Result<Option<Server>, StoreError> {
         let row = map_db(
             sqlx::query(
-                "SELECT s.id, s.name, s.owner_id, i.code AS invite_code
+                "SELECT s.id, s.name, s.owner_id, i.code AS invite_code, s.blocked_words, s.cooldown_seconds
                  FROM servers s JOIN invites i ON i.server_id=s.id WHERE s.id=$1",
             )
             .bind(id)
@@ -451,26 +565,83 @@ impl Store for PgStore {
         row.as_ref().map(server_from).transpose()
     }
 
+    async fn update_moderation(
+        &self,
+        id: Uuid,
+        blocked_words: Vec<String>,
+        cooldown_seconds: u32,
+    ) -> Result<Server, StoreError> {
+        map_db(
+            sqlx::query(
+                "UPDATE servers SET blocked_words=$2::jsonb, cooldown_seconds=$3 WHERE id=$1",
+            )
+            .bind(id)
+            .bind(serde_json::to_value(&blocked_words).unwrap_or_else(|_| serde_json::json!([])))
+            .bind(cooldown_seconds as i32)
+            .execute(&self.0)
+            .await,
+        )?;
+        self.find_server(id)
+            .await?
+            .ok_or(StoreError::NotFound)
+    }
+
+    async fn last_user_message_at(
+        &self,
+        channel: Uuid,
+        user: Uuid,
+    ) -> Result<Option<i64>, StoreError> {
+        let row = map_db(
+            sqlx::query(
+                "SELECT EXTRACT(EPOCH FROM created_at)::bigint AS ts
+                 FROM messages
+                 WHERE channel_id=$1 AND author_id=$2 AND deleted_at IS NULL
+                 ORDER BY id DESC LIMIT 1",
+            )
+            .bind(channel)
+            .bind(user)
+            .fetch_optional(&self.0)
+            .await,
+        )?;
+        Ok(row.and_then(|row| row.try_get("ts").ok()))
+    }
+
     async fn add_channel(&self, channel: Channel) -> Result<Channel, StoreError> {
         map_db(
             sqlx::query(
-                "INSERT INTO channels (id, server_id, name, kind, position)
-                 VALUES ($1,$2,$3,$4,COALESCE((SELECT MAX(position)+1 FROM channels WHERE server_id=$2),0))",
+                "INSERT INTO channels (id, server_id, name, kind, position, audio_quality)
+                 VALUES ($1,$2,$3,$4,COALESCE((SELECT MAX(position)+1 FROM channels WHERE server_id=$2),0),$5)",
             )
             .bind(channel.id)
             .bind(channel.server_id)
             .bind(&channel.name)
             .bind(channel.kind.as_str())
+            .bind(channel.audio_quality.as_str())
             .execute(&self.0)
             .await,
         )?;
         Ok(channel)
     }
 
+    async fn set_channel_audio_quality(
+        &self,
+        id: Uuid,
+        quality: chat_domain::voice::AudioQuality,
+    ) -> Result<Channel, StoreError> {
+        map_db(
+            sqlx::query("UPDATE channels SET audio_quality=$2 WHERE id=$1")
+                .bind(id)
+                .bind(quality.as_str())
+                .execute(&self.0)
+                .await,
+        )?;
+        self.find_channel(id).await?.ok_or(StoreError::NotFound)
+    }
+
     async fn join_invite(&self, user: Uuid, code: &str) -> Result<Server, StoreError> {
         let row = map_db(
             sqlx::query(
-                "SELECT s.id, s.name, s.owner_id, i.code AS invite_code
+                "SELECT s.id, s.name, s.owner_id, i.code AS invite_code, s.blocked_words, s.cooldown_seconds
                  FROM invites i JOIN servers s ON s.id=i.server_id WHERE i.code=$1",
             )
             .bind(code)
@@ -518,13 +689,14 @@ impl Store for PgStore {
 
     async fn list_visible_users(&self, user: Uuid) -> Result<Vec<User>, StoreError> {
         let rows = map_db(
-            sqlx::query(
-                "SELECT DISTINCT u.id, u.username, u.display_name
+            sqlx::query(&format!(
+                "SELECT DISTINCT {USER_SELECT}
                  FROM members mine
                  JOIN members theirs ON theirs.server_id=mine.server_id
                  JOIN users u ON u.id=theirs.user_id
-                 WHERE mine.user_id=$1",
-            )
+                 LEFT JOIN attachments a ON a.id=u.avatar_id
+                 WHERE mine.user_id=$1"
+            ))
             .bind(user)
             .fetch_all(&self.0)
             .await,
@@ -633,6 +805,20 @@ impl Store for PgStore {
         .transpose()
     }
 
+    async fn message_channel(&self, message_id: Uuid) -> Result<Option<Uuid>, StoreError> {
+        let row = map_db(
+            sqlx::query("SELECT channel_id FROM messages WHERE id=$1")
+                .bind(message_id)
+                .fetch_optional(&self.0)
+                .await,
+        )?;
+        row.map(|row| {
+            row.try_get("channel_id")
+                .map_err(|_| StoreError::Unavailable)
+        })
+        .transpose()
+    }
+
     async fn bind_attachments(
         &self,
         message_id: Uuid,
@@ -645,6 +831,7 @@ impl Store for PgStore {
                 sqlx::query(
                     "UPDATE attachments SET message_id=$1
                      WHERE id=$2 AND uploader_id=$3 AND message_id IS NULL
+                       AND NOT EXISTS (SELECT 1 FROM users WHERE avatar_id=$2)
                      RETURNING id, file_name, mime_type, size_bytes, object_key, thumbnail_key",
                 )
                 .bind(message_id)

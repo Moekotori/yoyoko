@@ -11,6 +11,9 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media) : IAsyncDispos
     public bool SelfDeaf { get; private set; }
     public bool Joined => ChannelId is not null;
     public string? MediaError { get; private set; }
+    public string Quality { get; private set; } = AudioQualities.Studio;
+    public string MaxQuality { get; private set; } = AudioQualities.Studio;
+    public AudioCaptureOptions Capture => AudioQualities.Profile(Quality);
     public IEnumerable<VoiceStateDto> Participants => _states.Values;
     public event Action? Changed;
     public IEnumerable<VoiceStateDto> InChannel(Guid channelId) =>
@@ -32,15 +35,22 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media) : IAsyncDispos
         Changed?.Invoke();
     }
 
-    public async Task JoinAsync(Guid channelId, CancellationToken cancellationToken)
+    public Task JoinAsync(Guid channelId, CancellationToken cancellationToken)
+        => JoinAsync(channelId, Quality, cancellationToken);
+
+    public async Task JoinAsync(Guid channelId, string? quality, CancellationToken cancellationToken)
     {
-        var joined = await api.JoinVoiceAsync(channelId, SelfMute, SelfDeaf, cancellationToken);
+        var joined = await api.JoinVoiceAsync(channelId, SelfMute, SelfDeaf, quality ?? Quality, cancellationToken);
         ChannelId = joined.State.ChannelId;
         SelfMute = joined.State.SelfMute;
         SelfDeaf = joined.State.SelfDeaf;
+        Quality = string.IsNullOrEmpty(joined.Audio.Id) ? AudioQualities.Studio : joined.Audio.Id;
+        MaxQuality = string.IsNullOrEmpty(joined.MaxAudioQuality) ? AudioQualities.Studio : joined.MaxAudioQuality;
         Apply(joined.State);
         MediaError = null;
-        try { await media.ConnectAsync(joined.Rtc.Url, joined.Rtc.Token, SelfMute, SelfDeaf, cancellationToken); }
+        var capture = new AudioCaptureOptions(joined.Audio.Id, joined.Audio.SampleRateHz, joined.Audio.Channels,
+            joined.Audio.BitrateBps, joined.Audio.FrameMs, joined.Audio.Dtx, joined.Audio.Fec);
+        try { await media.ConnectAsync(joined.Rtc.Url, joined.Rtc.Token, SelfMute, SelfDeaf, capture, cancellationToken); }
         catch (Exception exception) { MediaError = exception.Message; }
         Changed?.Invoke();
     }
@@ -57,7 +67,7 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media) : IAsyncDispos
     public async Task SetMuteAsync(bool muted, CancellationToken cancellationToken)
     {
         if (!Joined) return;
-        var state = await api.PatchVoiceAsync(muted, SelfDeaf && muted, cancellationToken);
+        var state = await api.PatchVoiceAsync(muted, SelfDeaf && muted, Quality, cancellationToken);
         SelfMute = state.SelfMute;
         SelfDeaf = state.SelfDeaf;
         Apply(state);
@@ -69,7 +79,7 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media) : IAsyncDispos
     public async Task SetDeafAsync(bool deafened, CancellationToken cancellationToken)
     {
         if (!Joined) return;
-        var state = await api.PatchVoiceAsync(deafened || SelfMute, deafened, cancellationToken);
+        var state = await api.PatchVoiceAsync(deafened || SelfMute, deafened, Quality, cancellationToken);
         SelfMute = state.SelfMute;
         SelfDeaf = state.SelfDeaf;
         Apply(state);
@@ -82,5 +92,20 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media) : IAsyncDispos
         Changed?.Invoke();
     }
 
-    public ValueTask DisposeAsync() => LeaveAsync(CancellationToken.None);
+    public async Task SetQualityAsync(string quality, CancellationToken cancellationToken)
+    {
+        if (!Joined || ChannelId is not Guid channel) { Quality = quality; Changed?.Invoke(); return; }
+        await JoinAsync(channel, quality, cancellationToken);
+    }
+
+    public async Task SetChannelMaxQualityAsync(Guid channelId, string quality, CancellationToken cancellationToken)
+    {
+        var updated = await api.PatchChannelAsync(channelId, new PatchChannelRequest(quality), cancellationToken);
+        MaxQuality = updated.AudioQuality ?? quality;
+        if (Joined && ChannelId == channelId)
+            await SetQualityAsync(AudioQualities.Clamp(Quality, MaxQuality), cancellationToken);
+        else Changed?.Invoke();
+    }
+
+    public ValueTask DisposeAsync() => new(LeaveAsync(CancellationToken.None));
 }

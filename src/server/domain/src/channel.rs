@@ -1,3 +1,4 @@
+use crate::voice::AudioQuality;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,6 +13,7 @@ pub struct Channel {
     pub server_id: Uuid,
     pub name: String,
     pub kind: ChannelKind,
+    pub audio_quality: AudioQuality,
 }
 
 #[derive(Debug, Clone)]
@@ -20,6 +22,8 @@ pub struct Server {
     pub name: String,
     pub owner_id: Uuid,
     pub invite_code: String,
+    pub blocked_words: Vec<String>,
+    pub cooldown_seconds: u32,
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -1,0 +1,16 @@
+{
+  "op":"dispatch", "event":"USER_UPDATE", "seq":"9007199254740993",
+  "data":{
+    "id":"01950000-0000-7000-8000-000000000030",
+    "username":"ada",
+    "display_name":"Ada",
+    "avatar":{
+      "id":"01950000-0000-7000-8000-000000000031",
+      "mime_type":"image/gif",
+      "size":2048,
+      "download_url":"http://localhost:8080/api/v1/attachments/01950000-0000-7000-8000-000000000031/content?exp=1770000000&sig=test",
+      "thumbnail_url":"http://localhost:8080/api/v1/attachments/01950000-0000-7000-8000-000000000031/thumbnail?exp=1770000000&sig=test",
+      "animated":true
+    }
+  }
+}

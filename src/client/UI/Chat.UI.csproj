@@ -4,8 +4,10 @@
     <ProjectReference Include="../Core/Chat.Core.csproj" />
     <ProjectReference Include="../Domain/Chat.Domain.csproj" />
     <ProjectReference Include="../Protocol/Chat.Protocol.csproj" />
+    <ProjectReference Include="../Localization/Chat.Localization.csproj" />
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="SkiaSharp" />
   </ItemGroup>
   <ItemGroup><AvaloniaResource Include="Assets/*.png" /></ItemGroup>
 </Project>

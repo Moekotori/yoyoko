@@ -9,7 +9,16 @@ pub const MAX_PAGE_SIZE: u32 = 100;
 pub const DEFAULT_PAGE_SIZE: u32 = 50;
 pub const MAX_CONTENT_BYTES: usize = 16_384;
 pub const MAX_ATTACHMENT_BYTES: u64 = 25_165_824;
+pub const MAX_ATTACHMENT_BYTES_CEILING: u64 = 268_435_456;
 pub const MAX_ATTACHMENTS_PER_MESSAGE: usize = 4;
+pub const MAX_AVATAR_BYTES: u64 = 8_388_608;
+pub const MAX_AVATAR_EDGE: u32 = 4_096;
+fn default_max_attachment_bytes() -> u64 {
+    MAX_ATTACHMENT_BYTES
+}
+fn default_max_attachments_per_message() -> u32 {
+    MAX_ATTACHMENTS_PER_MESSAGE as u32
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstanceDiscovery {
@@ -21,6 +30,10 @@ pub struct InstanceDiscovery {
     pub gateway: String,
     pub cdn: String,
     pub rtc: String,
+    #[serde(default = "default_max_attachment_bytes")]
+    pub max_attachment_bytes: u64,
+    #[serde(default = "default_max_attachments_per_message")]
+    pub max_attachments_per_message: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,6 +69,28 @@ pub struct User {
     pub id: Uuid,
     pub username: String,
     pub display_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<Avatar>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Avatar {
+    pub id: Uuid,
+    pub mime_type: String,
+    pub size: u64,
+    pub download_url: String,
+    pub thumbnail_url: Option<String>,
+    #[serde(default)]
+    pub animated: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct PatchMeRequest {
+    pub username: Option<String>,
+    pub display_name: Option<String>,
+    pub avatar_id: Option<Uuid>,
+    #[serde(default)]
+    pub clear_avatar: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,6 +125,18 @@ pub struct Server {
     pub name: String,
     pub owner_id: Uuid,
     pub invite_code: String,
+    #[serde(default)]
+    pub blocked_words: Vec<String>,
+    #[serde(default)]
+    pub cooldown_seconds: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PatchModerationRequest {
+    #[serde(default)]
+    pub blocked_words: Option<Vec<String>>,
+    #[serde(default)]
+    pub cooldown_seconds: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,6 +145,8 @@ pub struct Channel {
     pub server_id: Uuid,
     pub name: String,
     pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio_quality: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -109,6 +158,14 @@ pub struct CreateServerRequest {
 pub struct CreateChannelRequest {
     pub name: String,
     pub kind: String,
+    #[serde(default)]
+    pub audio_quality: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PatchChannelRequest {
+    #[serde(default)]
+    pub audio_quality: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -163,6 +220,19 @@ pub struct VoiceFlags {
     pub self_mute: bool,
     #[serde(default)]
     pub self_deaf: bool,
+    #[serde(default)]
+    pub audio_quality: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AudioProfile {
+    pub id: String,
+    pub sample_rate_hz: u32,
+    pub channels: u8,
+    pub bitrate_bps: u32,
+    pub frame_ms: u32,
+    pub dtx: bool,
+    pub fec: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,6 +243,8 @@ pub struct VoiceState {
     pub self_mute: bool,
     pub self_deaf: bool,
     pub display_name: String,
+    #[serde(default)]
+    pub audio_quality: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -187,6 +259,8 @@ pub struct RtcToken {
 pub struct VoiceJoin {
     pub rtc: RtcToken,
     pub state: VoiceState,
+    pub audio: AudioProfile,
+    pub max_audio_quality: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -211,6 +285,11 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(discovery.protocol_version, PROTOCOL_VERSION);
+        assert_eq!(discovery.max_attachment_bytes, MAX_ATTACHMENT_BYTES);
+        assert_eq!(
+            discovery.max_attachments_per_message,
+            MAX_ATTACHMENTS_PER_MESSAGE as u32
+        );
         let event: GatewayEnvelope = serde_json::from_str(include_str!(
             "../../../../docs/protocol/fixtures/message-create.json"
         ))
@@ -230,5 +309,13 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(rtc.room, "voice:01950000-0000-7000-8000-000000000040");
+        let user_event: GatewayEnvelope = serde_json::from_str(include_str!(
+            "../../../../docs/protocol/fixtures/user-update.json"
+        ))
+        .unwrap();
+        assert_eq!(user_event.event.as_deref(), Some("USER_UPDATE"));
+        let user: User = serde_json::from_value(user_event.data).unwrap();
+        assert_eq!(user.username, "ada");
+        assert_eq!(user.avatar.as_ref().map(|a| a.animated), Some(true));
     }
 }

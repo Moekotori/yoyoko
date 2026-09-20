@@ -2,6 +2,7 @@
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/client/Core/Chat.Core.csproj" />
+    <ProjectReference Include="../../src/client/Localization/Chat.Localization.csproj" />
     <ProjectReference Include="../../src/client/Storage/Chat.Storage.csproj" />
     <ProjectReference Include="../../src/client/Networking/Chat.Networking.csproj" />
     <ProjectReference Include="../../src/client/Media/Chat.Media.csproj" />

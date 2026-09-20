@@ -1,6 +1,7 @@
 use crate::configuration::Rtc;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use chat_domain::voice::AudioQuality;
 use hmac::{Hmac, Mac};
 use serde::Serialize;
 use sha2::Sha256;
@@ -30,6 +31,7 @@ struct LiveKitClaims<'a> {
     name: &'a str,
     nbf: u64,
     exp: u64,
+    metadata: String,
     video: VideoGrant,
 }
 
@@ -46,6 +48,7 @@ pub fn mint_voice_token(
     name: &str,
     room: &str,
     can_publish: bool,
+    quality: AudioQuality,
     ttl: Duration,
 ) -> Result<IssuedToken, &'static str> {
     let now = SystemTime::now()
@@ -54,12 +57,23 @@ pub fn mint_voice_token(
         .as_secs();
     let exp = now + ttl.as_secs().max(30);
     let header = serde_json::json!({"alg":"HS256","typ":"JWT","kid": rtc.api_key});
+    let metadata = serde_json::json!({
+        "audio_quality": quality.as_str(),
+        "sample_rate_hz": quality.sample_rate_hz(),
+        "channels": quality.channels(),
+        "bitrate_bps": quality.bitrate_bps(),
+        "frame_ms": quality.frame_ms(),
+        "dtx": quality.dtx(),
+        "fec": quality.fec(),
+    })
+    .to_string();
     let claims = LiveKitClaims {
         iss: &rtc.api_key,
         sub: identity,
         name,
         nbf: now.saturating_sub(5),
         exp,
+        metadata,
         video: VideoGrant {
             room_join: true,
             room: room.to_string(),
@@ -123,6 +137,7 @@ mod tests {
             "Ada",
             "voice:room",
             true,
+            AudioQuality::Studio,
             Duration::from_secs(60),
         )
         .unwrap();
@@ -133,6 +148,8 @@ mod tests {
         assert!(payload.contains("\"roomJoin\":true"));
         assert!(payload.contains("\"canPublish\":true"));
         assert!(payload.contains("voice:room"));
+        assert!(payload.contains("510000"));
+        assert!(payload.contains("studio"));
         let mut mac = HmacSha256::new_from_slice(rtc.api_secret.as_bytes()).unwrap();
         mac.update(format!("{}.{}", parts[0], parts[1]).as_bytes());
         let expected = URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());

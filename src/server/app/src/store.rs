@@ -122,6 +122,16 @@ pub trait Store: Send + Sync {
         &self,
         username: &str,
     ) -> Result<Option<(User, String)>, StoreError>;
+    async fn update_user(
+        &self,
+        id: Uuid,
+        username: &str,
+        display_name: &str,
+        avatar_id: Option<Uuid>,
+        avatar_animated: bool,
+    ) -> Result<User, StoreError>;
+    async fn avatar_owner(&self, attachment_id: Uuid) -> Result<Option<Uuid>, StoreError>;
+    async fn shares_community(&self, a: Uuid, b: Uuid) -> Result<bool, StoreError>;
 
     async fn create_session(&self, session: SessionRecord) -> Result<(), StoreError>;
     async fn find_session_by_refresh(
@@ -148,7 +158,23 @@ pub trait Store: Send + Sync {
     async fn list_channels(&self, server: Uuid) -> Result<Vec<Channel>, StoreError>;
     async fn find_channel(&self, id: Uuid) -> Result<Option<Channel>, StoreError>;
     async fn find_server(&self, id: Uuid) -> Result<Option<Server>, StoreError>;
+    async fn update_moderation(
+        &self,
+        id: Uuid,
+        blocked_words: Vec<String>,
+        cooldown_seconds: u32,
+    ) -> Result<Server, StoreError>;
+    async fn last_user_message_at(
+        &self,
+        channel: Uuid,
+        user: Uuid,
+    ) -> Result<Option<i64>, StoreError>;
     async fn add_channel(&self, channel: Channel) -> Result<Channel, StoreError>;
+    async fn set_channel_audio_quality(
+        &self,
+        id: Uuid,
+        quality: chat_domain::voice::AudioQuality,
+    ) -> Result<Channel, StoreError>;
     async fn join_invite(&self, user: Uuid, code: &str) -> Result<Server, StoreError>;
     async fn list_members(&self, server: Uuid) -> Result<Vec<Uuid>, StoreError>;
     async fn list_visible_users(&self, user: Uuid) -> Result<Vec<User>, StoreError>;
@@ -167,6 +193,7 @@ pub trait Store: Send + Sync {
         &self,
         id: Uuid,
     ) -> Result<Option<(Attachment, Uuid, Option<Uuid>)>, StoreError>;
+    async fn message_channel(&self, message_id: Uuid) -> Result<Option<Uuid>, StoreError>;
     async fn bind_attachments(
         &self,
         message_id: Uuid,

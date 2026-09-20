@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using Chat.Core.Voice;
 
@@ -21,7 +20,7 @@ public sealed class WorkerMediaService : IMediaService
         return path is null ? new UnavailableMediaService() : new WorkerMediaService(path);
     }
 
-    public async Task ConnectAsync(Uri endpoint, string token, bool muted, bool deafened, CancellationToken cancellationToken)
+    public async Task ConnectAsync(Uri endpoint, string token, bool muted, bool deafened, AudioCaptureOptions audio, CancellationToken cancellationToken)
     {
         await LeaveAsync(cancellationToken);
         var process = new Process
@@ -47,7 +46,14 @@ public sealed class WorkerMediaService : IMediaService
             ["url"] = endpoint.AbsoluteUri,
             ["token"] = token,
             ["muted"] = muted,
-            ["deafened"] = deafened
+            ["deafened"] = deafened,
+            ["quality"] = audio.Quality,
+            ["sample_rate_hz"] = audio.SampleRateHz,
+            ["channels"] = audio.Channels,
+            ["bitrate_bps"] = audio.BitrateBps,
+            ["frame_ms"] = audio.FrameMs,
+            ["dtx"] = audio.Dtx,
+            ["fec"] = audio.Fec
         }, cancellationToken);
     }
 
@@ -55,6 +61,19 @@ public sealed class WorkerMediaService : IMediaService
         => SendAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "mute", ["muted"] = muted }, cancellationToken);
     public Task SetDeafenedAsync(bool deafened, CancellationToken cancellationToken)
         => SendAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "deafen", ["deafened"] = deafened }, cancellationToken);
+    public Task SetQualityAsync(AudioCaptureOptions audio, CancellationToken cancellationToken)
+        => SendAsync(new Dictionary<string, object?>
+        {
+            ["id"] = _nextId++,
+            ["op"] = "quality",
+            ["quality"] = audio.Quality,
+            ["sample_rate_hz"] = audio.SampleRateHz,
+            ["channels"] = audio.Channels,
+            ["bitrate_bps"] = audio.BitrateBps,
+            ["frame_ms"] = audio.FrameMs,
+            ["dtx"] = audio.Dtx,
+            ["fec"] = audio.Fec
+        }, cancellationToken);
 
     public async Task LeaveAsync(CancellationToken cancellationToken)
     {
@@ -114,11 +133,11 @@ public sealed class WorkerMediaService : IMediaService
             Path.Combine(Directory.GetCurrentDirectory(), "target", "debug")
         };
         foreach (var root in roots)
-        foreach (var name in names)
-        {
-            var path = Path.Combine(root, name);
-            if (File.Exists(path)) return path;
-        }
+            foreach (var name in names)
+            {
+                var path = Path.Combine(root, name);
+                if (File.Exists(path)) return path;
+            }
         return null;
     }
 

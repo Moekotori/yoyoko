@@ -63,12 +63,13 @@ public sealed class ChannelTimeline(CacheScope scope, Guid channelId, Guid accou
         Changed?.Invoke();
     }
 
-    public async Task SendAsync(string? content, IReadOnlyList<PickedImage> images, CancellationToken cancellationToken)
+    public async Task SendAsync(string? content, IReadOnlyList<PickedFile> files, CancellationToken cancellationToken)
     {
         var localId = Guid.CreateVersion7();
-        var attachments = Array.Empty<AttachmentDto>();
+        var localFiles = files.Select(file => new AttachmentDto(Guid.Empty, file.FileName, file.MimeType, file.Size,
+            new("http://127.0.0.1/.pending"), null)).ToArray();
         var pending = new MessageDto(localId, channelId, accountId, "text", content, DateTimeOffset.UtcNow, null, null,
-            [], attachments, [], [], null);
+            [], localFiles, [], [], null);
         var row = new TimelineItem { Message = pending, Status = SendStatus.Sending, LocalId = localId };
         _items.Add(row);
         Trim();
@@ -76,9 +77,9 @@ public sealed class ChannelTimeline(CacheScope scope, Guid channelId, Guid accou
         try
         {
             var uploaded = new List<Guid>();
-            foreach (var image in images)
+            foreach (var file in files)
             {
-                var dto = await api.UploadAsync(image, cancellationToken);
+                var dto = await api.UploadAsync(file, cancellationToken);
                 uploaded.Add(dto.Id);
             }
             var sent = await api.SendMessageAsync(channelId, new(content, null, [.. uploaded]), localId.ToString("N")[..16], cancellationToken);
@@ -98,7 +99,12 @@ public sealed class ChannelTimeline(CacheScope scope, Guid channelId, Guid accou
     public void ApplyRemote(MessageDto message)
     {
         if (message.ChannelId != channelId) return;
-        var existing = _items.Find(item => item.Message.Id == message.Id || (item.Status != SendStatus.Sent && item.Message.AuthorId == message.AuthorId && item.Message.Content == message.Content));
+        var existing = _items.Find(item =>
+            item.Message.Id == message.Id
+            || item.Status != SendStatus.Sent
+                && item.Message.AuthorId == message.AuthorId
+                && item.Message.Content == message.Content
+                && Names(item.Message) == Names(message));
         if (existing is not null)
         {
             existing.Message = message;
@@ -123,6 +129,9 @@ public sealed class ChannelTimeline(CacheScope scope, Guid channelId, Guid accou
                 _items.Add(item);
         Trim();
     }
+
+    private static string Names(MessageDto message) =>
+        string.Join('\0', message.Attachments.Select(item => item.FileName));
 
     private void Trim()
     {

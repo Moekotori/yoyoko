@@ -1,14 +1,17 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" x:Class="Chat.UI.Instances.AddInstanceView" x:DataType="vm:ShellViewModel">
+  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Instances.AddInstanceView" x:DataType="vm:ShellViewModel">
   <StackPanel MaxWidth="480" Margin="40" Spacing="18" VerticalAlignment="Center" HorizontalAlignment="Center">
-    <TextBlock Text="连接你的社区" FontSize="30" FontWeight="SemiBold" />
-    <TextBlock Text="实例地址" FontSize="13" />
+    <TextBlock Text="{i18n:T ConnectCommunity}" FontSize="30" FontWeight="SemiBold" />
+    <TextBlock Text="{i18n:T InstanceAddress}" FontSize="13" />
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-      <TextBox Text="{Binding Address}" PlaceholderText="chat.example.com 或 192.168.x.x:8080" AutomationProperties.Name="实例地址" MinWidth="200">
+      <TextBox Text="{Binding Address}" PlaceholderText="{i18n:T InstanceAddressPlaceholder}"
+        AutomationProperties.Name="{i18n:T InstanceAddress}" MinWidth="200">
         <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding AddInstance}" /></TextBox.KeyBindings>
       </TextBox>
-      <Button Grid.Column="1" Classes="primary" Content="添加实例" Command="{Binding AddInstance}" />
+      <Button Grid.Column="1" Classes="primary" Content="{i18n:T AddInstance}" Command="{Binding AddInstance}" />
     </Grid>
-    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" MinHeight="40" AutomationProperties.Name="操作状态" />
+    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" MinHeight="40"
+      AutomationProperties.Name="{i18n:T ActionStatus}" />
   </StackPanel>
 </UserControl>

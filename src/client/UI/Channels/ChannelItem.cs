@@ -1,6 +1,16 @@
+using Chat.Localization;
+using Chat.UI.Components;
+using Chat.UI.Localization;
+
 namespace Chat.UI.Channels;
 
-public sealed record ChannelItem(Guid Id, string Name, string Kind)
+public sealed class ChannelItem(Guid id, Guid serverId, string name, string kind, string? audioQuality) : ObservableObject
 {
-    public string Label => Kind == "voice" ? Name + " · 语音" : "# " + Name;
+    public Guid Id { get; } = id;
+    public Guid ServerId { get; } = serverId;
+    public string Name { get; } = name;
+    public string Kind { get; } = kind;
+    public string AudioQuality { get; set; } = audioQuality ?? "studio";
+    public string Label => Kind == "voice" ? Name + " · " + I18n.Presenter.Get(TextKey.Voice) : "# " + Name;
+    public void Refresh() => Changed(nameof(Label));
 }

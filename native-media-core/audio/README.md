@@ -1,5 +1,5 @@
 # audio
 
-Not implemented yet.
+Not implemented yet in this C ABI.
 
-Planned responsibility: AEC / RNNoise / AGC / VAD; preallocated 48 kHz mono Opus input, DTX and FEC.
+Voice transport is LiveKit in `chat-media-worker`. Planned here later: AEC / RNNoise / AGC / VAD; 48 kHz mono Opus, DTX and FEC.

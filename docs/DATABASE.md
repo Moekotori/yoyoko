@@ -6,14 +6,14 @@
 
 | 表 | 所属业务与约束 |
 | --- | --- |
-| users / sessions | 实例内账号、Argon2id PHC、refresh hash 与过期/撤销时间；认证逻辑未实现 |
+| users / sessions | 实例内账号、Argon2id PHC、refresh hash 与过期/撤销时间；`avatar_id` 指向未绑定消息的附件，`avatar_animated` 标记 GIF/动态 WebP/APNG |
 | servers / members | 社区与成员；owner、membership 外键 |
 | roles / member_roles | u64 permission 使用 NUMERIC(20,0)，server 范围复合外键 |
 | channels | text/voice、server 索引、显示顺序 |
 | channel_role_overrides / channel_member_overrides | allow/deny 位，禁止跨 server 引用 |
 | messages | UUIDv7、kind、content、reply、edit/delete、JSON embed/encrypted envelope |
 | message_mentions / reactions | 标准化关联、复合唯一键 |
-| attachments | 随机 UUID object key、显示名、MIME、大小、缩略图 key |
+| attachments | 随机 UUID object key、显示名、MIME、大小、缩略图 key；表内硬顶 256 MiB，实际上限由 `storage.max_bytes` 执行 |
 
 消息分页：`WHERE channel_id=$1 AND id<$before ORDER BY id DESC LIMIT $limit`。同频道 reply 外键避免跨频道回复。UUIDv7 提供稳定可排序 keyset，不承诺跨节点严格因果时钟；真正事件顺序以 Gateway seq 为准。
 
@@ -21,7 +21,7 @@
 
 临时状态不写 Postgres：presence 使用 Redis TTL，typing 短期 Gateway 事件，voice state 使用 Redis/内存。S3 只存内容，DB 存元数据。上传的 size/MIME/扩展名需在服务端实施，不把文件名作为路径。
 
-当前 migration 不包含 outbox。Phase 1 实现消息时需在同一事务保存 message + outbox，提交后再发布，避免“数据库成功但推送丢失”。Outbox retention、session sequence 和重放窗口将作为下一次 migration 引入。
+`0002_chat.sql` 增加 outbox、gateway_sessions、idempotency、invites，并允许 pending attachment。发送消息时同一事务写入 message + outbox，提交后再推 Gateway。Outbox 保留约 15 分钟或每用户 10,000 条。本机默认 `local:` JSON 存储实现同一语义；Postgres 由 Compose/CI 使用。
 
 迁移显式执行 `chat-server migrate`；正常 API 启动不暗中改库。sqlx migration 表记录版本与校验和。发布前备份，禁止修改已经部署的 migration；回退优先 forward fix，不提供破坏性自动 down migration。
 
