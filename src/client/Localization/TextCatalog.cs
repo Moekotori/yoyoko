@@ -33,11 +33,15 @@ public sealed class TextCatalog : ITextCatalog
     // One row per string: key, English, Chinese, Japanese. Add new copy here only.
     private static readonly (string Key, string En, string Zh, string Ja)[] Rows =
     [
+        (TextKey.UltraLightMode, "UltraLight", "UltraLight", "UltraLight"),
+        (TextKey.UltraLightHelp, "Unload the interface when minimized or hidden; keep chats and voice connected.", "最小化或隐藏时卸载界面，保持消息与语音连接。", "最小化・非表示時に画面を解放し、チャットと音声の接続を維持します。"),
         ("RenameChannel", "Rename channel", "重命名频道", "チャンネル名を変更"),
         ("DeleteChannel", "Delete channel", "删除频道", "チャンネルを削除"),
         ("DeleteChannelConfirm", "Delete “{0}”? Its messages will be permanently deleted.", "删除「{0}」？频道内的消息将被永久删除。", "「{0}」を削除しますか？メッセージも完全に削除されます。"),
         ("ChannelNameInvalid", "Enter a channel name (1–100 UTF-8 bytes).", "请输入频道名称（1–100 UTF-8 字节）。", "チャンネル名を入力してください（1〜100 UTF-8 バイト）。"),
         ("OpenChannel", "Open channel", "打开频道", "チャンネルを開く"),
+        ("JoinVoiceChannel", "Join voice", "加入语音", "ボイスに参加"),
+        ("VoiceAudioOff", "Audio not connected", "音频未接通", "音声未接続"),
         ("ChannelSave", "Save", "保存", "保存"),
         ("ChannelCancel", "Cancel", "取消", "キャンセル"),
         ("CreateTextChannel", "Create text channel", "添加文字频道", "テキストチャンネルを追加"),
@@ -106,7 +110,7 @@ public sealed class TextCatalog : ITextCatalog
         ("Deafen", "Deafen", "耳聋", "スピーカーミュート"),
         ("Undeafen", "Undeafen", "取消耳聋", "スピーカーミュート解除"),
         ("VoiceConnected", "Voice connected", "语音已连接", "ボイスに接続しました"),
-        ("VoiceJoinHint", "Select a voice channel to join", "点击语音频道加入", "ボイスチャンネルを選択して参加"),
+        ("VoiceJoinHint", "Double-click a voice channel to join", "双击语音频道加入", "ボイスチャンネルをダブルクリックして参加"),
         ("VoiceMediaError", "In the channel, audio not connected: {0}", "已进入频道，音频未接通：{0}", "チャンネルに入りましたが、音声は未接続です：{0}"),
         ("AudioQuality", "Audio quality", "音质", "音質"),
         ("ChannelQualityCap", "Channel maximum", "频道上限", "チャンネル上限"),

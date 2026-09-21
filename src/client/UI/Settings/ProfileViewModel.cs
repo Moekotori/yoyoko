@@ -11,6 +11,7 @@ public sealed class ProfileViewModel : ObservableObject
     private readonly Func<Task<PickedFile?>> _pick;
     private string _username = "";
     private string _displayName = "";
+    private string _idText = "";
     private string _status = "";
     private readonly I18n _text;
     private AvatarPlayback? _playback;
@@ -32,8 +33,22 @@ public sealed class ProfileViewModel : ObservableObject
     public AsyncCommand ChangeAvatar { get; }
     public AsyncCommand RemoveAvatar { get; }
     public bool IsSignedIn { get; private set; }
-    public string Username { get => _username; set { _username = value; Changed(); Changed(nameof(Initial)); } }
+    public string Username
+    {
+        get => _username;
+        set
+        {
+            _username = value;
+            Changed();
+            Changed(nameof(Initial));
+            Changed(nameof(Handle));
+            Changed(nameof(HasHandle));
+        }
+    }
     public string DisplayName { get => _displayName; set { _displayName = value; Changed(); Changed(nameof(Initial)); } }
+    public string Handle => Username.Length == 0 ? "" : "@" + Username;
+    public bool HasHandle => Username.Length > 0;
+    public string IdText { get => _idText; private set { if (_idText == value) return; _idText = value; Changed(); } }
     public string Initial
     {
         get
@@ -60,11 +75,13 @@ public sealed class ProfileViewModel : ObservableObject
         {
             Username = "";
             DisplayName = "";
+            IdText = "";
             Status = "";
             return;
         }
         Username = session.Me.Username;
         DisplayName = session.Me.DisplayName;
+        IdText = session.Me.Id.ToString("D");
         Status = "";
     }
 

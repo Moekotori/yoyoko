@@ -13,12 +13,13 @@ public sealed class ShortcutGroup(string title, IReadOnlyList<ShortcutRow> rows)
     public IReadOnlyList<ShortcutRow> Rows { get; } = rows;
 }
 
-public sealed class ShortcutRow(ShortcutAction action, string title, string gesture) : ObservableObject
+public sealed class ShortcutRow(ShortcutAction action, string title, string gesture, bool last = false) : ObservableObject
 {
     private string _title = title;
     private string _gesture = gesture;
     private bool _recording;
     public ShortcutAction Action { get; } = action;
+    public bool ShowDivider { get; } = !last;
     public string Title { get => _title; internal set { if (_title == value) return; _title = value; Changed(); } }
     public string Gesture { get => _gesture; internal set { if (_gesture == value) return; _gesture = value; Changed(); } }
     public bool IsRecording { get => _recording; internal set { if (_recording == value) return; _recording = value; Changed(); } }
@@ -124,23 +125,23 @@ public sealed class ShortcutSettingsViewModel : ObservableObject, IDisposable
             Row(ShortcutAction.PreviousTab, TextKey.ShortcutPreviousTab),
             Row(ShortcutAction.NextTab, TextKey.ShortcutNextTab),
             Row(ShortcutAction.CloseTab, TextKey.CloseTab),
-            Row(ShortcutAction.Settings, TextKey.Settings)
+            Row(ShortcutAction.Settings, TextKey.Settings, last: true)
         ]));
         Groups.Add(new(_text.Get(TextKey.ChatBehavior),
         [
             Row(ShortcutAction.Search, TextKey.SearchMessages),
             Row(ShortcutAction.Members, TextKey.ToggleMembers),
-            Row(ShortcutAction.Attach, TextKey.AddFile)
+            Row(ShortcutAction.Attach, TextKey.AddFile, last: true)
         ]));
         Groups.Add(new(_text.Get(TextKey.Voice),
         [
             Row(ShortcutAction.Mute, TextKey.Mute),
-            Row(ShortcutAction.Deafen, TextKey.Deafen)
+            Row(ShortcutAction.Deafen, TextKey.Deafen, last: true)
         ]));
     }
 
-    private ShortcutRow Row(ShortcutAction action, string key) =>
-        new(action, _text.Get(key), Gesture(action));
+    private ShortcutRow Row(ShortcutAction action, string key, bool last = false) =>
+        new(action, _text.Get(key), Gesture(action), last);
 
     private string Gesture(ShortcutAction action) =>
         ShortcutScheme.Display(action, _preference.Overrides, _text.Get(TextKey.ShortcutUnbound));

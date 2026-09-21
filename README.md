@@ -20,7 +20,7 @@
 | 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
 | 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
 | SQLite 消息分页缓存与账号隔离 | 已实现并接入远程同步 |
-| 界面内存调度 | 已接入前台 / 空闲 / 压力 / 隐藏四档，收缩附件、头像并回收隐藏壁纸；[策略与验证](docs/MEMORY_SCHEDULING.md) |
+| 界面内存调度 | 已接入前台 / 空闲 / 压力 / 隐藏四档；设置 → 常规可开启深度 UltraLight，最小化/隐藏时卸载页面，保留消息和语音会话；[策略与验证](docs/MEMORY_SCHEDULING.md) |
 | Rust 健康检查、发现、认证 Gateway READY | 已实现 |
 | Domain、Service、Repository | 已实现 VIEW_CHANNEL / SEND_MESSAGE 服务端检查 |
 | C++ Native Media C ABI | 骨架可编译，能力位为 0，媒体操作明确返回未实现 |
@@ -28,7 +28,7 @@
 | 注册、登录、社区/频道、文字消息 | 已接通控制面；完整验收见路线图 |
 | 社区屏蔽词与发言冷却 | 已实现；owner / MANAGE_MESSAGES 可 PATCH，发送时服务端强制 |
 | 聊天附件（拖拽/选择图片与文件、可配置上限、对端下载） | 已实现；默认 24 MiB，服务端 `storage.max_bytes` 可改 |
-| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 未进语音也可预设麦克风/耳机开关，悬浮显示设备，旁边箭头切换输入输出；控制面不因 mute/改音质重连；本机 20 ms/3 帧设备检查已实现；对端听筒需 LiveKit |
+| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 未进语音也可预设麦克风/耳机开关，悬浮显示设备，麦克风与耳机各自的箭头打开对应设备列表；控制面不因 mute/改音质重连；本机 20 ms/3 帧设备检查已实现；对端听筒需 LiveKit |
 | 屏幕共享 | **Not implemented yet** |
 
 本机已通过 .NET Release 构建、Rust 聚焦测试与 Clippy、Native C ABI 检查，并验证了实例添加和离线恢复。Windows/Linux 的实际构建、GUI、安装包及媒体硬件尚未验证。
@@ -148,7 +148,7 @@ CHAT_CACHE_DIRECTORY=/tmp/chat-local CHAT_DEFAULT_INSTANCE_URL=http://localhost:
 
 输入 `localhost`（也支持 `http://localhost`）会连接配置的默认服务器，当前为 `http://10.19.144.83:8080`，无需输入端口。显式填写 `localhost:8080` 等带端口地址仍连接本机服务。此快捷地址仅在客户端内生效。
 
-也可以通过「设置 → 服务器」输入其他服务器地址并连接；加号也打开这个设置入口。用户名、显示名和头像在「设置 → 资料」修改。创建社区会得到邀请码；第二个客户端用同一地址登录并加入，即可互发文字和图片。本机 `cargo run` 默认使用 `local:data/chat.json` 与 `data/objects`，不需要 PostgreSQL、Docker 或 MinIO。两个客户端请用不同的 `CHAT_CACHE_DIRECTORY`，避免抢同一份 SQLite。
+也可以通过「设置 → 服务器」输入其他服务器地址并连接；加号也打开这个设置入口。用户名、显示名和头像在「设置 → 资料」修改。最左侧实例栏显示该实例账号的圆形头像，更换或移除后同步刷新；未设置时显示服务器名称首字。创建社区会得到邀请码；第二个客户端用同一地址登录并加入，即可互发文字和图片。本机 `cargo run` 默认使用 `local:data/chat.json` 与 `data/objects`，不需要 PostgreSQL、Docker 或 MinIO。两个客户端请用不同的 `CHAT_CACHE_DIRECTORY`，避免抢同一份 SQLite。
 
 ```sh
 CHAT_CACHE_DIRECTORY=/tmp/chat-b dotnet run --project src/client/App -c Release

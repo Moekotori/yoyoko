@@ -2,11 +2,15 @@ namespace Chat.Localization;
 
 public static class TextKey
 {
+    public const string UltraLightMode = "UltraLightMode";
+    public const string UltraLightHelp = "UltraLightHelp";
     public const string RenameChannel = "RenameChannel";
     public const string DeleteChannel = "DeleteChannel";
     public const string DeleteChannelConfirm = "DeleteChannelConfirm";
     public const string ChannelNameInvalid = "ChannelNameInvalid";
     public const string OpenChannel = "OpenChannel";
+    public const string JoinVoiceChannel = "JoinVoiceChannel";
+    public const string VoiceAudioOff = "VoiceAudioOff";
     public const string ChannelSave = "ChannelSave";
     public const string ChannelCancel = "ChannelCancel";
     public const string CreateTextChannel = "CreateTextChannel";

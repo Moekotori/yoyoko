@@ -51,6 +51,7 @@ public sealed partial class InstanceSession : IAsyncDisposable
     public int MaxAttachments { get; private set; } = ProtocolVersion.MaxAttachmentsPerMessage;
     public event Action? CommunityChanged;
     public event Action<MessageDto>? MessageArrived;
+    public event Action<MessageDto>? MessageUpdated;
 
     public void ApplyDiscovery(InstanceDiscovery info)
     {
@@ -335,7 +336,7 @@ public sealed partial class InstanceSession : IAsyncDisposable
             }
             return;
         }
-        if (envelope.Event == "MESSAGE_CREATE")
+        if (envelope.Event is "MESSAGE_CREATE" or "MESSAGE_UPDATE")
         {
             var message = envelope.Data.Deserialize(ProtocolJson.Default.MessageDto);
             if (message is null) return;
@@ -345,7 +346,8 @@ public sealed partial class InstanceSession : IAsyncDisposable
                 var cursor = await _cache.LoadCursorAsync(Scope, cancellationToken);
                 await _cache.SaveCursorAsync(Scope, cursor.SessionId, seq, cancellationToken);
             }
-            MessageArrived?.Invoke(message);
+            if (envelope.Event == "MESSAGE_UPDATE") MessageUpdated?.Invoke(message);
+            else MessageArrived?.Invoke(message);
             return;
         }
         if (envelope.Event is "CHANNEL_CREATE" or "CHANNEL_UPDATE" or "CHANNEL_DELETE" or "SERVER_CREATE" or "MEMBER_JOIN")

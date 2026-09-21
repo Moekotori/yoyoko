@@ -31,7 +31,7 @@
 
 参考了 ECHO 的 `WindowResidencyController`、`mainWindowTrayLoadShedding`、`UltraLightModeService` 与窗口驻留说明：可见性驱动降载、释放可重建资源、用取消和代次检查拒绝过期恢复、保留核心业务状态。
 
-没有复制 Electron Renderer 销毁、GPU runtime 重启、曲库 worker 或音乐播放逻辑。yoyoko 的 Avalonia UI 与业务当前在同一进程；本次不销毁整棵 UI，不承诺达到 ECHO UltraLight 的驻留内存水平。
+没有复制 Electron Renderer 销毁、GPU runtime 重启、曲库 worker 或音乐播放逻辑。yoyoko 的 Avalonia UI 与业务当前在同一进程；基础四档保留 UI 树；可选的深度开关见下节。不承诺达到 ECHO UltraLight 的驻留内存水平。
 
 ## 验证与限制
 
@@ -42,3 +42,18 @@
 - 原生最小化/恢复动作的工具反馈未能确认状态；仅离屏事件已验证。填充聊天窗口、图片/头像密集频道、100/1000/10000 条消息、三平台压力响应、通话中降载与原生窗口恢复延迟尚未验收。
 
 当前先验收可回收资源有界。50–100 MiB 仍是目标；SQLite 全局磁盘淘汰、整个 UI/字体/渲染器驻留优化不在本次完成范围内。
+
+## 可选深度 UltraLight
+
+「设置 → 常规 → UltraLight」默认关闭，保存到客户端偏好的 `ultra_light_enabled`。打开开关后，窗口仍可正常使用；最小化或隐藏才进入深度模式。失焦、空闲和系统压力只应用基础四档，不会卸载可见页面。
+
+- 将主要界面抽成 `ShellSurface`，由 `UltraLightWindowContent` 释放和重建 `Window.Content`；保留原生窗口外壳作为系统任务栏/程序坞的恢复入口。没有新增托盘功能，也不改变关闭窗口或退出应用的语义。
+- 先停止图片工作，再卸载页面、关闭临时弹出菜单、解绑视图事件，清理 Messages / VisibleMessages / Participants 的 UI 投影。Shell、Core 时间线、账号会话、Gateway、SQLite、发送/上传、VoiceRuntime 和媒体 worker 的生命周期不变。
+- 保留当前频道、草稿、待发送附件流、设置状态；恢复时重建当前消息投影，重新加载受预算限制的图片，并尝试恢复频道滚动偏移。如果后台时间线已经淘汰旧消息，不保证历史阅读位置逐像素不变。
+- 暂停设置页的连接探测轮询、取消快捷键录制；不会调用语音 Leave、Connect、设备切换或修改 mute/deafen。关闭开关时若窗口仍隐藏，延迟到显示时重建，避免创建不可见页面。
+- 壁纸视图在脱离视觉树时解绑长期存活的 WallpaperSession，防止旧页面被事件订阅保留。
+- 页面卸载后可由 GC 回收；产品不主动强制 GC、不重启进程、不声称所有字体/主题/渲染器原生缓存立即退回系统。
+
+聚焦入口：`dotnet run --project tests/ultralight -c Release`。测试使用真正的 App/ShellSurface 与离屏窗口，验证默认关闭、持久化、卸载后弱引用回收、重建、隐藏时关闭开关、草稿/附件流保留。语音使用真正的 VoiceRuntime 和记录调用次数的 API/媒体端口：加入后经历隐藏/恢复，Connect=1、Leave=0，频道和 mute/deafen 不变。测试内的强制 GC 仅用于证明视图可回收，产品无此调用。
+
+开关已完成离屏渲染检查；此结果不等于真实设备/RTP 音频连续性、三平台恢复延迟或新一轮 RSS A/B 验收。

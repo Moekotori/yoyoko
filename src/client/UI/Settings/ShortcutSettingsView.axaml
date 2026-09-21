@@ -1,22 +1,28 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.ShortcutSettingsView" x:DataType="vm:ShortcutSettingsViewModel" x:Name="Root">
-  <StackPanel Spacing="28">
+  <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="20">
     <ItemsControl ItemsSource="{Binding Groups}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Spacing="20" /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:ShortcutGroup">
           <StackPanel Spacing="8">
-            <TextBlock Text="{Binding Title}" Classes="section" Margin="0,0,0,4" />
+            <TextBlock Text="{Binding Title}" Classes="section" Margin="4,0,0,2" />
             <Border Classes="settingsGroup">
               <ItemsControl ItemsSource="{Binding Rows}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ShortcutRow">
-                    <Grid Classes="shortcutRow" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                      <TextBlock Text="{Binding Title}" Classes="settingsLabel" />
-                      <Button Grid.Column="1" Classes="shortcutKey" Classes.recording="{Binding IsRecording}"
-                        Command="{Binding #Root.((vm:ShortcutSettingsViewModel)DataContext).Capture}" CommandParameter="{Binding}"
-                        Content="{Binding Gesture}" AutomationProperties.Name="{Binding Title}" />
-                    </Grid>
+                    <StackPanel>
+                      <Grid Classes="shortcutRow" ColumnDefinitions="*,160" ColumnSpacing="16">
+                        <TextBlock Text="{Binding Title}" Classes="settingsLabel" TextTrimming="CharacterEllipsis" />
+                        <Button Grid.Column="1" Classes="shortcutKey" Classes.recording="{Binding IsRecording}"
+                          Command="{Binding #Root.((vm:ShortcutSettingsViewModel)DataContext).Capture}" CommandParameter="{Binding}"
+                          Content="{Binding Gesture}" AutomationProperties.Name="{Binding Title}" />
+                      </Grid>
+                      <Border Classes="settingsRowDivider" IsVisible="{Binding ShowDivider}" />
+                    </StackPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

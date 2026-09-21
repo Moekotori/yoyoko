@@ -185,6 +185,11 @@ pub struct SendMessageRequest {
     pub attachment_ids: Vec<Uuid>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PatchMessageRequest {
+    pub content: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Attachment {
     pub id: Uuid,

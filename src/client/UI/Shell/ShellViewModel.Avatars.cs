@@ -41,6 +41,7 @@ public sealed partial class ShellViewModel
         var user = session?.User(userId);
         if (user?.Avatar is null)
         {
+            _avatarAttempts.Remove(userId);
             ApplyPlayback(userId, null);
             if (_playbacks.Remove(userId, out var stale)) stale.Playback.Dispose();
             return;
@@ -67,6 +68,9 @@ public sealed partial class ShellViewModel
             var bytes = await session!.DownloadAsync(url, limit, token);
             if (bytes is null || bytes.Length == 0 || token.IsCancellationRequested || generation != _avatarGeneration
                 || !ReferenceEquals(session, SelectedInstance?.Context.Session) || _visualBudget.Suspended) return;
+            var currentAvatar = session.User(userId)?.Avatar;
+            if (currentAvatar is null || currentAvatar.Id != user.Avatar.Id
+                || !_avatarAttempts.TryGetValue(userId, out var requested) || requested != url) return;
             if (session.Me.Id != userId && !Messages.Any(row => row.Item.Message.AuthorId == userId)) return;
             var retained = _playbacks.Values.Sum(item => item.Playback.DecodedBytes);
             if (retained + 128 * 128 * 4 > AvatarBudget) return;
@@ -77,6 +81,13 @@ public sealed partial class ShellViewModel
             if (_playbacks.Remove(userId, out var previous)) previous.Playback.Dispose();
             _playbacks[userId] = (url, playback);
             ApplyPlayback(userId, playback);
+            if (session.Me.Id == userId && SelectedInstance is { } instance)
+            {
+                // At most 512 KiB of static rail thumbnails, with no extra downloads.
+                if (instance.Playback is null && Instances.Count(item => item.Playback is not null) >= 32)
+                    Instances.First(item => item.Playback is not null).ClearAvatar();
+                instance.SetAvatar(bytes);
+            }
         }
         catch { /* Leave the letter avatar; retry on URL or residency change. */ }
         finally
@@ -97,6 +108,8 @@ public sealed partial class ShellViewModel
         }
         foreach (var row in Messages)
             if (row.Item.Message.AuthorId == userId) row.Playback = playback;
+        foreach (var member in Participants)
+            if (member.Id == userId) member.Playback = playback;
     }
 
     private void ClearPlaybacks()
@@ -107,6 +120,7 @@ public sealed partial class ShellViewModel
         _avatarScope = null;
         _avatarAttempts.Clear();
         foreach (var row in Messages) row.Playback = null;
+        foreach (var member in Participants) member.Playback = null;
         AccountPlayback = null;
         Changed(nameof(AccountPlayback));
         Changed(nameof(HasAvatar));
@@ -116,5 +130,10 @@ public sealed partial class ShellViewModel
         previous?.Cancel();
         previous?.Dispose();
         _clearingAvatars = false;
+    }
+
+    private void ClearRailAvatars()
+    {
+        foreach (var instance in Instances) instance.ClearAvatar();
     }
 }

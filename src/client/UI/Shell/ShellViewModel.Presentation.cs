@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia.Threading;
+using Chat.Core.Messaging;
 using Chat.Localization;
 using Chat.UI.Chat;
 using Chat.UI.Components;
@@ -76,9 +77,12 @@ public sealed partial class ShellViewModel
         ToggleParticipants = new(_ => ParticipantsOpen = !ParticipantsOpen);
         ToggleTextChannels = new(_ => { TextExpanded = !TextExpanded; if (!TextExpanded && ChannelEditor is { IsVoice: false } editor) editor.Cancel.Execute(null); });
         ToggleVoiceChannels = new(_ => { VoiceExpanded = !VoiceExpanded; if (!VoiceExpanded && ChannelEditor is { IsVoice: true } editor) editor.Cancel.Execute(null); });
+        JumpPresent = new(_ => JumpToPresent());
+        CancelComposerEdit = new(_ => CancelEdit());
         DismissPresentation = new(_ =>
         {
-            if (ProfileOpen) ProfileOpen = false;
+            if (IsEditing) CancelEdit();
+            else if (ProfileOpen) ProfileOpen = false;
             else if (SwitcherOpen) CloseJump();
             else if (ChannelEditor is { } editor) editor.Cancel.Execute(null);
             else if (ShowSettings) ShowSettings = false;
@@ -106,6 +110,10 @@ public sealed partial class ShellViewModel
         }
         if (args.PropertyName == nameof(SelectedChannel))
         {
+            FlushDraft();
+            if (IsEditing) { _editingId = null; _editBackup = ""; Changed(nameof(IsEditing)); }
+            _newWhileAway = 0;
+            _awayFromBottom = false;
             foreach (var item in Channels.Concat(OpenChannels).Distinct()) item.IsSelected = item.Id == SelectedChannel?.Id;
             if (SelectedChannel is { } channel && !OpenChannels.Any(item => item.Id == channel.Id))
             {
@@ -119,10 +127,13 @@ public sealed partial class ShellViewModel
             Changed(nameof(ComposerPlaceholder));
             Changed(nameof(SendTip));
             Changed(nameof(ShowChannelEmpty));
+            Changed(nameof(ShowJumpBar));
+            Changed(nameof(ChannelHasUnread));
+            Changed(nameof(InSelectedVoice));
             if (SearchOpen) FocusSearch?.Invoke();
             else if (!SwitcherOpen && SelectedChannel is { Kind: "text" }) FocusComposer?.Invoke();
         }
-        if (args.PropertyName == nameof(Draft) && _draftKey is not null)
+        if (args.PropertyName == nameof(Draft) && _draftKey is not null && !IsEditing)
         {
             if (string.IsNullOrEmpty(Draft)) _channelDrafts.Remove(_draftKey);
             else
@@ -130,6 +141,7 @@ public sealed partial class ShellViewModel
                 if (_channelDrafts.Count >= 32 && !_channelDrafts.ContainsKey(_draftKey)) _channelDrafts.Remove(_channelDrafts.Keys.First());
                 _channelDrafts[_draftKey] = Draft;
             }
+            QueueDraftSave();
         }
         if (args.PropertyName is nameof(IsSignedIn) or nameof(ShowSettings)) Changed(nameof(ShowChannelEmpty));
         if (args.PropertyName == nameof(IsSignedIn) && !IsSignedIn)
@@ -187,9 +199,33 @@ public sealed partial class ShellViewModel
                 if (previous >= 0) VisibleMessages.Move(previous, i); else VisibleMessages.Insert(i, matches[i]);
             }
         RefreshParticipants();
+        InsertUnreadDivider(matches);
+        MessageRow? previous = null;
         for (var i = 0; i < VisibleMessages.Count; i++)
-            VisibleMessages[i].SetContinuation(i > 0 && Continues(VisibleMessages[i - 1], VisibleMessages[i]));
+        {
+            var row = VisibleMessages[i];
+            if (row.IsUnreadDivider) { previous = null; continue; }
+            row.SetContinuation(previous is not null && Continues(previous, row));
+            previous = row;
+        }
         Changed(nameof(EmptyMessages)); Changed(nameof(EmptyMessageTitle));
+        Changed(nameof(ChannelHasUnread));
+        Changed(nameof(ShowJumpBar));
+    }
+
+    private void InsertUnreadDivider(List<MessageRow> matches)
+    {
+        if (SearchQuery.Length > 0 || SelectedChannel is not { Kind: "text" } channel) return;
+        if (!_inbox.TryGetValue(channel.Id, out var inbox) || inbox.LastReadId is not Guid read) return;
+        var firstUnread = -1;
+        for (var i = 0; i < matches.Count; i++)
+            if (!matches[i].IsPending && MessageMarkup.IdAfter(matches[i].Id, read))
+            {
+                firstUnread = i;
+                break;
+            }
+        if (firstUnread < 0) return;
+        VisibleMessages.Insert(firstUnread, _unreadDivider);
     }
 
     private void RefreshParticipants()
@@ -259,10 +295,13 @@ public sealed partial class ShellViewModel
     private void DisposePresentation()
     {
         _presentationDisposed = true;
+        if (_draftTimer is not null) _draftTimer.Tick -= OnDraftTick;
+        _draftTimer?.Stop();
         PropertyChanged -= OnPresentationChanged;
         Channels.CollectionChanged -= OnPresentationCollection;
         Messages.CollectionChanged -= OnPresentationCollection;
         CloseJump();
         _channelDrafts.Clear();
+        _inbox.Clear();
     }
 }

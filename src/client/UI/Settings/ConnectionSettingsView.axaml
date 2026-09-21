@@ -4,7 +4,7 @@
   <StackPanel Spacing="24">
     <Border Classes="settingsGroup">
       <StackPanel>
-        <StackPanel Spacing="10" Margin="0,0,0,8">
+        <StackPanel Spacing="10" Margin="20,16,20,8">
           <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
           <TextBox Classes="settingsField" Text="{Binding Address}" IsEnabled="{Binding !IsBusy}"
             PlaceholderText="{i18n:T InstanceAddressPlaceholder}"

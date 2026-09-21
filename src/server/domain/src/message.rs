@@ -20,5 +20,6 @@ pub struct Message {
     pub created_at: String,
     pub edited_at: Option<String>,
     pub reply_to: Option<Uuid>,
+    pub mentions: Vec<Uuid>,
     pub attachments: Vec<Attachment>,
 }

@@ -25,7 +25,7 @@
             <DataTemplate x:DataType="chat:MemberProfile">
               <Button Classes="memberRow" AutomationProperties.Name="{Binding Name}">
                 <Button.Flyout>
-                  <Flyout Placement="LeftEdgeAlignedTop" Opened="OnCardOpened">
+                  <Flyout Placement="LeftEdgeAlignedTop" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
                     <chat:UserCard DataContext="{Binding}" />
                   </Flyout>
                 </Button.Flyout>

@@ -235,7 +235,7 @@ pub fn message_dto(tokens: &TokenService, api: &str, message: &Message) -> chat_
         created_at: message.created_at.clone(),
         edited_at: message.edited_at.clone(),
         reply_to: message.reply_to,
-        mentions: vec![],
+        mentions: message.mentions.clone(),
         attachments: message
             .attachments
             .iter()
@@ -713,6 +713,7 @@ pub async fn send_message(
             ));
         }
     }
+    let mentions = resolve_mentions(&*state.store, channel.server_id, content.as_deref()).await?;
     let id = Uuid::now_v7();
     let attachments = if attachment_ids.is_empty() {
         vec![]
@@ -731,6 +732,7 @@ pub async fn send_message(
         created_at: Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         edited_at: None,
         reply_to,
+        mentions,
         attachments,
     };
     let api = state.settings.api_origin();
@@ -746,6 +748,74 @@ pub async fn send_message(
             payload.clone(),
             idempotency.as_deref(),
         )
+        .await?;
+    fanout(&state.hub, events).await;
+    Ok(dto)
+}
+
+pub async fn edit_message(
+    state: &AppState,
+    user: Uuid,
+    channel_id: Uuid,
+    message_id: Uuid,
+    content: Option<String>,
+) -> ApiResult<chat_protocol::Message> {
+    require(&*state.store, user, channel_id, Permissions::VIEW_CHANNEL).await?;
+    let channel = state
+        .store
+        .find_channel(channel_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    let server = state
+        .store
+        .find_server(channel.server_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    let mut message = state
+        .store
+        .get_message(message_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    if message.channel_id != channel_id {
+        return Err(ApiErr::not_found());
+    }
+    if message.author_id != user {
+        return Err(ApiErr::forbidden());
+    }
+    let content = content.and_then(|value| {
+        let trimmed = value.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
+    if let Some(text) = &content
+        && text.len() > MAX_CONTENT_BYTES
+    {
+        return Err(ApiErr::bad("too_long", "Message is too long."));
+    }
+    if content.is_none() && message.attachments.is_empty() {
+        return Err(ApiErr::bad(
+            "empty_message",
+            "Message needs text or a file.",
+        ));
+    }
+    if let Some(text) = &content
+        && contains_blocked(text, &server.blocked_words)
+    {
+        return Err(ApiErr::blocked_word());
+    }
+    message.content = content;
+    message.edited_at = Some(Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
+    message.mentions = resolve_mentions(&*state.store, channel.server_id, message.content.as_deref()).await?;
+    let api = state.settings.api_origin();
+    let dto = message_dto(&state.tokens, &api, &message);
+    let payload = serde_json::to_value(&dto).unwrap_or_default();
+    let members = state.store.list_members(channel.server_id).await?;
+    let (_, events) = state
+        .store
+        .update_message(message, &members, "MESSAGE_UPDATE", payload)
         .await?;
     fanout(&state.hub, events).await;
     Ok(dto)
@@ -1031,6 +1101,54 @@ pub async fn fanout(hub: &Hub, events: Vec<OutboxEvent>) {
         )
         .await;
     }
+}
+
+async fn resolve_mentions(
+    store: &dyn Store,
+    server_id: Uuid,
+    content: Option<&str>,
+) -> ApiResult<Vec<Uuid>> {
+    let Some(text) = content else { return Ok(vec![]) };
+    let members = store.list_members(server_id).await?;
+    let mut names = Vec::with_capacity(members.len());
+    for id in members {
+        if let Some(user) = store.find_user(id).await? {
+            names.push((user.id, user.username));
+        }
+    }
+    Ok(parse_mentions(text, &names))
+}
+
+fn parse_mentions(text: &str, members: &[(Uuid, String)]) -> Vec<Uuid> {
+    let bytes = text.as_bytes();
+    let mut found = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'@' && (i == 0 || !is_mention_char(bytes[i - 1])) {
+            let start = i + 1;
+            let mut end = start;
+            while end < bytes.len() && is_mention_char(bytes[end]) {
+                end += 1;
+            }
+            if end - start >= 2
+                && let Ok(name) = std::str::from_utf8(&bytes[start..end])
+                && let Some((id, _)) = members
+                    .iter()
+                    .find(|(_, username)| username.eq_ignore_ascii_case(name))
+                && !found.contains(id)
+            {
+                found.push(*id);
+            }
+            i = end.max(start + 1);
+            continue;
+        }
+        i += 1;
+    }
+    found
+}
+
+fn is_mention_char(value: u8) -> bool {
+    value.is_ascii_alphanumeric() || value == b'_' || value == b'-'
 }
 
 fn validate_username(value: &str) -> ApiResult<()> {

@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         {
             if (DataContext is ShellViewModel model) model.ApplyVisualBudget(budget);
         });
+        InitializeUltraLight();
         if (DataContext is ShellViewModel shell)
         {
             shell.PickFiles = PickFilesAsync;
@@ -108,12 +109,6 @@ public partial class MainWindow : Window
             SuggestedFileName = fileName
         });
         return file is null ? null : await file.OpenWriteAsync();
-    }
-
-    private void OnJumpBackdrop(object? sender, PointerPressedEventArgs e)
-    {
-        if (DataContext is ShellViewModel shell) shell.CloseJump();
-        e.Handled = true;
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)

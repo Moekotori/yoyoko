@@ -56,6 +56,8 @@ public sealed class ChatApiClient : IChatApi
             (object?)null, null, ProtocolJson.Default.MessagePageDto, cancellationToken)!;
     public Task<MessageDto> SendMessageAsync(Guid channelId, SendMessageRequest request, string idempotencyKey, CancellationToken cancellationToken)
         => Send(HttpMethod.Post, $"channels/{channelId}/messages", request, ProtocolJson.Default.SendMessageRequest, ProtocolJson.Default.MessageDto, cancellationToken, idempotencyKey)!;
+    public Task<MessageDto> EditMessageAsync(Guid channelId, Guid messageId, PatchMessageRequest request, CancellationToken cancellationToken)
+        => Send(HttpMethod.Patch, $"channels/{channelId}/messages/{messageId}", request, ProtocolJson.Default.PatchMessageRequest, ProtocolJson.Default.MessageDto, cancellationToken)!;
     public Task<VoiceJoinDto> JoinVoiceAsync(Guid channelId, bool mute, bool deaf, string? quality, CancellationToken cancellationToken)
         => Send(HttpMethod.Post, $"channels/{channelId}/voice/join", new VoiceFlags(mute, deaf, quality), ProtocolJson.Default.VoiceFlags, ProtocolJson.Default.VoiceJoinDto, cancellationToken)!;
     public Task LeaveVoiceAsync(CancellationToken cancellationToken)

@@ -78,6 +78,13 @@ public partial class CommunityMenu : UserControl
         e.Handled = true;
     }
 
+    private void SignOutClick(object? sender, RoutedEventArgs e)
+    {
+        CloseHostFlyout();
+        if (DataContext is ShellViewModel shell)
+            shell.SignOut.Execute(null);
+    }
+
     private void CloseForChannelEdit(object? sender, RoutedEventArgs e) => CloseHostFlyout();
 
     private void CloseHostFlyout()

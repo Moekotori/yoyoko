@@ -17,11 +17,12 @@ public partial class WallpaperView : UserControl
         AttachedToVisualTree += OnAttached;
         DetachedFromVisualTree += OnDetached;
         SizeChanged += OnSize;
-        DataContextChanged += (_, _) => Bind(DataContext as WallpaperSession);
+        DataContextChanged += (_, _) => Bind(VisualRoot is null ? null : DataContext as WallpaperSession);
     }
 
     private void OnAttached(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        Bind(DataContext as WallpaperSession);
         _window = TopLevel.GetTopLevel(this) as Window;
         if (_window is not null)
         {
@@ -36,6 +37,8 @@ public partial class WallpaperView : UserControl
         if (_window is not null) _window.PropertyChanged -= OnWindow;
         _window = null;
         Pause(true);
+        Bind(null);
+        _frame = null;
     }
 
     private void OnSize(object? sender, SizeChangedEventArgs e) => ReportSize();

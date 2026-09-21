@@ -15,9 +15,11 @@ public interface IChatChrome
     bool EnterToSend { get; }
     bool Compact { get; }
     bool ReduceMotion { get; }
+    bool UltraLightEnabled { get; }
     void SetEnterToSend(bool value);
     void SetCompact(bool value);
     void SetReduceMotion(bool value);
+    void SetUltraLightEnabled(bool value);
     event Action? Changed;
 }
 
@@ -162,6 +164,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         get => _chrome.EnterToSend ? 0 : 1;
         set { if (value is 0 or 1 && value != SendMode) _chrome.SetEnterToSend(value == 0); }
     }
+    public bool UltraLightEnabled { get => _chrome.UltraLightEnabled; set { if (value != UltraLightEnabled) _chrome.SetUltraLightEnabled(value); } }
     public bool EnterToSend => _chrome.EnterToSend;
     public bool Compact { get => _chrome.Compact; set { if (value != Compact) _chrome.SetCompact(value); } }
     public bool ReduceMotion { get => _chrome.ReduceMotion; set { if (value != ReduceMotion) _chrome.SetReduceMotion(value); } }
@@ -182,6 +185,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         Changed(nameof(SendMode));
         Changed(nameof(Compact));
         Changed(nameof(ReduceMotion));
+        Changed(nameof(UltraLightEnabled));
     }
     private void Refresh()
     {

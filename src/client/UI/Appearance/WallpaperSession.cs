@@ -48,7 +48,7 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     public Bitmap? Frame { get => _frame; private set { if (ReferenceEquals(_frame, value)) return; _frame = value; Changed(); Changed(nameof(IsActive)); } }
     public bool IsActive => _appearance.WallpaperEnabled && Frame is not null;
     public bool HasFile => _appearance.WallpaperFile.Length > 0;
-    public bool CanAdjust => HasFile;
+    public bool CanAdjust => Enabled && HasFile;
     public string FileLabel => _appearance.WallpaperLabel;
     public bool HasLabel => FileLabel.Length > 0;
     public string Error { get => _error; private set { if (_error == value) return; _error = value; Changed(); Changed(nameof(HasError)); } }

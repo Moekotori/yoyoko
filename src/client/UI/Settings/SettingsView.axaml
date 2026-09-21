@@ -40,9 +40,9 @@
           <PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" />
         </Button>
       </Grid>
-      <ScrollViewer x:Name="SettingsScroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <motion:MotionHost Margin="0,16,0,40" HorizontalAlignment="Left"
-          Width="{Binding #SettingsScroll.Viewport.Width}" VerticalAlignment="Top" Trigger="{Binding Section}">
+      <ScrollViewer x:Name="SettingsScroll" Grid.Row="1" Margin="0,0,8,0"
+        HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <motion:MotionHost Margin="0,16,20,40" HorizontalAlignment="Stretch" VerticalAlignment="Top" Trigger="{Binding Section}">
         <Panel>
           <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>

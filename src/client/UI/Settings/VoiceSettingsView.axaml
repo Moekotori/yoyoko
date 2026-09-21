@@ -3,26 +3,28 @@
   x:Class="Chat.UI.Settings.VoiceSettingsView" x:DataType="vm:SettingsViewModel">
   <Border Classes="settingsGroup">
   <StackPanel>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24">
+    <Grid Classes="settingsRow" ColumnDefinitions="2*,3*" ColumnSpacing="24">
       <TextBlock Text="{i18n:T InputDevice}" Classes="settingsLabel" />
       <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding Devices.Inputs}" SelectedItem="{Binding Devices.SelectedInput}"
         AutomationProperties.Name="{i18n:T InputDevice}">
         <ComboBox.ItemTemplate><DataTemplate x:DataType="voice:AudioDeviceChoice"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
       </ComboBox>
     </Grid>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24">
+    <Border Classes="settingsRowDivider" />
+    <Grid Classes="settingsRow" ColumnDefinitions="2*,3*" ColumnSpacing="24">
       <TextBlock Text="{i18n:T OutputDevice}" Classes="settingsLabel" />
       <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding Devices.Outputs}" SelectedItem="{Binding Devices.SelectedOutput}"
         AutomationProperties.Name="{i18n:T OutputDevice}">
         <ComboBox.ItemTemplate><DataTemplate x:DataType="voice:AudioDeviceChoice"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
       </ComboBox>
     </Grid>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24">
+    <Border Classes="settingsRowDivider" />
+    <Grid Classes="settingsRow" ColumnDefinitions="2*,3*" ColumnSpacing="24">
       <TextBlock Text="{i18n:T CheckDevices}" Classes="settingsLabel" VerticalAlignment="Center" />
       <Button Grid.Column="1" Classes="settingsSecondary" HorizontalAlignment="Stretch" Command="{Binding ToggleLoopback}"
         Content="{Binding LoopbackLabel}" AutomationProperties.Name="{Binding LoopbackLabel}" />
     </Grid>
-    <TextBlock Text="{Binding Devices.Error}" Classes="muted" Margin="0,16,0,0" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" />
+    <TextBlock Text="{Binding Devices.Error}" Classes="muted" Margin="20,8,20,12" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" />
   </StackPanel>
   </Border>
 </UserControl>

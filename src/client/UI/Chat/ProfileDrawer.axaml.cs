@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Chat.UI.Shell;
 
@@ -84,7 +85,7 @@ public partial class ProfileDrawer : UserControl
     {
         try
         {
-            await Task.Delay(230, closing.Token);
+            await Task.Delay(190, closing.Token);
             if (_model?.ProfileOpen != true) IsVisible = false;
         }
         catch (OperationCanceledException) { }
@@ -98,6 +99,13 @@ public partial class ProfileDrawer : UserControl
     private void OnBackdrop(object? sender, PointerPressedEventArgs e)
     {
         _model?.CloseProfile.Execute(null);
+        e.Handled = true;
+    }
+
+    private async void CopyId(object? sender, RoutedEventArgs e)
+    {
+        if (_model?.Settings.Profile.IdText is { Length: > 0 } id)
+            await MemberGestures.CopyAsync(this, id);
         e.Handled = true;
     }
 }

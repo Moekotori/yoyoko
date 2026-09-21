@@ -11,7 +11,21 @@ public partial class LiveAccountBar : UserControl
     public LiveAccountBar()
     {
         InitializeComponent();
-        DeviceButton.Command = new ActionCommand(_ => DevicePopup.IsOpen = !DevicePopup.IsOpen);
+        InputDeviceButton.Command = new ActionCommand(_ =>
+        {
+            OutputDevicePopup.IsOpen = false;
+            InputDevicePopup.IsOpen = !InputDevicePopup.IsOpen;
+        });
+        OutputDeviceButton.Command = new ActionCommand(_ =>
+        {
+            InputDevicePopup.IsOpen = false;
+            OutputDevicePopup.IsOpen = !OutputDevicePopup.IsOpen;
+        });
+    }
+    private void OnDeviceChosen(object? sender, EventArgs e)
+    {
+        InputDevicePopup.IsOpen = false;
+        OutputDevicePopup.IsOpen = false;
     }
     private async void OnDevicesHover(object? sender, PointerEventArgs e)
     {

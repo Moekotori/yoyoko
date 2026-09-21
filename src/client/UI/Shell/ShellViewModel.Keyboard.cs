@@ -37,7 +37,7 @@ public sealed partial class ShellViewModel
     public string DeafTip => DeafLabel + " · " + ChordLabel(ShortcutAction.Deafen);
     public string SearchShortcutTip => ChordTip(TextKey.SearchMessages, ShortcutAction.Search);
     public string MembersShortcutTip => ChordTip(TextKey.Members, ShortcutAction.Members);
-    public string SettingsShortcutTip => ChordTip(TextKey.Settings, ShortcutAction.Settings);
+    public string SettingsShortcutTip => ChordTip(ShowSettings ? TextKey.CloseSettings : TextKey.Settings, ShortcutAction.Settings);
     public string CloseTabShortcutTip => ChordTip(TextKey.CloseTab, ShortcutAction.CloseTab);
 
     private void InitializeKeyboard()
@@ -83,8 +83,13 @@ public sealed partial class ShellViewModel
         };
         CloseJump();
         if (channel is null) return;
+        if (channel.Kind == "voice")
+        {
+            JoinVoice.Execute(channel);
+            return;
+        }
         SelectOpenChannel.Execute(channel);
-        if (channel.Kind == "text") FocusComposer?.Invoke();
+        FocusComposer?.Invoke();
     }
 
     public void MoveJump(int delta)
@@ -177,8 +182,7 @@ public sealed partial class ShellViewModel
     {
         var list = new List<ChannelItem>();
         if (TextExpanded) list.AddRange(TextChannels);
-        if (VoiceExpanded) list.AddRange(VoiceChannels);
-        if (list.Count == 0) list.AddRange(TextChannels.Concat(VoiceChannels));
+        if (list.Count == 0) list.AddRange(TextChannels);
         return list;
     }
 
@@ -208,9 +212,7 @@ public sealed partial class ShellViewModel
                 CloseCurrentTab();
                 return true;
             case ShortcutAction.Settings:
-                CloseJump();
-                if (ShowSettings) ShowSettings = false;
-                else OpenSettings.Execute(null);
+                OpenSettings.Execute(null);
                 return true;
             case ShortcutAction.Members:
                 ToggleParticipants.Execute(null);

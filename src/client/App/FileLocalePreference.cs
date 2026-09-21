@@ -15,6 +15,7 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
     private bool _enterToSend = true;
     private bool _compact;
     private bool _reduceMotion;
+    private bool _ultraLightEnabled;
     private string? _inputDevice;
     private string? _outputDevice;
     private ColorScheme _colorScheme = ColorScheme.Dark;
@@ -32,6 +33,7 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
         _enterToSend = stored.EnterToSend;
         _compact = stored.Compact;
         _reduceMotion = stored.ReduceMotion;
+        _ultraLightEnabled = stored.UltraLightEnabled;
         _inputDevice = EmptyToNull(stored.InputDevice);
         _outputDevice = EmptyToNull(stored.OutputDevice);
         _colorScheme = stored.ColorScheme.Equals("light", StringComparison.OrdinalIgnoreCase) ? ColorScheme.Light : ColorScheme.Dark;
@@ -61,6 +63,7 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
     public bool EnterToSend => _enterToSend;
     public bool Compact => _compact;
     public bool ReduceMotion => _reduceMotion;
+    public bool UltraLightEnabled => _ultraLightEnabled;
     public string? InputDeviceId => _inputDevice;
     public string? OutputDeviceId => _outputDevice;
     public ColorScheme ColorScheme => _colorScheme;
@@ -120,6 +123,14 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
     {
         if (_reduceMotion == value) return;
         _reduceMotion = value;
+        Persist();
+        ChromeChanged?.Invoke();
+    }
+
+    public void SetUltraLightEnabled(bool value)
+    {
+        if (_ultraLightEnabled == value) return;
+        _ultraLightEnabled = value;
         Persist();
         ChromeChanged?.Invoke();
     }
@@ -217,7 +228,7 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
             new PreferenceFile(_current.Code, _enterToSend, _compact, _reduceMotion, _inputDevice, _outputDevice,
                 _colorScheme == ColorScheme.Light ? "light" : "dark", _wallpaperEnabled, _wallpaperFile, _wallpaperLabel,
                 _wallpaperBlur, _wallpaperBrightness,
-                _shortcuts.Count == 0 ? null : new Dictionary<string, string>(_shortcuts)),
+                _shortcuts.Count == 0 ? null : new Dictionary<string, string>(_shortcuts), _ultraLightEnabled),
             PreferenceJson.Default.PreferenceFile));
         File.Move(temp, _path, true);
     }
@@ -238,7 +249,7 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
 internal sealed record PreferenceFile(string Locale = "", bool EnterToSend = true, bool Compact = false, bool ReduceMotion = false,
     string? InputDevice = null, string? OutputDevice = null, string ColorScheme = "dark", bool WallpaperEnabled = false,
     string WallpaperFile = "", string WallpaperLabel = "", int WallpaperBlur = 0, int WallpaperBrightness = 60,
-    Dictionary<string, string>? Shortcuts = null);
+    Dictionary<string, string>? Shortcuts = null, bool UltraLightEnabled = false);
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(PreferenceFile))]
 [JsonSerializable(typeof(Dictionary<string, string>))]

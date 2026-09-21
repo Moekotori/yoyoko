@@ -202,6 +202,7 @@ pub trait Store: Send + Sync + crate::channel::repository::ChannelManagementStor
     ) -> Result<Vec<Attachment>, StoreError>;
 
     async fn find_idempotent(&self, user: Uuid, key: &str) -> Result<Option<Message>, StoreError>;
+    async fn get_message(&self, id: Uuid) -> Result<Option<Message>, StoreError>;
     async fn insert_message(
         &self,
         message: Message,
@@ -209,6 +210,13 @@ pub trait Store: Send + Sync + crate::channel::repository::ChannelManagementStor
         event: &str,
         payload: Value,
         idempotency_key: Option<&str>,
+    ) -> Result<(Message, Vec<OutboxEvent>), StoreError>;
+    async fn update_message(
+        &self,
+        message: Message,
+        member_ids: &[Uuid],
+        event: &str,
+        payload: Value,
     ) -> Result<(Message, Vec<OutboxEvent>), StoreError>;
     async fn page_messages(
         &self,

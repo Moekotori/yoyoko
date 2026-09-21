@@ -148,6 +148,39 @@ public sealed class ChannelTimeline(CacheScope scope, Guid channelId, Guid accou
         row.Outbox.Clear();
     }
 
+    public async Task EditAsync(Guid messageId, string content, CancellationToken cancellationToken)
+    {
+        var row = _items.Find(item => item.Message.Id == messageId && item.Status == SendStatus.Sent)
+            ?? throw new InvalidOperationException("Nothing to edit.");
+        if (row.Message.AuthorId != accountId) throw new InvalidOperationException("Cannot edit that message.");
+        var previous = row.Message;
+        row.Message = previous with { Content = content, EditedAt = DateTimeOffset.UtcNow };
+        Changed?.Invoke();
+        try
+        {
+            var edited = await api.EditMessageAsync(channelId, messageId, new(content), cancellationToken);
+            await cache.UpsertAsync(scope, edited, cancellationToken);
+            row.Message = edited;
+            row.Status = SendStatus.Sent;
+            Changed?.Invoke();
+        }
+        catch
+        {
+            row.Message = previous;
+            Changed?.Invoke();
+            throw;
+        }
+    }
+
+    public TimelineItem? LastOwnSent()
+    {
+        for (var i = _items.Count - 1; i >= 0; i--)
+            if (_items[i].Status == SendStatus.Sent && _items[i].Message.AuthorId == accountId
+                && _items[i].Message.Kind == "text")
+                return _items[i];
+        return null;
+    }
+
     public void ApplyRemote(MessageDto message)
     {
         if (message.ChannelId != channelId) return;

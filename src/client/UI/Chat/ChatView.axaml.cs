@@ -64,6 +64,7 @@ public partial class ChatView : UserControl
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
+        SaveViewport();
         Messages.LayoutUpdated -= OnMessagesLayout;
         if (_scroll is not null)
             _scroll.ScrollChanged -= OnScrollChanged;
@@ -77,6 +78,7 @@ public partial class ChatView : UserControl
         _subscribed = DataContext as ShellViewModel;
         if (_subscribed is null) return;
         _subscribed.ScrollToLatest = ScrollToEnd;
+        _subscribed.ScrollToUnread = ScrollToUnread;
         _subscribed.IsNearBottom = NearBottom;
         _subscribed.FocusComposer = FocusComposer;
         _subscribed.FocusSearch = FocusSearch;
@@ -86,12 +88,14 @@ public partial class ChatView : UserControl
 
     private void Unsubscribe()
     {
+        SaveViewport();
         _pendingScroll?.Abort();
         _pendingScroll = null;
         if (_subscribed is not null)
         {
             _subscribed.PropertyChanged -= OnShellChanged;
             if (_subscribed.ScrollToLatest == ScrollToEnd) _subscribed.ScrollToLatest = null;
+            if (_subscribed.ScrollToUnread == ScrollToUnread) _subscribed.ScrollToUnread = null;
             if (_subscribed.IsNearBottom == NearBottom) _subscribed.IsNearBottom = null;
             if (_subscribed.FocusComposer == FocusComposer) _subscribed.FocusComposer = null;
             if (_subscribed.FocusSearch == FocusSearch) _subscribed.FocusSearch = null;
@@ -140,12 +144,40 @@ public partial class ChatView : UserControl
         _scroll = Messages.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
         if (_scroll is null) return;
         _scroll.ScrollChanged += OnScrollChanged;
+        if (_subscribed is { TimelineViewport: { } viewport } shell && shell.SelectedChannel?.Id == viewport.Channel)
+        {
+            shell.TimelineViewport = null;
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_subscribed != shell || _scroll is null || shell.SelectedChannel?.Id != viewport.Channel) return;
+                if (viewport.AtBottom) _scroll.ScrollToEnd();
+                else _scroll.Offset = new Vector(0, viewport.Offset);
+            }, DispatcherPriority.Loaded);
+        }
+    }
+
+    private void SaveViewport()
+    {
+        if (_scroll is not null && _subscribed?.SelectedChannel is { } channel)
+            _subscribed.TimelineViewport = (channel.Id, _scroll.Offset.Y, NearBottom());
     }
 
     private bool NearBottom()
     {
         if (_scroll is null) return true;
         return _scroll.Extent.Height - _scroll.Viewport.Height - _scroll.Offset.Y <= 80;
+    }
+
+    private void ScrollToUnread()
+    {
+        var divider = _subscribed?.VisibleMessages.FirstOrDefault(row => row.IsUnreadDivider);
+        if (divider is null) { ScrollToEnd(); return; }
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!IsEffectivelyVisible || divider != _subscribed?.VisibleMessages.FirstOrDefault(row => row.IsUnreadDivider))
+                return;
+            Messages.ScrollIntoView(divider);
+        }, DispatcherPriority.Loaded);
     }
 
     private void ScrollToEnd()
@@ -166,7 +198,9 @@ public partial class ChatView : UserControl
 
     private async void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        if (_loadingOlder || _scroll is null || DataContext is not ShellViewModel shell) return;
+        if (_scroll is null || DataContext is not ShellViewModel shell) return;
+        shell.OnTimelineScroll(NearBottom());
+        if (_loadingOlder) return;
         if (_scroll.Offset.Y > 36)
         {
             _olderExhausted = false;
@@ -195,6 +229,20 @@ public partial class ChatView : UserControl
         if (e.Key == Key.V && chord)
         {
             if (await TryPasteFilesAsync(shell)) e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && shell.IsEditing)
+        {
+            shell.CancelEdit();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Up && e.KeyModifiers == KeyModifiers.None
+            && string.IsNullOrEmpty(Composer.Text)
+            && Composer.CaretIndex == 0)
+        {
+            shell.BeginEditLast();
+            if (shell.IsEditing) e.Handled = true;
             return;
         }
         if (e.Key is Key.ImeProcessed or Key.DeadCharProcessed) return;
@@ -252,10 +300,24 @@ public partial class ChatView : UserControl
 
     private async void CopyMessage(object? sender, RoutedEventArgs args)
     {
-        if (sender is not Control { DataContext: MessageRow row }) return;
+        if (sender is not Control { DataContext: MessageRow row } || row.IsUnreadDivider) return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         try { if (clipboard is not null) await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(clipboard, row.Content); }
         catch (Exception) { _subscribed?.Workspace.ShowNotice(I18n.T(TextKey.ClipboardFailed)); }
+        args.Handled = true;
+    }
+
+    private void MarkUnreadFrom(object? sender, RoutedEventArgs args)
+    {
+        if (sender is not Control { DataContext: MessageRow row } || row.IsUnreadDivider) return;
+        _subscribed?.MarkUnreadFrom(row);
+        args.Handled = true;
+    }
+
+    private void EditMessage(object? sender, RoutedEventArgs args)
+    {
+        if (sender is not Control { DataContext: MessageRow row }) return;
+        _subscribed?.BeginEdit(row);
         args.Handled = true;
     }
 

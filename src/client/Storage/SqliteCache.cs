@@ -7,7 +7,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Chat.Storage;
 
-public sealed class SqliteCache : IInstanceStore, IMessageCache
+public sealed partial class SqliteCache : IInstanceStore, IMessageCache
 {
     private readonly string _connectionString;
     public SqliteCache(string path)
@@ -29,9 +29,10 @@ public sealed class SqliteCache : IInstanceStore, IMessageCache
         command.ExecuteNonQuery();
         command.CommandText = "PRAGMA user_version;";
         var version = Convert.ToInt32(command.ExecuteScalar());
-        if (version > 2) throw new InvalidDataException("Cache schema newer than this client.");
+        if (version > 3) throw new InvalidDataException("Cache schema newer than this client.");
         if (version < 1) Apply(connection, "Chat.Storage.Migrations.001_cache.sql");
         if (version < 2) Apply(connection, "Chat.Storage.Migrations.002_sync.sql");
+        if (version < 3) Apply(connection, "Chat.Storage.Migrations.003_inbox.sql");
     }, cancellationToken);
 
     private static void Apply(SqliteConnection connection, string resource)
@@ -112,7 +113,7 @@ public sealed class SqliteCache : IInstanceStore, IMessageCache
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         Scope(command, scope);
-        foreach (var table in new[] { "messages", "servers", "channels", "users", "sync_state" })
+        foreach (var table in new[] { "messages", "servers", "channels", "users", "sync_state", "channel_inbox" })
         {
             command.CommandText = $"DELETE FROM {table} WHERE instance_id=$instance AND account_id=$account";
             command.ExecuteNonQuery();
@@ -154,6 +155,8 @@ public sealed class SqliteCache : IInstanceStore, IMessageCache
         command.Parameters.Clear();
         Scope(command, scope);
         command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id NOT IN (SELECT id FROM channels WHERE instance_id=$instance AND account_id=$account)";
+        command.ExecuteNonQuery();
+        command.CommandText = "DELETE FROM channel_inbox WHERE instance_id=$instance AND account_id=$account AND channel_id NOT IN (SELECT id FROM channels WHERE instance_id=$instance AND account_id=$account)";
         command.ExecuteNonQuery();
         foreach (var user in snapshot.Users)
         {

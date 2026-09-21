@@ -17,9 +17,9 @@ use axum::{
 use chat_protocol::{
     API_VERSION, ApiError, AuthResponse, Channel, CreateChannelRequest, CreateServerRequest,
     InstanceDiscovery, JoinRequest, LoginRequest, MAX_ATTACHMENTS_PER_MESSAGE, Message,
-    MessagePage, PROTOCOL_VERSION, PatchMeRequest, RefreshRequest,
-    PatchModerationRequest, RegisterRequest, SendMessageRequest, Server, User, VoiceFlags,
-    VoiceJoin, VoiceState,
+    MessagePage, PROTOCOL_VERSION, PatchMeRequest, PatchMessageRequest, PatchModerationRequest,
+    RefreshRequest, RegisterRequest, SendMessageRequest, Server, User, VoiceFlags, VoiceJoin,
+    VoiceState,
 };
 use serde::Deserialize;
 use std::{net::SocketAddr, sync::Arc, time::Duration};
@@ -110,6 +110,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/channels/{id}/messages",
             get(list_messages).post(send_message),
+        )
+        .route(
+            "/api/v1/channels/{id}/messages/{message_id}",
+            patch(edit_message),
         )
         .route("/api/v1/channels/{id}/rtc-token", post(rtc_token))
         .route("/api/v1/channels/{id}/voice/join", post(voice_join))
@@ -472,6 +476,24 @@ async fn send_message(
             idempotency,
         )
         .await?,
+    ))
+}
+
+async fn edit_message(
+    State(state): State<Arc<AppState>>,
+    Auth(user, _): Auth,
+    Path((id, message_id)): Path<(Uuid, Uuid)>,
+    Json(body): Json<PatchMessageRequest>,
+) -> ApiResult<Json<Message>> {
+    if !state
+        .limiter
+        .check(&format!("edit:{user}"), 30, Duration::from_secs(10))
+        .await
+    {
+        return Err(ApiErr::too_many());
+    }
+    Ok(Json(
+        services::edit_message(&state, user, id, message_id, body.content).await?,
     ))
 }
 
@@ -838,6 +860,45 @@ mod tests {
         )
         .await;
         assert_eq!(ok.status(), StatusCode::OK);
+
+        let mention = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages", channel.id),
+            Some(&alice.access_token),
+            r#"{"content":"hey @bob"}"#,
+        )
+        .await;
+        assert_eq!(mention.status(), StatusCode::OK);
+        let mentioned: Message = json(mention).await;
+        assert_eq!(mentioned.mentions, vec![bob.user.id]);
+
+        let edited = patch_json(
+            &app,
+            &format!(
+                "/api/v1/channels/{}/messages/{}",
+                channel.id, mentioned.id
+            ),
+            &alice.access_token,
+            r#"{"content":"hey @bob again"}"#,
+        )
+        .await;
+        assert_eq!(edited.status(), StatusCode::OK);
+        let edited: Message = json(edited).await;
+        assert_eq!(edited.content.as_deref(), Some("hey @bob again"));
+        assert!(edited.edited_at.is_some());
+        assert_eq!(edited.mentions, vec![bob.user.id]);
+
+        let denied_edit = patch_json(
+            &app,
+            &format!(
+                "/api/v1/channels/{}/messages/{}",
+                channel.id, mentioned.id
+            ),
+            &bob.access_token,
+            r#"{"content":"nope"}"#,
+        )
+        .await;
+        assert_eq!(denied_edit.status(), StatusCode::FORBIDDEN);
 
         let joined_voice = post_json(
             &app,

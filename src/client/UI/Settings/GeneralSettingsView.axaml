@@ -3,14 +3,21 @@
   x:Class="Chat.UI.Settings.GeneralSettingsView" x:DataType="vm:SettingsViewModel">
   <Border Classes="settingsGroup">
   <StackPanel>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24">
+    <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="24">
+      <TextBlock Text="{i18n:T UltraLightMode}" Classes="settingsLabel" />
+      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding UltraLightEnabled}"
+        ToolTip.Tip="{i18n:T UltraLightHelp}" AutomationProperties.Name="{i18n:T UltraLightMode}" />
+    </Grid>
+    <Border Classes="settingsRowDivider" />
+    <Grid Classes="settingsRow" ColumnDefinitions="2*,3*" ColumnSpacing="24">
       <TextBlock Text="{i18n:T Language}" Classes="settingsLabel" />
       <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding Languages}"
         SelectedItem="{Binding SelectedLanguage}" AutomationProperties.Name="{i18n:T Language}">
         <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:LanguageOption"><TextBlock Text="{Binding NativeName}" /></DataTemplate></ComboBox.ItemTemplate>
       </ComboBox>
     </Grid>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24">
+    <Border Classes="settingsRowDivider" />
+    <Grid Classes="settingsRow" ColumnDefinitions="2*,3*" ColumnSpacing="24">
       <TextBlock Text="{i18n:T SendShortcut}" Classes="settingsLabel" />
       <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding SendShortcutChoices}"
         SelectedIndex="{Binding SendMode}" AutomationProperties.Name="{i18n:T SendShortcut}" />

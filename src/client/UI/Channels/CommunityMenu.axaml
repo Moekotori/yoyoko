@@ -13,8 +13,12 @@
       <Setter Property="FontSize" Value="14" />
     </Style>
     <Style Selector="Button.menuAction /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.menuAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource HoverBrush}" />
     </Style>
     <Style Selector="Button.menuAction PathIcon"><Setter Property="Foreground" Value="{StaticResource QuietTextBrush}" /></Style>
     <Style Selector="Button.menuDanger"><Setter Property="Foreground" Value="#DDA49C" /></Style>
@@ -44,7 +48,7 @@
     <Style Selector="Border.menuDivider"><Setter Property="Height" Value="1" /><Setter Property="Background" Value="{StaticResource DividerBrush}" /><Setter Property="Margin" Value="8,6" /></Style>
     <Style Selector="StackPanel.menuForm"><Setter Property="Spacing" Value="10" /><Setter Property="Margin" Value="10,4,10,10" /></Style>
   </UserControl.Styles>
-  <ScrollViewer MaxHeight="480" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+  <ScrollViewer MaxHeight="560" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <StackPanel Width="276" Spacing="2">
       <Grid ColumnDefinitions="48,*" ColumnSpacing="12" Margin="10,8,10,10" IsVisible="{Binding IsSignedIn}">
         <Button Classes="avatarPick" Width="48" Height="48" ClipToBounds="True" Click="ChangeAvatar"
@@ -62,7 +66,8 @@
           <TextBlock Text="{Binding AccountHandle}" Classes="quiet" FontSize="12" TextTrimming="CharacterEllipsis" />
           <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
             <Button Classes="link" Content="{i18n:T ChangeAvatar}" Click="ChangeAvatar" />
-            <Button Classes="link" Content="{i18n:T RemoveAvatar}" Click="RemoveAvatar" IsVisible="{Binding HasAvatar}" />
+            <Button Classes="link" Content="{i18n:T RemoveAvatar}" Click="RemoveAvatar"
+              IsVisible="{Binding HasAvatar, FallbackValue=False}" />
           </StackPanel>
         </StackPanel>
       </Grid>
@@ -84,7 +89,9 @@
       <TextBlock Text="{Binding InviteHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" Margin="10,0,10,8"
         IsVisible="{Binding !HasInvite}" />
       <Border Classes="menuDivider" />
-      <Button Classes="menuAction" Command="{Binding OpenAddInstance}" Content="{i18n:T AddInstance}" />
+      <Button Classes="menuAction" Command="{Binding OpenAddInstance}">
+        <TextBlock Text="{i18n:T AddInstance}" VerticalAlignment="Center" />
+      </Button>
       <StackPanel IsVisible="{Binding IsSignedIn}" Spacing="2">
         <Button Classes="menuAction" Tag="CreateCommunityPanel" Click="ToggleSection">
           <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
@@ -108,8 +115,12 @@
           <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" AutomationProperties.Name="{i18n:T InviteCode}" Tag="join" KeyDown="OnSubmitKeyDown" />
           <Button Classes="primary" Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
         </StackPanel>
-        <Button Classes="menuAction" Content="{i18n:T CreateTextChannel}" Command="{Binding AddTextChannel}" Click="CloseForChannelEdit" IsVisible="{Binding CanModerate}" />
-        <Button Classes="menuAction" Content="{i18n:T CreateVoiceChannel}" Command="{Binding AddVoiceChannel}" Click="CloseForChannelEdit" IsVisible="{Binding CanModerate}" />
+        <Button Classes="menuAction" Command="{Binding AddTextChannel}" Click="CloseForChannelEdit" IsVisible="{Binding CanModerate}">
+          <TextBlock Text="{i18n:T CreateTextChannel}" VerticalAlignment="Center" />
+        </Button>
+        <Button Classes="menuAction" Command="{Binding AddVoiceChannel}" Click="CloseForChannelEdit" IsVisible="{Binding CanModerate}">
+          <TextBlock Text="{i18n:T CreateVoiceChannel}" VerticalAlignment="Center" />
+        </Button>
         <Button Classes="menuAction" Tag="ModerationPanel" Click="ToggleSection" IsVisible="{Binding CanModerate}">
           <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
             <TextBlock Text="{i18n:T Moderation}" VerticalAlignment="Center" />
@@ -125,8 +136,8 @@
           <Button Classes="primary" Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch" />
         </StackPanel>
         <Border Classes="menuDivider" />
-        <Button Classes="menuAction menuDanger" Command="{Binding SignOut}">
-          <TextBlock Text="{i18n:T SignOut}" VerticalAlignment="Center" />
+        <Button Classes="menuAction menuDanger" Click="SignOutClick">
+          <TextBlock Text="{i18n:T SignOut}" Foreground="#DDA49C" VerticalAlignment="Center" />
         </Button>
       </StackPanel>
       <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="10,6,10,8" IsVisible="{Binding HasStatus}" />

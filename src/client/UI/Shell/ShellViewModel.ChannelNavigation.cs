@@ -1,5 +1,7 @@
 using Avalonia.Threading;
 using Chat.Core.Messaging;
+using Chat.Localization;
+using Chat.UI.Channels;
 
 namespace Chat.UI.Shell;
 
@@ -31,16 +33,8 @@ public sealed partial class ShellViewModel
         if (session is null || channel is null) return;
         if (channel.Kind == "voice")
         {
-            try
-            {
-                session.Voice.ApplyRoute(Devices.Route);
-                await Devices.StopLoopbackAsync();
-                await session.Voice.JoinAsync(channel.Id, SelectedAudioQuality?.Id, _lifetime);
-                NotifyVoice();
-                _ = Devices.RefreshAsync();
-            }
-            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-            catch (Exception error) { OnError(error); }
+            NotifyVoice();
+            _ = Devices.RefreshAsync();
             return;
         }
 
@@ -60,7 +54,18 @@ public sealed partial class ShellViewModel
             {
                 _channelContentVersion++;
                 Changed(nameof(ChannelContentVersion));
-                ScrollToLatest?.Invoke();
+                if (ChannelHasUnread)
+                {
+                    _awayFromBottom = true;
+                    Changed(nameof(ShowJumpBar));
+                    ScrollToUnread?.Invoke();
+                }
+                else
+                {
+                    ScrollToLatest?.Invoke();
+                    if (LatestVisibleId() is Guid latest && SelectedChannel is { } selected)
+                        _ = MarkReadAsync(selected.Id, latest);
+                }
             }
         });
         timeline.Changed += _timelineChanged;
@@ -89,5 +94,18 @@ public sealed partial class ShellViewModel
         _timeline = null;
         _timelineChanged = null;
         SetChannelLoading(false);
+    }
+
+    private async Task JoinVoiceChannelAsync(ChannelItem? channel)
+    {
+        channel ??= SelectedChannel is { Kind: "voice" } selected ? selected : null;
+        if (channel is not { Kind: "voice" }) return;
+        var session = SelectedInstance?.Context.Session ?? throw new InvalidOperationException(_text.Get(TextKey.NeedSignIn));
+        if (session.Voice.ChannelId == channel.Id && string.IsNullOrEmpty(session.Voice.MediaError)) return;
+        session.Voice.ApplyRoute(Devices.Route);
+        await Devices.StopLoopbackAsync();
+        await session.Voice.JoinAsync(channel.Id, SelectedAudioQuality?.Id, _lifetime);
+        NotifyVoice();
+        _ = Devices.RefreshAsync();
     }
 }

@@ -46,6 +46,7 @@ public sealed record VoiceJoinDto(RtcTokenDto Rtc, VoiceStateDto State, AudioPro
 public sealed record ReadyDto(string SessionId, UserDto User, ServerDto[] Servers, ChannelDto[] Channels,
     UserDto[] Users, int HeartbeatIntervalMs, VoiceStateDto[]? VoiceStates);
 public sealed record SendMessageRequest(string? Content, Guid? ReplyTo, Guid[] AttachmentIds);
+public sealed record PatchMessageRequest(string? Content);
 public sealed record MessagePageDto(MessageDto[] Items, Guid? Before);
 public sealed record MessageDto(Guid Id, Guid ChannelId, Guid AuthorId, string Kind,
     string? Content, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, Guid? ReplyTo,
@@ -87,6 +88,7 @@ public sealed record AttachmentDto(Guid Id, string FileName, string MimeType, lo
 [JsonSerializable(typeof(VoiceJoinDto))]
 [JsonSerializable(typeof(ReadyDto))]
 [JsonSerializable(typeof(SendMessageRequest))]
+[JsonSerializable(typeof(PatchMessageRequest))]
 [JsonSerializable(typeof(MessagePageDto))]
 [JsonSerializable(typeof(MessageDto))]
 [JsonSerializable(typeof(MessageDto[]))]

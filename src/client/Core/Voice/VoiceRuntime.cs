@@ -55,6 +55,10 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
     public async Task JoinAsync(Guid channelId, string? quality, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(quality)) Preferred = quality;
+        if (ChannelId is not null)
+        {
+            try { await media.LeaveAsync(cancellationToken); } catch (Exception) { }
+        }
         var joined = await api.JoinVoiceAsync(channelId, SelfMute, SelfDeaf, Preferred, cancellationToken);
         ChannelId = joined.State.ChannelId;
         SelfMute = joined.State.SelfMute;

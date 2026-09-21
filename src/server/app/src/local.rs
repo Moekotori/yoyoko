@@ -79,6 +79,8 @@ struct MessageRow {
     created_at: String,
     edited_at: Option<String>,
     reply_to: Option<Uuid>,
+    #[serde(default)]
+    mentions: Vec<Uuid>,
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct AttachmentRow {
@@ -300,6 +302,7 @@ impl Inner {
             created_at: row.created_at.clone(),
             edited_at: row.edited_at.clone(),
             reply_to: row.reply_to,
+            mentions: row.mentions.clone(),
             attachments: self
                 .attachments
                 .values()
@@ -860,6 +863,11 @@ impl Store for LocalStore {
             .and_then(|id| inner.message(*id)))
     }
 
+    async fn get_message(&self, id: Uuid) -> Result<Option<Message>, StoreError> {
+        let inner = self.0.lock().await;
+        Ok(inner.message(id))
+    }
+
     async fn insert_message(
         &self,
         mut message: Message,
@@ -880,6 +888,7 @@ impl Store for LocalStore {
                 created_at: message.created_at.clone(),
                 edited_at: message.edited_at.clone(),
                 reply_to: message.reply_to,
+                mentions: message.mentions.clone(),
             },
         );
         inner
@@ -891,6 +900,34 @@ impl Store for LocalStore {
             inner
                 .idempotency
                 .insert((message.author_id, key.into()), message.id);
+        }
+        let events = inner.enqueue(member_ids, event, payload);
+        message.attachments = inner
+            .attachments
+            .values()
+            .filter(|a| a.message_id == Some(message.id))
+            .map(|a| to_attachment(&a.attachment))
+            .collect();
+        inner.persist();
+        Ok((message, events))
+    }
+
+    async fn update_message(
+        &self,
+        mut message: Message,
+        member_ids: &[Uuid],
+        event: &str,
+        payload: Value,
+    ) -> Result<(Message, Vec<OutboxEvent>), StoreError> {
+        let mut inner = self.0.lock().await;
+        {
+            let row = inner
+                .messages
+                .get_mut(&message.id)
+                .ok_or(StoreError::NotFound)?;
+            row.content = message.content.clone();
+            row.edited_at = message.edited_at.clone();
+            row.mentions = message.mentions.clone();
         }
         let events = inner.enqueue(member_ids, event, payload);
         message.attachments = inner

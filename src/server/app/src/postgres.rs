@@ -141,7 +141,11 @@ fn attachment_from(row: &PgRow) -> Result<Attachment, StoreError> {
     })
 }
 
-fn message_from(row: &PgRow, attachments: Vec<Attachment>) -> Result<Message, StoreError> {
+fn message_from(
+    row: &PgRow,
+    attachments: Vec<Attachment>,
+    mentions: Vec<Uuid>,
+) -> Result<Message, StoreError> {
     let created: DateTime<Utc> = row
         .try_get("created_at")
         .map_err(|_| StoreError::Unavailable)?;
@@ -165,8 +169,30 @@ fn message_from(row: &PgRow, attachments: Vec<Attachment>) -> Result<Message, St
         reply_to: row
             .try_get("reply_to")
             .map_err(|_| StoreError::Unavailable)?,
+        mentions,
         attachments,
     })
+}
+
+async fn load_mentions(pool: &PgPool, ids: &[Uuid]) -> Result<HashMap<Uuid, Vec<Uuid>>, StoreError> {
+    let mut grouped: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+    if ids.is_empty() {
+        return Ok(grouped);
+    }
+    let rows = map_db(
+        sqlx::query("SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)")
+            .bind(ids)
+            .fetch_all(pool)
+            .await,
+    )?;
+    for row in rows {
+        let message_id: Uuid = row
+            .try_get("message_id")
+            .map_err(|_| StoreError::Unavailable)?;
+        let user_id: Uuid = row.try_get("user_id").map_err(|_| StoreError::Unavailable)?;
+        grouped.entry(message_id).or_default().push(user_id);
+    }
+    Ok(grouped)
 }
 
 async fn load_attachment_rows(pool: &PgPool, ids: &[Uuid]) -> Result<Vec<PgRow>, StoreError> {
@@ -211,6 +237,29 @@ async fn enqueue_tx(
         });
     }
     Ok(events)
+}
+
+async fn replace_mentions_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    message_id: Uuid,
+    mentions: &[Uuid],
+) -> Result<(), StoreError> {
+    map_db(
+        sqlx::query("DELETE FROM message_mentions WHERE message_id=$1")
+            .bind(message_id)
+            .execute(&mut **tx)
+            .await,
+    )?;
+    for user_id in mentions {
+        map_db(
+            sqlx::query("INSERT INTO message_mentions (message_id, user_id) VALUES ($1,$2)")
+                .bind(message_id)
+                .bind(user_id)
+                .execute(&mut **tx)
+                .await,
+        )?;
+    }
+    Ok(())
 }
 
 #[async_trait]
@@ -870,7 +919,38 @@ impl Store for PgStore {
                     .iter()
                     .map(attachment_from)
                     .collect::<Result<Vec<_>, _>>()?;
-                Ok(Some(message_from(&row, attachments)?))
+                let mentions = load_mentions(&self.0, &[id])
+                    .await?
+                    .remove(&id)
+                    .unwrap_or_default();
+                Ok(Some(message_from(&row, attachments, mentions)?))
+            }
+        }
+    }
+
+    async fn get_message(&self, id: Uuid) -> Result<Option<Message>, StoreError> {
+        let row = map_db(
+            sqlx::query(
+                "SELECT id, channel_id, author_id, kind, content, created_at, edited_at, reply_to
+                 FROM messages WHERE id=$1 AND deleted_at IS NULL",
+            )
+            .bind(id)
+            .fetch_optional(&self.0)
+            .await,
+        )?;
+        match row {
+            None => Ok(None),
+            Some(row) => {
+                let attach_rows = load_attachment_rows(&self.0, &[id]).await?;
+                let attachments = attach_rows
+                    .iter()
+                    .map(attachment_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                let mentions = load_mentions(&self.0, &[id])
+                    .await?
+                    .remove(&id)
+                    .unwrap_or_default();
+                Ok(Some(message_from(&row, attachments, mentions)?))
             }
         }
     }
@@ -913,6 +993,41 @@ impl Store for PgStore {
                 .await,
             )?;
         }
+        replace_mentions_tx(&mut tx, message.id, &message.mentions).await?;
+        let events = enqueue_tx(&mut tx, member_ids, event, &payload).await?;
+        map_db(tx.commit().await)?;
+        Ok((message, events))
+    }
+
+    async fn update_message(
+        &self,
+        message: Message,
+        member_ids: &[Uuid],
+        event: &str,
+        payload: Value,
+    ) -> Result<(Message, Vec<OutboxEvent>), StoreError> {
+        let mut tx = map_db(self.0.begin().await)?;
+        let result = map_db(
+            sqlx::query(
+                "UPDATE messages SET content=$1, edited_at=$2 WHERE id=$3 AND deleted_at IS NULL",
+            )
+            .bind(&message.content)
+            .bind(
+                message
+                    .edited_at
+                    .as_deref()
+                    .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
+                    .map(|value| value.with_timezone(&Utc))
+                    .unwrap_or_else(Utc::now),
+            )
+            .bind(message.id)
+            .execute(&mut *tx)
+            .await,
+        )?;
+        if result.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
+        replace_mentions_tx(&mut tx, message.id, &message.mentions).await?;
         let events = enqueue_tx(&mut tx, member_ids, event, &payload).await?;
         map_db(tx.commit().await)?;
         Ok((message, events))
@@ -954,11 +1069,16 @@ impl Store for PgStore {
                 .or_default()
                 .push(attachment_from(row)?);
         }
+        let mut mentioned = load_mentions(&self.0, &ids).await?;
         let messages: Vec<Message> = page
             .iter()
             .map(|row| {
                 let id: Uuid = row.try_get("id").map_err(|_| StoreError::Unavailable)?;
-                message_from(row, grouped.remove(&id).unwrap_or_default())
+                message_from(
+                    row,
+                    grouped.remove(&id).unwrap_or_default(),
+                    mentioned.remove(&id).unwrap_or_default(),
+                )
             })
             .collect::<Result<_, _>>()?;
         let next = if has_more {

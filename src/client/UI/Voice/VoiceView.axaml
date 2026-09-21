@@ -63,7 +63,8 @@
     <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,24,0,0">
       <Button Content="{Binding MuteLabel}" Command="{Binding ToggleMute}" Background="{StaticResource RaisedBrush}" Padding="16,10" />
       <Button Content="{Binding DeafLabel}" Command="{Binding ToggleDeaf}" Background="{StaticResource RaisedBrush}" Padding="16,10" />
-      <Button Content="{i18n:T LeaveVoice}" Command="{Binding LeaveVoice}" Background="{StaticResource RaisedBrush}" Padding="16,10" />
+      <Button Content="{i18n:T JoinVoiceChannel}" Command="{Binding JoinVoice}" CommandParameter="{Binding SelectedChannel}" Background="{StaticResource RaisedBrush}" Padding="16,10" IsVisible="{Binding !InSelectedVoice}" />
+      <Button Content="{i18n:T LeaveVoice}" Command="{Binding LeaveVoice}" Background="{StaticResource RaisedBrush}" Padding="16,10" IsVisible="{Binding InSelectedVoice}" />
     </StackPanel>
   </Grid>
 </UserControl>
