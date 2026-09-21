@@ -31,6 +31,11 @@ public static class TextKey
     public const string LatencyUnreachable = "LatencyUnreachable";
     public const string ServerProtocol = "ServerProtocol";
     public const string ProtocolDetail = "ProtocolDetail";
+    public const string ServerHost = "ServerHost";
+    public const string Community = "Community";
+    public const string ServerAddressOrInvite = "ServerAddressOrInvite";
+    public const string InvalidInvite = "InvalidInvite";
+    public const string CopyInvite = "CopyInvite";
 
     public const string PageParticipants = "PageParticipants";
     public const string Settings = "Settings";

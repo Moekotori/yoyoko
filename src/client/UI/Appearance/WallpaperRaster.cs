@@ -9,7 +9,7 @@ internal static class WallpaperRaster
 {
     public static Bitmap Decode(string path, PixelSize size, int blur)
     {
-        size = WallpaperBudget.Clamp(size);
+        size = WallpaperBudget.Clamp(size, false);
         using var bitmap = Render(path, size, blur, 0);
         return WallpaperFrames.FromSkia(bitmap);
     }
@@ -46,7 +46,7 @@ internal static class WallpaperRaster
 
     internal static SKBitmap Render(SKCodec codec, PixelSize size, int blur, int frame)
     {
-        size = WallpaperBudget.Clamp(size);
+        size = WallpaperBudget.Clamp(size, false);
         var info = codec.Info;
         var origin = codec.EncodedOrigin;
         var (srcW, srcH) = Oriented(info.Width, info.Height, origin);
@@ -135,7 +135,7 @@ internal sealed class WallpaperMotion : IWallpaperPlayback
     {
         _stream = stream;
         _codec = codec;
-        _size = WallpaperBudget.Clamp(size);
+        _size = WallpaperBudget.Clamp(size, true);
         _blur = blur;
         _present = present;
         _delays = new int[codec.FrameCount];
@@ -165,7 +165,7 @@ internal sealed class WallpaperMotion : IWallpaperPlayback
 
     public void Update(PixelSize size, int blur)
     {
-        size = WallpaperBudget.Clamp(size);
+        size = WallpaperBudget.Clamp(size, false);
         if (size == _size && blur == _blur) return;
         _size = size;
         _blur = blur;

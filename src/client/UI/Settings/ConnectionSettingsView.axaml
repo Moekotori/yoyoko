@@ -7,7 +7,7 @@
         <StackPanel Spacing="10" Margin="20,16,20,8">
           <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
           <TextBox Classes="settingsField" Text="{Binding Address}" IsEnabled="{Binding !IsBusy}"
-            PlaceholderText="{i18n:T InstanceAddressPlaceholder}"
+            PlaceholderText="{i18n:T ServerAddressOrInvite}"
             AutomationProperties.Name="{i18n:T InstanceAddress}" />
         </StackPanel>
         <StackPanel IsVisible="{Binding IsConnected}">
@@ -15,7 +15,7 @@
           <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24">
             <TextBlock Text="{i18n:T ConnectionState}" Classes="settingsLabel" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <Ellipse Width="8" Height="8" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
+              <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
               <TextBlock Text="{Binding StateText}" FontSize="14" VerticalAlignment="Center" />
             </StackPanel>
           </Grid>
@@ -23,6 +23,18 @@
           <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasName}">
             <TextBlock Text="{i18n:T ServerName}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding ServerName}" FontSize="14" TextTrimming="CharacterEllipsis"
+              VerticalAlignment="Center" />
+          </Grid>
+          <Border Classes="settingsRowDivider" IsVisible="{Binding HasHost}" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasHost}">
+            <TextBlock Text="{i18n:T ServerHost}" Classes="settingsLabel" />
+            <TextBlock Grid.Column="1" Text="{Binding Host}" FontSize="14" TextTrimming="CharacterEllipsis"
+              VerticalAlignment="Center" />
+          </Grid>
+          <Border Classes="settingsRowDivider" IsVisible="{Binding HasCommunity}" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasCommunity}">
+            <TextBlock Text="{i18n:T Community}" Classes="settingsLabel" />
+            <TextBlock Grid.Column="1" Text="{Binding CommunityName}" FontSize="14" TextTrimming="CharacterEllipsis"
               VerticalAlignment="Center" />
           </Grid>
           <Border Classes="settingsRowDivider" />
@@ -36,6 +48,18 @@
             <TextBlock Text="{i18n:T ServerProtocol}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding ProtocolText}" FontSize="14" VerticalAlignment="Center"
               Classes="muted" />
+          </Grid>
+          <Border Classes="settingsRowDivider" IsVisible="{Binding HasInvite}" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasInvite}">
+            <TextBlock Text="{i18n:T InviteCode}" Classes="settingsLabel" />
+            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock Text="{Binding InviteCode}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"
+                TextTrimming="CharacterEllipsis" />
+              <Button Grid.Column="1" Classes="icon" Width="30" Height="30" Click="CopyInvite"
+                ToolTip.Tip="{i18n:T CopyInvite}" AutomationProperties.Name="{i18n:T CopyInvite}">
+                <PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" />
+              </Button>
+            </Grid>
           </Grid>
         </StackPanel>
       </StackPanel>

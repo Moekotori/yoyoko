@@ -15,11 +15,11 @@ internal static class WallpaperVideo
 {
     public static IWallpaperPlayback? TryOpen(string path, PixelSize size, Action<WriteableBitmap> present, Action<string> failed)
     {
-        size = WallpaperBudget.Clamp(size);
-        if (OperatingSystem.IsMacOS() && WallpaperMac.TryOpen(path, size, present) is { } mac)
-            return mac;
+        size = WallpaperBudget.Clamp(size, true);
         if (WallpaperFfmpeg.TryOpen(path, size, present, failed) is { } ffmpeg)
             return ffmpeg;
+        if (OperatingSystem.IsMacOS() && WallpaperMac.TryOpen(path, size, present) is { } mac)
+            return mac;
         return null;
     }
 }
@@ -53,7 +53,7 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
     public static WallpaperFfmpeg? TryOpen(string path, PixelSize size, Action<WriteableBitmap> present, Action<string> failed)
     {
         if (Find() is null) return null;
-        return new(path, WallpaperBudget.Clamp(size), present, failed);
+        return new(path, WallpaperBudget.Clamp(size, true), present, failed);
     }
 
     public void SetPaused(bool paused)
@@ -69,7 +69,7 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
 
     public void Update(PixelSize size, int blur)
     {
-        size = WallpaperBudget.Clamp(size);
+        size = WallpaperBudget.Clamp(size, true);
         lock (_gate)
         {
             if (_disposed || size == _size) return;

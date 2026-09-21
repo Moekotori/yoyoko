@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using Chat.Core.Instances;
 using Chat.Localization;
 using Chat.UI.Localization;
 using Chat.UI.Shell;
@@ -54,7 +55,9 @@ public partial class CommunityMenu : UserControl
         }
         try
         {
-            await ClipboardExtensions.SetTextAsync(clipboard, shell.InviteCode);
+            var origin = shell.SelectedInstance?.Context.Descriptor.BaseUrl;
+            var text = origin is null ? shell.InviteCode : WorkspaceInvite.Link(origin, shell.InviteCode);
+            await ClipboardExtensions.SetTextAsync(clipboard, text);
             shell.Workspace.ShowNotice(I18n.T(TextKey.InviteCopied));
         }
         catch (Exception)

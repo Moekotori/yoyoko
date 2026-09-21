@@ -501,6 +501,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             SelectedChannel = null;
             NotifySession();
+            Connection.Bind(SelectedInstance?.Context);
             return;
         }
         foreach (var channel in session.Channels)
@@ -514,6 +515,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         }
         FillModeration();
         NotifySession();
+        Connection.Bind(SelectedInstance?.Context);
         if (session is not null) _ = ReloadInboxAsync(session);
         _ = SyncVoiceCapAsync();
     }

@@ -14,6 +14,9 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
     private string _status = "";
     private string _connectedAddress = "";
     private string _serverName = "";
+    private string _host = "";
+    private string _communityName = "";
+    private string _inviteCode = "";
     private int? _protocol;
     private int? _api;
     private int? _latencyMs;
@@ -79,6 +82,15 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
     public bool CanDisconnect => ShowDisconnect && !IsBusy;
     public string ServerName => _serverName;
     public bool HasName => IsConnected && _serverName.Length > 0;
+    public string Host => _host;
+    public bool HasHost => IsConnected && _host.Length > 0;
+    public string CommunityName => _communityName;
+    public bool HasCommunity => IsConnected && _communityName.Length > 0;
+    public string InviteCode => _inviteCode;
+    public string InviteLink => _inviteCode.Length == 0 || _connectedAddress.Length == 0
+        ? ""
+        : WorkspaceInvite.Link(new Uri(_connectedAddress), _inviteCode);
+    public bool HasInvite => IsConnected && InviteLink.Length > 0;
     public bool HasProtocol => IsConnected && _protocol is not null && _api is not null;
     public string StateText => _text.Get(IsConnected ? TextKey.ConnectedServer : TextKey.NotConnected);
     public string LatencyText => _latencyMs is int ms
@@ -93,9 +105,13 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
         var name = context?.Discovery?.Name ?? context?.Descriptor.DisplayName ?? "";
         var protocol = context?.Discovery?.ProtocolVersion;
         var api = context?.Discovery?.ApiVersion;
+        var community = context?.Session?.Servers.FirstOrDefault();
         var identityChanged = connected != _isConnected || address != _connectedAddress;
         _connectedAddress = address;
         _serverName = name;
+        _host = context?.Descriptor.BaseUrl.Authority ?? "";
+        _communityName = community?.Name ?? "";
+        _inviteCode = community?.InviteCode ?? "";
         _protocol = protocol;
         _api = api;
         if (connected && address.Length > 0) Address = address;
@@ -107,6 +123,13 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
         IsConnected = connected;
         Changed(nameof(ServerName));
         Changed(nameof(HasName));
+        Changed(nameof(Host));
+        Changed(nameof(HasHost));
+        Changed(nameof(CommunityName));
+        Changed(nameof(HasCommunity));
+        Changed(nameof(InviteCode));
+        Changed(nameof(InviteLink));
+        Changed(nameof(HasInvite));
         Changed(nameof(HasProtocol));
         Changed(nameof(ProtocolText));
         Changed(nameof(LatencyText));

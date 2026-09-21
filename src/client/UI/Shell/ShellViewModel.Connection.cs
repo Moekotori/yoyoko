@@ -27,10 +27,15 @@ public sealed partial class ShellViewModel
         Connection.Status = _text.Get(TextKey.ConnectingServer);
         try
         {
-            Connection.Address = _connection.ResolveAddress(Connection.Address);
-            var context = await _connection.ConnectAsync(Connection.Address, _lifetime);
+            var invite = _connection.Resolve(Connection.Address);
+            var context = await _connection.ConnectAsync(invite.Address, _lifetime,
+                allowBootstrapCommunity: !invite.HasCommunityCode);
             var item = TrackInstance(context);
-            if (context.Session is { } session) BindSession(session);
+            if (context.Session is { } session)
+            {
+                BindSession(session);
+                if (invite.CommunityCode is { } code) await session.JoinAsync(code, _lifetime);
+            }
             SelectedInstance = item;
             Connection.Address = context.Descriptor.BaseUrl.AbsoluteUri;
             Connection.Status = "";

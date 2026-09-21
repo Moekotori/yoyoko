@@ -10,7 +10,7 @@ internal static class WallpaperFrames
 {
     public static WriteableBitmap Create(PixelSize size)
     {
-        size = WallpaperBudget.Clamp(size);
+        size = WallpaperBudget.Clamp(size, false);
         return new WriteableBitmap(size, new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
     }
 

@@ -11,7 +11,6 @@
               SelectedItem="{Binding SelectedColorScheme}" AutomationProperties.Name="{i18n:T ColorScheme}">
               <ComboBox.ItemTemplate><DataTemplate x:DataType="appearance:ColorSchemeChoice"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Text="{i18n:T NotImplemented}" Classes="muted" FontSize="13" IsVisible="{Binding ShowLightPlaceholder}" />
           </StackPanel>
         </Grid>
       </Border>

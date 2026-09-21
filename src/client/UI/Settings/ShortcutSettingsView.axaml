@@ -2,18 +2,15 @@
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.ShortcutSettingsView" x:DataType="vm:ShortcutSettingsViewModel" x:Name="Root">
   <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="20">
-    <Grid ColumnDefinitions="*,Auto">
-      <Border Classes="settingsGroup">
-        <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24" Margin="16,8">
-          <TextBlock Text="{i18n:T SendShortcut}" Classes="settingsLabel" />
-          <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding SendShortcutChoices}"
-            SelectedIndex="{Binding SendMode}" AutomationProperties.Name="{i18n:T SendShortcut}" />
-        </Grid>
-      </Border>
-      <Button Grid.Column="1" Classes="settingsSecondary" Margin="12,0,0,0" VerticalAlignment="Center"
-        Content="{i18n:T ShortcutResetAll}" Command="{Binding ResetAll}" IsVisible="{Binding CanResetAll}"
-        AutomationProperties.Name="{i18n:T ShortcutResetAll}" />
-    </Grid>
+    <Button Classes="settingsSecondary" HorizontalAlignment="Right" Content="{i18n:T ShortcutResetAll}"
+      Command="{Binding ResetAll}" IsVisible="{Binding CanResetAll}" AutomationProperties.Name="{i18n:T ShortcutResetAll}" />
+    <Border Classes="settingsGroup">
+      <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24" Margin="16,8">
+        <TextBlock Text="{i18n:T SendShortcut}" Classes="settingsLabel" />
+        <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding SendShortcutChoices}"
+          SelectedIndex="{Binding SendMode}" AutomationProperties.Name="{i18n:T SendShortcut}" />
+      </Grid>
+    </Border>
     <ItemsControl ItemsSource="{Binding Groups}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate><StackPanel Spacing="20" /></ItemsPanelTemplate>
@@ -37,14 +34,14 @@
                             <ItemsControl ItemsSource="{Binding Tokens}">
                               <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                               <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
+                                <DataTemplate>
                                   <Border Classes="shortcutCap"><TextBlock Text="{Binding}" FontSize="12" VerticalAlignment="Center" /></Border>
                                 </DataTemplate>
                               </ItemsControl.ItemTemplate>
                             </ItemsControl>
                           </StackPanel>
-                          <TextBlock Grid.Column="1" Text="{Binding Gesture}" Classes="muted" FontSize="13"
-                            VerticalAlignment="Center" IsVisible="{Binding !ShowKeys}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Gesture}" FontSize="13" VerticalAlignment="Center"
+                            Classes.muted="{Binding ShowUnbound}" IsVisible="{Binding !ShowKeys}" />
                           <Button Grid.Column="2" Classes="icon shortcutReset" Command="{Binding #Root.((vm:ShortcutSettingsViewModel)DataContext).ResetRow}"
                             CommandParameter="{Binding}" IsVisible="{Binding IsCustom}" ToolTip.Tip="{i18n:T ShortcutReset}"
                             AutomationProperties.Name="{i18n:T ShortcutReset}">

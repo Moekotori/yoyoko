@@ -127,7 +127,7 @@ public sealed partial class InstanceSession : IAsyncDisposable
 
     public async Task JoinAsync(string invite, CancellationToken cancellationToken)
     {
-        await _api.JoinAsync(invite, cancellationToken);
+        await _api.JoinAsync(WorkspaceInvite.CodeFrom(invite), cancellationToken);
         await RefreshCommunityAsync(cancellationToken);
     }
 

@@ -35,7 +35,7 @@ internal sealed class WallpaperMac : IWallpaperPlayback
         {
             Native.Ensure();
             if (!Native.CanOpen(path)) return null;
-            return new WallpaperMac(path, WallpaperBudget.Clamp(size), present);
+            return new WallpaperMac(path, WallpaperBudget.Clamp(size, true), present);
         }
         catch { return null; }
     }
@@ -49,7 +49,7 @@ internal sealed class WallpaperMac : IWallpaperPlayback
 
     public void Update(PixelSize size, int blur)
     {
-        size = WallpaperBudget.Clamp(size);
+        size = WallpaperBudget.Clamp(size, true);
         if (_disposed || size == _size) return;
         _size = size;
         _frame = null;

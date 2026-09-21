@@ -18,9 +18,11 @@ public sealed class WorkspaceConnection(InstanceManager instances, IMessageCache
     public async Task<string> StartupAddressAsync(CancellationToken token) =>
         await SavedAddressAsync(token) ?? defaultAddress;
 
-    public string ResolveAddress(string address) => WorkspaceAddress.Resolve(address, defaultAddress);
+    public string ResolveAddress(string address) => WorkspaceInvite.Parse(address, defaultAddress).Address;
+    public WorkspaceInvite Resolve(string input) => WorkspaceInvite.Parse(input, defaultAddress);
 
-    public async Task<InstanceContext> ConnectAsync(string address, CancellationToken token)
+    public async Task<InstanceContext> ConnectAsync(string address, CancellationToken token,
+        bool allowBootstrapCommunity = true)
     {
         address = ResolveAddress(address);
         await _connection.WaitAsync(token);
@@ -56,7 +58,9 @@ public sealed class WorkspaceConnection(InstanceManager instances, IMessageCache
                 }
             }
             await context.Session!.RefreshCommunityAsync(token);
-            if (LocalNetwork.IsTrustedDevelopmentHost(context.Descriptor.BaseUrl) && context.Session.Servers.Count == 0)
+            if (allowBootstrapCommunity
+                && LocalNetwork.IsTrustedDevelopmentHost(context.Descriptor.BaseUrl)
+                && context.Session.Servers.Count == 0)
                 await context.Session.CreateServerAsync(context.Descriptor.DisplayName, token);
             await cache.SetSettingAsync("workspace:address", context.Descriptor.BaseUrl.AbsoluteUri, token);
             return context;

@@ -7,6 +7,7 @@ using Chat.Media;
 using Chat.Networking.Http;
 using Chat.Networking.WebSocket;
 using Chat.Storage;
+using Chat.UI.Appearance;
 using Chat.UI.Localization;
 using Chat.UI.Shell;
 using Chat.UI.Preview;
@@ -29,6 +30,7 @@ public partial class DesktopApplication : Application
             {
                 var previewPacks = LanguagePackStore.Open(Path.Combine(settings.DataDirectory, "locales"));
                 var previewLocale = FileLocalePreference.Load(settings.PreferencesPath, previewPacks.Available);
+                ColorSchemeApply.Apply(previewLocale.ColorScheme);
                 I18n.Attach(new TextCatalog(previewPacks), previewLocale);
                 _i18n = I18n.Presenter;
                 desktop.MainWindow = new DesignPreviewWindow(settings.ProductName, _i18n);
@@ -43,6 +45,7 @@ public partial class DesktopApplication : Application
             var media = WorkerMediaService.Create();
             var packs = LanguagePackStore.Open(Path.Combine(settings.DataDirectory, "locales"));
             var locale = FileLocalePreference.Load(settings.PreferencesPath, packs.Available);
+            ColorSchemeApply.Apply(locale.ColorScheme);
             I18n.Attach(new TextCatalog(packs), locale);
             _i18n = I18n.Presenter;
             var apis = new ChatApiFactory();

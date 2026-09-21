@@ -149,6 +149,7 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
     {
         if (_colorScheme == value) return;
         _colorScheme = value;
+        ColorSchemeApply.Apply(value);
         Persist();
         AppearanceChanged?.Invoke();
     }

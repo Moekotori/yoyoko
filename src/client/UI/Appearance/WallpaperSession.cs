@@ -19,7 +19,7 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     private IWallpaperPlayback? _playback;
     private PixelSize _viewport;
     private string _error = "";
-    private bool _paused = true;
+    private bool _paused;
     private bool _resourceSuspended;
     private bool _resourceAnimationPaused;
     private bool _disposed;
@@ -72,7 +72,6 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
 
     public void SetViewport(PixelSize size)
     {
-        size = WallpaperBudget.Clamp(size);
         if (size.Width < 16 || size.Height < 16 || size == _viewport) return;
         _viewport = size;
         _resize ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(140) };
@@ -118,7 +117,7 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         var extension = WallpaperBudget.NormalizeExtension(file.FileName)
             ?? throw new ClientFault(TextKey.InvalidWallpaper);
         var limit = WallpaperBudget.IsVideo(extension) ? WallpaperBudget.MaxVideoBytes : WallpaperBudget.MaxImageBytes;
-        if (file.Size <= 0 || file.Size > limit) throw new ClientFault(TextKey.WallpaperTooLarge);
+        if (file.Size > limit) throw new ClientFault(TextKey.WallpaperTooLarge);
         Directory.CreateDirectory(_appearance.WallpaperDirectory);
         var stored = "current" + extension;
         var path = Path.Combine(_appearance.WallpaperDirectory, stored);
@@ -181,14 +180,38 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     private void OnAppearance()
     {
         Notify();
+        if (!_appearance.WallpaperEnabled)
+        {
+            _blur?.Stop();
+            Unload();
+            return;
+        }
+        if (_appliedEnabled && _appliedFile == _appearance.WallpaperFile && _appliedBlur != _appearance.WallpaperBlur && IsVideo)
+            return;
         if (_appliedBlur == _appearance.WallpaperBlur && _appliedEnabled == _appearance.WallpaperEnabled &&
             _appliedFile == _appearance.WallpaperFile)
             return;
+        if (_appliedFile != _appearance.WallpaperFile || _appliedEnabled != _appearance.WallpaperEnabled)
+        {
+            _blur?.Stop();
+            Reload();
+            return;
+        }
         _blur ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
         _blur.Tick -= OnBlur;
         _blur.Tick += OnBlur;
         _blur.Stop();
         _blur.Start();
+    }
+
+    private void Unload()
+    {
+        ++_load;
+        StopPlayback();
+        Frame = null;
+        IsVideo = false;
+        _appliedEnabled = false;
+        Notify();
     }
 
     private void OnResize(object? sender, EventArgs e)
@@ -208,32 +231,44 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     private void Reload()
     {
         if (_disposed || _resourceSuspended) return;
-        var id = ++_load;
         var enabled = _appearance.WallpaperEnabled;
         var relative = _appearance.WallpaperFile;
         var blur = _appearance.WallpaperBlur;
         var viewport = _viewport;
-        _appliedBlur = blur;
-        _appliedEnabled = enabled;
-        _appliedFile = relative;
         if (!enabled || relative.Length == 0 || viewport.Width < 16)
         {
-            StopPlayback();
-            if (!enabled) Frame = null;
-            Notify();
+            Unload();
+            _appliedFile = relative;
             return;
         }
         var path = Path.Combine(_appearance.WallpaperDirectory, Path.GetFileName(relative));
         if (!File.Exists(path))
         {
+            ++_load;
             StopPlayback();
             Frame = null;
             Error = _text.Get(TextKey.InvalidWallpaper);
+            _appliedBlur = blur;
+            _appliedEnabled = enabled;
+            _appliedFile = relative;
             Notify();
             return;
         }
         var extension = WallpaperBudget.NormalizeExtension(path) ?? "";
-        _ = Task.Run(() => Load(id, path, extension, viewport, blur));
+        var motion = WallpaperBudget.IsVideo(extension);
+        var fitted = WallpaperBudget.Clamp(viewport, motion);
+        if (motion && _playback is not null && IsVideo && _appliedFile == relative)
+        {
+            _appliedBlur = blur;
+            _appliedEnabled = true;
+            _playback.Update(fitted, blur);
+            return;
+        }
+        var id = ++_load;
+        _appliedBlur = blur;
+        _appliedEnabled = enabled;
+        _appliedFile = relative;
+        _ = Task.Run(() => Load(id, path, extension, fitted, blur));
     }
 
     private void Load(int id, string path, string extension, PixelSize size, int blur)
