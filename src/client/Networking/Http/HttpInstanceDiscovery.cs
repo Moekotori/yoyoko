@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Chat.Core;
 using Chat.Core.Instances;
@@ -8,6 +9,19 @@ namespace Chat.Networking.Http;
 
 public sealed class HttpInstanceDiscovery(HttpClient client) : IInstanceDiscovery
 {
+    public async Task<TimeSpan> ProbeAsync(Uri baseUrl, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(3));
+        var watch = Stopwatch.StartNew();
+        using var response = await client.GetAsync(new Uri(baseUrl, ProtocolVersion.HealthLivePath),
+            HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        await response.Content.LoadIntoBufferAsync(1024, timeout.Token);
+        watch.Stop();
+        response.EnsureSuccessStatusCode();
+        return watch.Elapsed;
+    }
+
     public async Task<InstanceDiscovery> DiscoverAsync(Uri baseUrl, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync(new Uri(baseUrl, ProtocolVersion.DiscoveryPath),

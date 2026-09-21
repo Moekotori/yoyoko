@@ -1,48 +1,129 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization"
-  x:Class="Chat.UI.Channels.CommunityMenu" x:DataType="vm:ShellViewModel" Classes="communityMenu">
+  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion"
+  x:Class="Chat.UI.Channels.CommunityMenu" x:DataType="vm:ShellViewModel" x:Name="MenuRoot" Classes="communityMenu">
   <UserControl.Styles>
-    <Style Selector="Button.menuAction"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="12,8" /></Style>
-    <Style Selector="Expander"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="CornerRadius" Value="6" /></Style>
-    <Style Selector=".communityMenu Expander /template/ ToggleButton#ExpanderHeader"><Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="12,8" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
+    <Style Selector="Button.menuAction">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="Button.menuAction PathIcon"><Setter Property="Foreground" Value="{StaticResource QuietTextBrush}" /></Style>
+    <Style Selector="Button.menuDanger"><Setter Property="Foreground" Value="#DDA49C" /></Style>
+    <Style Selector="Button.menuDanger:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="#E8B8B2" /></Style>
+    <Style Selector="Button.link">
+      <Setter Property="Padding" Value="0" /><Setter Property="MinHeight" Value="0" />
+      <Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+    </Style>
+    <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#E8E8E8" />
+    </Style>
+    <Style Selector="Button.avatarPick">
+      <Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="24" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.avatarPick:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="Button.avatarPick Border.avatarScrim">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="Transitions">
+        <Transitions><DoubleTransition Property="Opacity" Duration="{x:Static motion:MotionTokens.Feedback}" /></Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.avatarPick:pointerover Border.avatarScrim"><Setter Property="Opacity" Value="1" /></Style>
+    <Style Selector="Border.menuDivider"><Setter Property="Height" Value="1" /><Setter Property="Background" Value="{StaticResource DividerBrush}" /><Setter Property="Margin" Value="8,6" /></Style>
+    <Style Selector="StackPanel.menuForm"><Setter Property="Spacing" Value="10" /><Setter Property="Margin" Value="10,4,10,10" /></Style>
   </UserControl.Styles>
   <ScrollViewer MaxHeight="480" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-    <StackPanel Width="280" Spacing="4">
-      <StackPanel Margin="12,8,12,12" Spacing="6">
-        <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" FontSize="16" TextTrimming="CharacterEllipsis" />
+    <StackPanel Width="276" Spacing="2">
+      <Grid ColumnDefinitions="48,*" ColumnSpacing="12" Margin="10,8,10,10" IsVisible="{Binding IsSignedIn}">
+        <Button Classes="avatarPick" Width="48" Height="48" Click="ChangeAvatar"
+          ToolTip.Tip="{i18n:T ChangeAvatar}" AutomationProperties.Name="{i18n:T ChangeAvatar}">
+          <Panel>
+            <c:Avatar Width="48" Height="48" Playback="{Binding AccountPlayback}" Initial="{Binding AccountInitial}" />
+            <Border Classes="avatarScrim" Background="#99000000" CornerRadius="24" IsHitTestVisible="False">
+              <PathIcon Data="{StaticResource IconCamera}" Width="16" Height="16" Foreground="#F2F2F2"
+                HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+          </Panel>
+        </Button>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="{Binding AccountName}" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding AccountHandle}" Classes="quiet" FontSize="12" TextTrimming="CharacterEllipsis" />
+          <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
+            <Button Classes="link" Content="{i18n:T ChangeAvatar}" Click="ChangeAvatar" />
+            <Button Classes="link" Content="{i18n:T RemoveAvatar}" Click="RemoveAvatar" IsVisible="{Binding HasAvatar}" />
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+      <Border Classes="menuDivider" IsVisible="{Binding IsSignedIn}" />
+      <StackPanel Margin="10,6,10,8" Spacing="4">
+        <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
         <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
       </StackPanel>
+      <Grid ColumnDefinitions="*,Auto" Margin="10,0,6,6" IsVisible="{Binding HasInvite}">
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="{i18n:T InviteCode}" Classes="quiet" FontSize="11" />
+          <TextBlock Text="{Binding InviteCode}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="icon" Width="30" Height="30" Click="CopyInvite"
+          ToolTip.Tip="{i18n:T CopyText}" AutomationProperties.Name="{i18n:T CopyText}">
+          <PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" />
+        </Button>
+      </Grid>
+      <TextBlock Text="{Binding InviteHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" Margin="10,0,10,8"
+        IsVisible="{Binding !HasInvite}" />
+      <Border Classes="menuDivider" />
       <Button Classes="menuAction" Command="{Binding OpenAddInstance}" Content="{i18n:T AddInstance}" />
-      <StackPanel IsVisible="{Binding IsSignedIn}" Spacing="4">
-        <Border Height="1" Background="{StaticResource DividerBrush}" Margin="12,8" />
-        <TextBlock Text="{Binding InviteHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" Margin="12,4,12,12" />
-        <Expander Header="{i18n:T CreateCommunity}">
-          <StackPanel Spacing="12" Margin="12,4,12,12">
-            <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" AutomationProperties.Name="{i18n:T NewCommunity}" Tag="create" KeyDown="OnSubmitKeyDown" />
-            <Button Classes="primary" Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
-          </StackPanel>
-        </Expander>
-        <Expander Header="{i18n:T JoinCommunity}">
-          <StackPanel Spacing="12" Margin="12,4,12,12">
-            <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" AutomationProperties.Name="{i18n:T InviteCode}" Tag="join" KeyDown="OnSubmitKeyDown" />
-            <Button Classes="primary" Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
-          </StackPanel>
-        </Expander>
+      <StackPanel IsVisible="{Binding IsSignedIn}" Spacing="2">
+        <Button Classes="menuAction" Tag="CreateCommunityPanel" Click="ToggleSection">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{i18n:T CreateCommunity}" VerticalAlignment="Center" />
+            <PathIcon x:Name="CreateCommunityPanelDown" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronDown}" />
+            <PathIcon x:Name="CreateCommunityPanelUp" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronUp}" IsVisible="False" />
+          </Grid>
+        </Button>
+        <StackPanel x:Name="CreateCommunityPanel" Classes="menuForm" IsVisible="False">
+          <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" AutomationProperties.Name="{i18n:T NewCommunity}" Tag="create" KeyDown="OnSubmitKeyDown" />
+          <Button Classes="primary" Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
+        </StackPanel>
+        <Button Classes="menuAction" Tag="JoinCommunityPanel" Click="ToggleSection">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{i18n:T JoinCommunity}" VerticalAlignment="Center" />
+            <PathIcon x:Name="JoinCommunityPanelDown" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronDown}" />
+            <PathIcon x:Name="JoinCommunityPanelUp" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronUp}" IsVisible="False" />
+          </Grid>
+        </Button>
+        <StackPanel x:Name="JoinCommunityPanel" Classes="menuForm" IsVisible="False">
+          <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" AutomationProperties.Name="{i18n:T InviteCode}" Tag="join" KeyDown="OnSubmitKeyDown" />
+          <Button Classes="primary" Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
+        </StackPanel>
         <Button Classes="menuAction" Content="{i18n:T CreateTextChannel}" Command="{Binding AddTextChannel}" IsVisible="{Binding CanModerate}" />
         <Button Classes="menuAction" Content="{i18n:T CreateVoiceChannel}" Command="{Binding AddVoiceChannel}" IsVisible="{Binding CanModerate}" />
-        <Expander Header="{i18n:T Moderation}" IsVisible="{Binding CanModerate}">
-          <StackPanel Spacing="10" Margin="12,4,12,12">
-            <TextBlock Text="{i18n:T BlockedWordsHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-            <TextBox Text="{Binding ModerationWords}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="96" AutomationProperties.Name="{i18n:T BlockedWordsHint}" />
-            <TextBlock Text="{i18n:T CooldownSeconds}" Classes="muted" FontSize="12" />
-            <TextBox Text="{Binding CooldownInput}" AutomationProperties.Name="{i18n:T CooldownSeconds}" Tag="cooldown" KeyDown="OnSubmitKeyDown" />
-            <Button Classes="primary" Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch" />
-          </StackPanel>
-        </Expander>
-        <Border Height="1" Background="{StaticResource DividerBrush}" Margin="12,8" />
-        <Button Classes="menuAction" Content="{i18n:T SignOut}" Command="{Binding SignOut}" Foreground="#DDA49C" />
+        <Button Classes="menuAction" Tag="ModerationPanel" Click="ToggleSection" IsVisible="{Binding CanModerate}">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{i18n:T Moderation}" VerticalAlignment="Center" />
+            <PathIcon x:Name="ModerationPanelDown" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronDown}" />
+            <PathIcon x:Name="ModerationPanelUp" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronUp}" IsVisible="False" />
+          </Grid>
+        </Button>
+        <StackPanel x:Name="ModerationPanel" Classes="menuForm" IsVisible="False">
+          <TextBlock Text="{i18n:T BlockedWordsHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+          <TextBox Text="{Binding ModerationWords}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="96" AutomationProperties.Name="{i18n:T BlockedWordsHint}" />
+          <TextBlock Text="{i18n:T CooldownSeconds}" Classes="muted" FontSize="12" />
+          <TextBox Text="{Binding CooldownInput}" AutomationProperties.Name="{i18n:T CooldownSeconds}" Tag="cooldown" KeyDown="OnSubmitKeyDown" />
+          <Button Classes="primary" Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch" />
+        </StackPanel>
+        <Border Classes="menuDivider" />
+        <Button Classes="menuAction menuDanger" Content="{i18n:T SignOut}" Command="{Binding SignOut}" />
       </StackPanel>
-      <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="12,8" IsVisible="{Binding HasStatus}" />
+      <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="10,6,10,8" IsVisible="{Binding HasStatus}" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

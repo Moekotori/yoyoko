@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Chat.Core.Instances;
 using Chat.Localization;
@@ -9,6 +8,7 @@ using Chat.Core.Realtime;
 using Chat.Core.Sessions;
 using Chat.Core.Voice;
 using Chat.Protocol;
+using Chat.UI.Appearance;
 using Chat.UI.Auth;
 using Chat.UI.Channels;
 using Chat.UI.Chat;
@@ -40,9 +40,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _cooldownInput = "0";
     private bool _settingsOpen;
     private readonly SemaphoreSlim _images = new(4);
-    private readonly Dictionary<Uri, Bitmap> _bitmaps = [];
+    private readonly AttachmentPreviews _previews;
     private readonly Dictionary<Guid, (Uri Url, AvatarPlayback Playback)> _playbacks = [];
-    private long _bitmapBytes;
     private string _address = "";
     private string _status = "";
     private string _draft = "";
@@ -58,7 +57,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private string _qualityUi = "";
     public ShellViewModel(InstanceManager instances, IMessageCache cache, ICredentialVault vault,
         IInstanceDiscovery discovery, IChatApiFactory apis, Func<IGatewayConnection> gateways,
-        IVoiceMedia media, ILocalePreference locale, IChatChrome chrome, IVoiceDevicePreference devices, I18n text, string productName, CancellationToken lifetime, WorkspaceConnection connection)
+        IVoiceMedia media, ILocalePreference locale, IChatChrome chrome, IVoiceDevicePreference devices,
+        IAppearancePreference appearance, I18n text, string productName, CancellationToken lifetime, WorkspaceConnection connection)
     {
         _connection = connection;
         _instances = instances;
@@ -72,10 +72,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _chrome = chrome;
         ProductName = productName;
         _lifetime = lifetime;
+        _previews = new(lifetime);
         Devices = new(media, devices, text, () => SelectedInstance?.Context.Session, lifetime);
         AuthForm = new(AuthenticateAsync, error => { AuthForm!.Status = _text.Error(error); OnError(error); });
-        Connection = new(ConnectWorkspaceAsync, OnError);
-        Settings = new(locale, chrome, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm);
+        Connection = new(ConnectWorkspaceAsync, DisconnectWorkspaceAsync, ProbeLatencyAsync, OnError, text);
+        Wallpaper = new(appearance, chrome, text);
+        Settings = new(locale, chrome, appearance, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm);
         chrome.Changed += OnChromeChanged;
         OpenAddInstance = new(_ =>
         {
@@ -158,6 +160,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public ActionCommand OpenAddInstance { get; }
     public ActionCommand OpenSettings { get; }
     public SettingsViewModel Settings { get; }
+    public WallpaperSession Wallpaper { get; }
     public VoiceDevicesViewModel Devices { get; }
     public Func<Task<IReadOnlyList<PickedFile>>>? PickFiles { get; set; }
     public Func<Task<PickedFile?>>? PickAvatar { get; set; }
@@ -232,7 +235,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             Changed(nameof(AccountHandle));
             Changed(nameof(AccountInitial));
             Changed(nameof(AccountPlayback));
+            Changed(nameof(HasAvatar));
             Changed(nameof(InviteHint));
+            Changed(nameof(InviteCode));
+            Changed(nameof(HasInvite));
             _ = LoadSessionVisualsAsync();
         }
     }
@@ -270,6 +276,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             Changed(nameof(ShowChat));
             Changed(nameof(ShowVoice));
             Changed(nameof(PaneTitle));
+            Connection.SetWatching(value && Settings.Section == SettingsSection.Connection);
         }
     }
     public bool ShowAddInstance => false;
@@ -304,12 +311,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public string AccountInitial => Avatar.FromName(AccountName);
     public string AccountHandle => SelectedInstance?.Context.Account is { Username: { Length: > 0 } name } ? "@" + name : "";
     public AvatarPlayback? AccountPlayback { get; private set; }
+    public bool HasAvatar => AccountPlayback is not null;
+    public string InviteCode => SelectedInstance?.Context.Session?.Servers.FirstOrDefault()?.InviteCode ?? "";
+    public bool HasInvite => InviteCode.Length > 0;
     public string InviteHint
     {
         get
         {
-            var invite = SelectedInstance?.Context.Session?.Servers.FirstOrDefault()?.InviteCode;
-            return string.IsNullOrEmpty(invite) ? _text.Get(TextKey.InviteHintEmpty) : _text.Get(TextKey.InviteHint, invite);
+            return HasInvite ? _text.Get(TextKey.InviteHint, InviteCode) : _text.Get(TextKey.InviteHintEmpty);
         }
     }
     public ObservableCollection<PendingFileItem> PendingFiles { get; } = [];
@@ -357,10 +366,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             }
             if (preparationError is not null) OnError(preparationError);
             Connection.Status = preparationError is null ? "" : _text.Error(preparationError);
+            Connection.Bind(SelectedInstance?.Context);
             Settings.Profile.Reload();
         }
         catch (Exception exception) { Connection.Status = Status = _text.Get(TextKey.CacheLoadFailed, exception.Message); }
-        finally { Connection.IsBusy = false; }
+        finally { Connection.IsBusy = false; Connection.Bind(SelectedInstance?.Context); }
     }
 
     private async Task RestoreAsync(InstanceItem item)
@@ -372,6 +382,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 _cache, _vault, _gateways, _media, _lifetime);
             if (session is null) return;
             session.ApplyDiscovery(info);
+            item.Context.AttachDiscovery(info);
             item.Context.AttachSession(session);
             BindSession(session);
             if (SelectedInstance == item) RefreshCommunity();
@@ -408,6 +419,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Status = "";
         Settings.Profile.Reload();
         Connection.Status = "";
+        Connection.Bind(item.Context);
         RefreshCommunity();
     }
 
@@ -464,7 +476,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(AccountHandle));
         Changed(nameof(AccountInitial));
         Changed(nameof(AccountPlayback));
+        Changed(nameof(HasAvatar));
         Changed(nameof(InviteHint));
+        Changed(nameof(InviteCode));
+        Changed(nameof(HasInvite));
         Changed(nameof(PaneTitle));
         Changed(nameof(ShowSettings));
         if (SelectedInstance?.Context.Session is { } session)
@@ -485,6 +500,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(InstanceHost));
         Changed(nameof(PaneTitle));
         Changed(nameof(InviteHint));
+        Changed(nameof(InviteCode));
+        Changed(nameof(HasInvite));
         Changed(nameof(MuteLabel));
         Changed(nameof(DeafLabel));
         Changed(nameof(MuteTip));
@@ -570,6 +587,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (_timeline is null)
         {
             Messages.Clear();
+            _previews.Clear();
             Changed(nameof(HasOlder));
             return;
         }
@@ -589,7 +607,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             }
             if (_playbacks.TryGetValue(item.Message.AuthorId, out var cached))
                 row.Playback = cached.Playback;
-            _ = LoadAttachmentsAsync(row);
             if (session is not null) _ = LoadUserAvatarAsync(item.Message.AuthorId);
             ordered.Add(row);
         }
@@ -603,7 +620,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         while (Messages.Count > ordered.Count)
             Messages.RemoveAt(Messages.Count - 1);
         RefreshMessagePresentation();
-        TrimBitmaps();
+        if (session is not null)
+            _previews.Update(Messages.SelectMany(row => row.Files), session.DownloadAsync);
         Changed(nameof(HasOlder));
         var prepended = previousFirst != Guid.Empty && ordered.Count > 0
             && ordered[0].Item.LocalId != previousFirst
@@ -611,46 +629,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         var appended = ordered.Count > 0 && ordered[^1].Item.LocalId != previousLast && !prepended;
         if (appended && (IsNearBottom?.Invoke() ?? true))
             ScrollToLatest?.Invoke();
-    }
-
-    private async Task LoadAttachmentsAsync(MessageRow row)
-    {
-        var session = SelectedInstance?.Context.Session;
-        if (session is null) return;
-        foreach (var file in row.Files)
-        {
-            if (file.HasPreview || file.PreviewUrl is null) continue;
-            if (_bitmaps.TryGetValue(file.PreviewUrl, out var cached))
-            {
-                file.Preview = cached;
-                continue;
-            }
-            await _images.WaitAsync(_lifetime);
-            try
-            {
-                var bytes = await session.DownloadAsync(file.PreviewUrl, 512 * 1024, _lifetime);
-                if (bytes is null) continue;
-                using var stream = new MemoryStream(bytes);
-                var bitmap = Bitmap.DecodeToWidth(stream, 128);
-                _bitmaps[file.PreviewUrl] = bitmap;
-                _bitmapBytes += (long)bitmap.PixelSize.Width * bitmap.PixelSize.Height * 4;
-                file.Preview = bitmap;
-                TrimBitmaps();
-            }
-            catch { /* chip remains without preview */ }
-            finally { _images.Release(); }
-        }
-    }
-
-    private void TrimBitmaps()
-    {
-        while (_bitmapBytes > MemoryBudget.ThumbnailBytes && _bitmaps.Count > 0)
-        {
-            var oldest = _bitmaps.First();
-            _bitmapBytes -= (long)oldest.Value.PixelSize.Width * oldest.Value.PixelSize.Height * 4;
-            if (!Messages.SelectMany(row => row.Files).Any(file => file.Preview == oldest.Value)) oldest.Value.Dispose();
-            _bitmaps.Remove(oldest.Key);
-        }
     }
 
     private async Task SendAsync()
@@ -815,6 +793,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(ShowAuth));
         Changed(nameof(ShowGuest));
         Changed(nameof(IsSignedIn));
+        Connection.Bind(item.Context);
     }
 
     private Task SetMuteAsync(bool _)
@@ -916,6 +895,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             AccountPlayback = playback;
             Changed(nameof(AccountPlayback));
+            Changed(nameof(HasAvatar));
             Settings.Profile.SetPlayback(playback);
         }
         foreach (var row in Messages)
@@ -929,6 +909,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _playbacks.Clear();
         AccountPlayback = null;
         Changed(nameof(AccountPlayback));
+        Changed(nameof(HasAvatar));
         Settings.Profile.SetPlayback(null);
     }
 
@@ -1003,10 +984,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     {
         DetachTimeline();
         DisposePresentation();
+        _previews.Dispose();
         _text.PropertyChanged -= OnTextChanged;
         _chrome.Changed -= OnChromeChanged;
         ClearPlaybacks();
         Settings.Dispose();
+        Wallpaper.Dispose();
         Workspace.Dispose();
     }
 }

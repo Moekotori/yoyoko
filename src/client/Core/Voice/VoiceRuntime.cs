@@ -141,9 +141,9 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
     {
         Route = route;
         if (!Joined) { Changed?.Invoke(); return; }
-        try { await media.SetDevicesAsync(route, cancellationToken); }
-        catch (Exception exception) { MediaError = exception.Message; }
-        Changed?.Invoke();
+        try { await media.SetDevicesAsync(route, cancellationToken); MediaError = null; }
+        catch (Exception exception) { MediaError = exception.Message; throw; }
+        finally { Changed?.Invoke(); }
     }
 
     public Task<AudioDeviceList> ListDevicesAsync(CancellationToken cancellationToken)

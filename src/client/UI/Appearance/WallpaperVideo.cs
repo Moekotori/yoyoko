@@ -181,12 +181,9 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
             return false;
         }
         length = end + 2 - start;
-        if (start > 0)
-        {
-            var copy = new byte[length];
-            Buffer.BlockCopy(_jpeg, start, copy, 0, length);
-            buffer = copy;
-        }
+        var copy = new byte[length];
+        Buffer.BlockCopy(_jpeg, start, copy, 0, length);
+        buffer = copy;
         var remain = _jpegLength - (end + 2);
         if (remain > 0) Buffer.BlockCopy(_jpeg, end + 2, _jpeg, 0, remain);
         _jpegLength = remain;
@@ -195,7 +192,7 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
 
     private void Present(byte[] jpeg, int length, PixelSize size, int generation)
     {
-        using var data = SkiaSharp.SKData.CreateCopy(jpeg, 0, length);
+        using var data = SkiaSharp.SKData.CreateCopy(jpeg.AsSpan(0, length));
         using var codec = SkiaSharp.SKCodec.Create(data);
         if (codec is null) return;
         var info = new SkiaSharp.SKImageInfo(size.Width, size.Height, SkiaSharp.SKColorType.Bgra8888, SkiaSharp.SKAlphaType.Premul);

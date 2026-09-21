@@ -21,18 +21,18 @@ internal static class WallpaperFrames
         return bitmap;
     }
 
-    public static void Copy(IntPtr source, int width, int height, int stride, WriteableBitmap destination)
+    public static unsafe void Copy(IntPtr source, int width, int height, int stride, WriteableBitmap destination)
     {
         using var frame = destination.Lock();
         var row = Math.Min(width * 4, Math.Min(stride, frame.RowBytes));
         if (stride == frame.RowBytes && row == stride)
-            NativeMemory.Copy(source.ToPointer(), frame.Address.ToPointer(), (nuint)(stride * height));
+            NativeMemory.Copy((void*)source, (void*)frame.Address, (nuint)(stride * height));
         else
         {
             for (var y = 0; y < height; y++)
                 NativeMemory.Copy(
-                    IntPtr.Add(source, y * stride).ToPointer(),
-                    IntPtr.Add(frame.Address, y * frame.RowBytes).ToPointer(),
+                    (void*)IntPtr.Add(source, y * stride),
+                    (void*)IntPtr.Add(frame.Address, y * frame.RowBytes),
                     (nuint)row);
         }
     }

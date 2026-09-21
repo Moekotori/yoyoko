@@ -18,6 +18,23 @@ void Check(bool condition, string name)
     checks++;
     Console.WriteLine("PASS " + name);
 }
+var offlineVoice = new VoiceRuntime(
+    System.Reflection.DispatchProxy.Create<Chat.Core.Sessions.IChatApi, NoVoiceIo>(),
+    System.Reflection.DispatchProxy.Create<IVoiceMedia, NoVoiceIo>(), Guid.NewGuid());
+await offlineVoice.SetMuteAsync(true, default);
+Check(offlineVoice.SelfMute && !offlineVoice.Joined, "mute can be set before joining without API or media IO");
+await offlineVoice.SetMuteAsync(false, default);
+await offlineVoice.SetDeafAsync(true, default);
+Check(offlineVoice.SelfMute && offlineVoice.SelfDeaf, "deafen also mutes before joining");
+await offlineVoice.SetDeafAsync(false, default);
+Check(!offlineVoice.SelfMute && !offlineVoice.SelfDeaf, "undeafen restores previously open microphone");
+await offlineVoice.SetMuteAsync(true, default);
+await offlineVoice.SetDeafAsync(true, default);
+await offlineVoice.SetDeafAsync(false, default);
+Check(offlineVoice.SelfMute && !offlineVoice.SelfDeaf, "undeafen preserves manual mute");
+await offlineVoice.SetDeafAsync(true, default);
+await offlineVoice.SetMuteAsync(false, default);
+Check(!offlineVoice.SelfMute && !offlineVoice.SelfDeaf, "unmute also clears deafen before joining");
 var discovery = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/discovery.json")), ProtocolJson.Default.InstanceDiscovery)!;
 var envelope = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/message-create.json")), ProtocolJson.Default.GatewayEnvelope)!;
 var message = envelope.Data.Deserialize(ProtocolJson.Default.MessageDto)!;
@@ -127,3 +144,9 @@ if (args.Length == 2 && args[0] == "--gateway")
     Check(!await events.MoveNextAsync(), "live Gateway rejects incompatible version");
 }
 Console.WriteLine($"{checks} foundation checks passed.");
+
+public class NoVoiceIo : System.Reflection.DispatchProxy
+{
+    protected override object? Invoke(System.Reflection.MethodInfo? method, object?[]? args)
+        => throw new InvalidOperationException("Unexpected voice IO before joining: " + method?.Name);
+}

@@ -6,6 +6,7 @@ namespace Chat.Core.Instances;
 public interface IInstanceDiscovery
 {
     Task<InstanceDiscovery> DiscoverAsync(Uri baseUrl, CancellationToken cancellationToken);
+    Task<TimeSpan> ProbeAsync(Uri baseUrl, CancellationToken cancellationToken);
 }
 public interface IInstanceStore
 {

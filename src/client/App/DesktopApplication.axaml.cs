@@ -51,7 +51,7 @@ public partial class DesktopApplication : Application
                 () => new WebSocketConnection(), voice, defaultAddress);
             var shell = new ShellViewModel(_instances, cache, vault, new HttpInstanceDiscovery(_http),
                 apis, () => new WebSocketConnection(), voice,
-                locale, locale, locale, _i18n, settings.ProductName, _lifetime.Token, connection);
+                locale, locale, locale, locale, _i18n, settings.ProductName, _lifetime.Token, connection);
             var window = new MainWindow { DataContext = shell };
             desktop.MainWindow = window;
             var workspace = new DefaultWorkspace(connection);

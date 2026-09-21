@@ -46,10 +46,62 @@ public sealed partial class ShellViewModel
         }
         finally
         {
-            Connection.IsBusy = false;
-            ShowSettings = keepSettings;
-            Settings.Profile.Reload();
+            FinishConnection(keepSettings);
         }
+    }
+
+    private async Task DisconnectWorkspaceAsync()
+    {
+        if (Connection.IsBusy) return;
+        var item = SelectedInstance;
+        if (item is null) return;
+        var keepSettings = ShowSettings;
+        Connection.IsBusy = true;
+        Connection.Status = _text.Get(TextKey.DisconnectingServer);
+        try
+        {
+            if (item.Context.Session is { } session) _boundSessions.Remove(session);
+            await _connection.DisconnectAsync(item.Context, _lifetime);
+            ClearAccountDrafts();
+            DetachTimeline();
+            foreach (var pending in PendingFiles.ToList())
+                pending.File.Content.Dispose();
+            PendingFiles.Clear();
+            NotifyPending();
+            Channels.Clear();
+            Messages.Clear();
+            SelectedChannel = null;
+            ClearPlaybacks();
+            NotifySession();
+            Connection.Status = "";
+            Status = "";
+        }
+        catch (Exception error)
+        {
+            Connection.Status = _text.Error(error);
+            OnError(error);
+        }
+        finally
+        {
+            FinishConnection(keepSettings);
+        }
+    }
+
+    private async Task<int> ProbeLatencyAsync(CancellationToken token)
+    {
+        var url = SelectedInstance?.Context.Descriptor.BaseUrl
+            ?? throw new InvalidOperationException();
+        var elapsed = await _discovery.ProbeAsync(url, token);
+        return (int)Math.Round(Math.Clamp(elapsed.TotalMilliseconds, 0, 99_999));
+    }
+
+    private void FinishConnection(bool keepSettings)
+    {
+        Connection.IsBusy = false;
+        Connection.Bind(SelectedInstance?.Context);
+        ShowSettings = keepSettings;
+        Connection.SetWatching(keepSettings && Settings.Section == SettingsSection.Connection);
+        Settings.Profile.Reload();
     }
 
     private InstanceItem TrackInstance(InstanceContext context)

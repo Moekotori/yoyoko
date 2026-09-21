@@ -63,4 +63,18 @@ public sealed class WorkspaceConnection(InstanceManager instances, IMessageCache
         }
         finally { _connection.Release(); }
     }
+
+    public async Task DisconnectAsync(InstanceContext context, CancellationToken token)
+    {
+        await _connection.WaitAsync(token);
+        try
+        {
+            if (context.Session is { } session)
+            {
+                await session.DisposeAsync();
+                context.AttachSessionClear();
+            }
+        }
+        finally { _connection.Release(); }
+    }
 }

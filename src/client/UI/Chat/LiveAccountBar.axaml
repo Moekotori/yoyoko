@@ -26,7 +26,7 @@
           <Button.ToolTip.Tip><StackPanel MaxWidth="320" Spacing="4"><TextBlock Text="{Binding DeafTip}" /><TextBlock Text="{Binding Devices.SelectedOutput.Name}" TextWrapping="Wrap" /><TextBlock Text="{Binding Devices.Error}" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" /></StackPanel></Button.ToolTip.Tip>
           <Panel Width="16" Height="16"><PathIcon Data="{StaticResource IconHeadphones}" Width="16" Height="16" /><Path Data="M1,1 L15,15" Stroke="#ED9292" StrokeThickness="1.8" IsVisible="{Binding IsSelfDeafened}" /></Panel>
         </Button>
-        <Button Classes="icon" Width="16" Padding="2" ToolTip.Tip="{i18n:T VoiceSettings}" AutomationProperties.Name="{i18n:T VoiceSettings}">
+        <Button Classes="icon" Width="16" Padding="2" ToolTip.Tip="{i18n:T AudioDevices}" AutomationProperties.Name="{i18n:T AudioDevices}">
           <PathIcon Data="{StaticResource IconChevronDown}" Width="9" Height="9" />
           <Button.Flyout><Flyout Placement="TopEdgeAlignedRight" Opened="OnDevicesOpened"><voice:AccountDevicePicker DataContext="{Binding Devices}" /></Flyout></Button.Flyout>
         </Button>

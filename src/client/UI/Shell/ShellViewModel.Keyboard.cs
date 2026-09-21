@@ -42,6 +42,7 @@ public sealed partial class ShellViewModel
     public void OpenJump()
     {
         if (!IsSignedIn || IsChannelEditorOpen) return;
+        if (ProfileOpen) ProfileOpen = false;
         if (SwitcherOpen)
         {
             FocusSwitcher?.Invoke();
@@ -94,6 +95,7 @@ public sealed partial class ShellViewModel
     public void OpenSearch()
     {
         if (IsChannelEditorOpen || SelectedChannel is not { Kind: "text" }) return;
+        if (ProfileOpen) ProfileOpen = false;
         CloseJump();
         ShowSettings = false;
         SearchOpen = true;

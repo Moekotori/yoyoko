@@ -63,11 +63,9 @@ internal static class WallpaperRaster
         using var canvas = new SKCanvas(output);
         canvas.Clear(SKColors.Black);
         var cover = Math.Max(size.Width / (float)oriented.Width, size.Height / (float)oriented.Height);
-        var drawW = oriented.Width * cover;
-        var drawH = oriented.Height * cover;
-        var dest = SKRect.Create((size.Width - drawW) / 2f, (size.Height - drawH) / 2f, drawW, drawH);
+        var dest = SKRect.Create((size.Width - oriented.Width * cover) / 2f, (size.Height - oriented.Height * cover) / 2f,
+            oriented.Width * cover, oriented.Height * cover);
         var sigma = Sigma(blur);
-        using var paint = new SKPaint { FilterQuality = SKFilterQuality.Medium };
         if (sigma > 0)
         {
             var down = sigma > 6 ? 0.35f : sigma > 3 ? 0.5f : 1f;
@@ -78,24 +76,18 @@ internal static class WallpaperRaster
                 using (var lowCanvas = new SKCanvas(low))
                 {
                     lowCanvas.Clear(SKColors.Black);
-                    var lowDest = SKRect.Create(
-                        dest.Left * down, dest.Top * down, dest.Width * down, dest.Height * down);
-                    lowCanvas.DrawBitmap(oriented, lowDest);
+                    lowCanvas.DrawBitmap(oriented, SKRect.Create(dest.Left * down, dest.Top * down, dest.Width * down, dest.Height * down));
                 }
-                using var blurPaint = new SKPaint
-                {
-                    ImageFilter = SKImageFilters.Blur(sigma * down, sigma * down),
-                    FilterQuality = SKFilterQuality.Low
-                };
+                using var blurPaint = new SKPaint { ImageFilter = SKImageFilters.Blur(sigma * down, sigma * down) };
                 canvas.DrawBitmap(low, SKRect.Create(size.Width, size.Height), blurPaint);
             }
             else
             {
-                paint.ImageFilter = SKImageFilters.Blur(sigma, sigma);
+                using var paint = new SKPaint { ImageFilter = SKImageFilters.Blur(sigma, sigma) };
                 canvas.DrawBitmap(oriented, dest, paint);
             }
         }
-        else canvas.DrawBitmap(oriented, dest, paint);
+        else canvas.DrawBitmap(oriented, dest);
         return output;
     }
 
@@ -107,18 +99,20 @@ internal static class WallpaperRaster
 
     private static SKBitmap Orient(SKBitmap source, SKEncodedOrigin origin)
     {
-        if (origin is SKEncodedOrigin.TopLeft or SKEncodedOrigin.Default) return source.Copy() ?? source;
+        if (origin is SKEncodedOrigin.TopLeft or SKEncodedOrigin.Default)
+            return source.Copy() ?? throw new InvalidOperationException("copy");
         var (width, height) = Oriented(source.Width, source.Height, origin);
         var dest = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
         using var canvas = new SKCanvas(dest);
-        using var matrix = new SKMatrix();
-        canvas.SetMatrix(origin switch
+        canvas.Translate(width / 2f, height / 2f);
+        canvas.RotateDegrees(origin switch
         {
-            SKEncodedOrigin.RightTop => SKMatrix.CreateRotationDegrees(90, 0, 0) * SKMatrix.CreateTranslation(width, 0),
-            SKEncodedOrigin.BottomRight => SKMatrix.CreateRotationDegrees(180, 0, 0) * SKMatrix.CreateTranslation(width, height),
-            SKEncodedOrigin.LeftBottom => SKMatrix.CreateRotationDegrees(270, 0, 0) * SKMatrix.CreateTranslation(0, height),
-            _ => SKMatrix.CreateIdentity()
+            SKEncodedOrigin.RightTop => 90,
+            SKEncodedOrigin.BottomRight => 180,
+            SKEncodedOrigin.LeftBottom => 270,
+            _ => 0
         });
+        canvas.Translate(-source.Width / 2f, -source.Height / 2f);
         canvas.DrawBitmap(source, 0, 0);
         return dest;
     }
@@ -154,8 +148,9 @@ internal sealed class WallpaperMotion : IDisposable
         }
         _timer = new DispatcherTimer();
         _timer.Tick += (_, _) => Advance();
-        Show(0);
     }
+
+    public void Start() => Show(_index);
 
     public void SetPaused(bool paused)
     {

@@ -25,5 +25,12 @@
   <Style Selector="TextBox:focus /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="{StaticResource FocusBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
   <Style Selector="TextBox.composer:focus /template/ Border#PART_BorderElement"><Setter Property="BorderThickness" Value="0" /></Style>
   <Style Selector="FlyoutPresenter"><Setter Property="CornerRadius" Value="10" /><Setter Property="Background" Value="#252525" /><Setter Property="BorderBrush" Value="#404040" /><Setter Property="Padding" Value="12" /></Style>
+  <Style Selector="FlyoutPresenter.communityFlyout">
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="MinWidth" Value="292" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="#252525" />
+    <Setter Property="BorderBrush" Value="#404040" />
+  </Style>
   <Style Selector="MenuFlyoutPresenter, ContextMenu"><Setter Property="CornerRadius" Value="8" /><Setter Property="Background" Value="#292929" /></Style>
 </Styles>

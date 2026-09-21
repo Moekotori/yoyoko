@@ -2,13 +2,51 @@
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.ConnectionSettingsView" x:DataType="vm:ConnectionSettingsViewModel">
   <StackPanel Spacing="24">
-    <StackPanel Spacing="10">
-      <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
-      <TextBox Classes="settingsField" Text="{Binding Address}" IsEnabled="{Binding !IsBusy}"
-        AutomationProperties.Name="{i18n:T InstanceAddress}" />
+    <Border Classes="settingsGroup">
+      <StackPanel>
+        <StackPanel Spacing="10" Margin="0,0,0,8">
+          <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
+          <TextBox Classes="settingsField" Text="{Binding Address}" IsEnabled="{Binding !IsBusy}"
+            Watermark="{i18n:T InstanceAddressPlaceholder}"
+            AutomationProperties.Name="{i18n:T InstanceAddress}" />
+        </StackPanel>
+        <StackPanel IsVisible="{Binding IsConnected}">
+          <Border Classes="settingsRowDivider" Margin="0,16" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24">
+            <TextBlock Text="{i18n:T ConnectionState}" Classes="settingsLabel" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding StateText}" FontSize="14" VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+          <Border Classes="settingsRowDivider" IsVisible="{Binding HasName}" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasName}">
+            <TextBlock Text="{i18n:T ServerName}" Classes="settingsLabel" />
+            <TextBlock Grid.Column="1" Text="{Binding ServerName}" FontSize="14" TextTrimming="CharacterEllipsis"
+              VerticalAlignment="Center" />
+          </Grid>
+          <Border Classes="settingsRowDivider" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24">
+            <TextBlock Text="{i18n:T ServerLatency}" Classes="settingsLabel" />
+            <TextBlock Grid.Column="1" Text="{Binding LatencyText}" FontSize="14" VerticalAlignment="Center"
+              Classes="muted" />
+          </Grid>
+          <Border Classes="settingsRowDivider" IsVisible="{Binding HasProtocol}" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasProtocol}">
+            <TextBlock Text="{i18n:T ServerProtocol}" Classes="settingsLabel" />
+            <TextBlock Grid.Column="1" Text="{Binding ProtocolText}" FontSize="14" VerticalAlignment="Center"
+              Classes="muted" />
+          </Grid>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+    <StackPanel Orientation="Horizontal" Spacing="12">
+      <Button Classes="primary" Content="{i18n:T ConnectServer}" Command="{Binding Connect}"
+        IsVisible="{Binding ShowConnect}" IsEnabled="{Binding CanConnect}" MinWidth="104" Height="38"
+        HorizontalAlignment="Left" FontWeight="Medium" />
+      <Button Classes="settingsSecondary" Content="{i18n:T DisconnectServer}" Command="{Binding Disconnect}"
+        IsVisible="{Binding ShowDisconnect}" IsEnabled="{Binding CanDisconnect}" MinWidth="104" Height="38" />
     </StackPanel>
-    <Button Classes="primary settingsPrimary" Content="{i18n:T ConnectServer}" Command="{Binding Connect}"
-      IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Left" />
-    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" />
+    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" IsVisible="{Binding HasStatus}" />
   </StackPanel>
 </UserControl>

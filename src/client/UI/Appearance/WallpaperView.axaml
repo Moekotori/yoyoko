@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Appearance"
+  x:Class="Chat.UI.Appearance.WallpaperView" x:DataType="vm:WallpaperSession"
+  IsHitTestVisible="False" IsTabStop="False">
+  <Panel IsVisible="{Binding IsActive}">
+    <Image x:Name="Surface" Source="{Binding Frame}" Stretch="UniformToFill" StretchDirection="Both">
+      <Image.Effect>
+        <BlurEffect Radius="{Binding LiveBlur}" />
+      </Image.Effect>
+    </Image>
+    <Rectangle Fill="Black" Opacity="{Binding DimOpacity}" />
+  </Panel>
+</UserControl>

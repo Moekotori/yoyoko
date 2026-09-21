@@ -222,7 +222,7 @@ public sealed class WorkerMediaService : IMediaService
             var id = element.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
             var label = element.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
             if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(label)) continue;
-            items.Add(new(id, label));
+            items.Add(new(id, label, element.TryGetProperty("default", out var defaultEl) && defaultEl.ValueKind == JsonValueKind.True));
         }
         return [.. items];
     }

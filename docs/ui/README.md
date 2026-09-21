@@ -41,7 +41,7 @@ The production UI keeps its neutral dark palette and flat pane structure. Inputs
 
 - Settings uses icon-and-label navigation, fewer separators and monochrome switches while retaining the existing motion and preference bindings.
 - The connect screen has one full-width address field and primary action. Login/register uses a segmented selector. User-facing instance terminology is now server terminology in Chinese, English and Japanese; localization keys, discovery and protocol identifiers are unchanged.
-- `Channels/CommunityMenu` owns the community flyout presentation. Create, join and moderation fields expand on demand; commands and server authorization remain unchanged. The menu scrolls within a bounded height and keeps operation feedback visible.
+- `Channels/CommunityMenu` owns the community flyout presentation. The signed-in header shows the account avatar, display name and handle; clicking the avatar or 更换头像 opens the existing image picker (`PATCH /users/me`), and 移除头像 clears it. Invite codes copy to the clipboard. Create, join and moderation fields expand on demand; commands and server authorization remain unchanged. The menu scrolls within a bounded height and keeps operation feedback visible. The account-bar avatar uses the same change command.
 - Channel tabs use a short bottom selection marker. Message attachments and actions have softer corners; the composer no longer has a redundant internal separator. Voice options scroll at smaller window heights. Signed-out navigation hides empty channel groups.
 
 Verification: the Release client build passed with zero warnings/errors; dependency boundaries and diff formatting passed. Native macOS checks covered the connect form, local server discovery, sign-in/register switching and settings navigation. The language popup appeared in the native accessibility tree, but the window screenshot did not include the separate popup; a focused Avalonia/Skia render confirmed its actual radius/padding, selection binding and the settings layout at a 908×598 pane. Profile fields in the render are explicitly a local fixture. No account registration, message send, moderation save, voice hardware or Windows/Linux acceptance was performed in this polish pass.
@@ -128,3 +128,9 @@ See `../../design-qa.md` for the visual comparison and screenshot evidence.
 成员栏使用 52 px 标题、会话作者计数（空时隐藏）和悬停行。没有头像时显示名字首字，不表示在线或社区成员名单。
 
 验证：macOS Release 构建、本地 API / Gateway 聚焦检查；原生窗口见 [live](polish/sidebar-live.png) 与 [design preview](polish/sidebar-preview.png)。远端部署、PostgreSQL 实际删除和三平台窗口尚未验证。
+
+## Account controls (2026-09-21)
+
+The account bar opens a 380px profile drawer with editable username, display name and avatar using the existing profile API. Its 220ms slide/fade can reverse during dismissal, respects reduced motion and stops when minimized. Escape and the backdrop dismiss it; focus cycles inside and returns to the opener.
+
+Microphone/deafen controls work before joining voice and carry the chosen state into the next join. Undeafen restores the previous microphone preference. Hover resolves the selected device name (including the current system default); the adjacent arrow opens shared input/output selectors. Enumeration runs on demand with coalesced refreshes, not an idle polling loop. These controls do not establish working remote audio: LiveKit transport and two-client audio acceptance remain pending.

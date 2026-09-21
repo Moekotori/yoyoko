@@ -7,6 +7,7 @@ public static class ProtocolVersion
 {
     public const int Current = 1;
     public const string DiscoveryPath = "/.well-known/lightchat";
+    public const string HealthLivePath = "/health/live";
     public const int MaxPageSize = 100;
     public const int MaxGatewayBytes = 65_536;
     public const long MaxAttachmentBytes = 25_165_824;

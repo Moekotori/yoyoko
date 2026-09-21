@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Chat.Core.Sessions;
+using Chat.UI.Appearance;
 using Chat.UI.Auth;
 using Chat.Localization;
 using Chat.UI.Components;
@@ -37,18 +38,24 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
 {
     private readonly ILocalePreference _preference;
     private readonly IChatChrome _chrome;
+    private readonly IAppearancePreference _appearance;
     private readonly I18n _text;
     private SettingsSection _section;
-    public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, Action close, Func<InstanceSession?> session,
+    public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, IAppearancePreference appearance,
+        WallpaperSession wallpaper, Action close, Func<InstanceSession?> session,
         Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth)
     {
         _preference = preference;
         _chrome = chrome;
+        _appearance = appearance;
         _text = text;
+        Wallpaper = wallpaper;
         Profile = new(session, pickAvatar, onError, text);
         Devices = devices;
         Connection = connection;
         Auth = auth;
+        ColorSchemes.Add(new(ColorScheme.Dark));
+        ColorSchemes.Add(new(ColorScheme.Light));
         Close = new(_ => close());
         Navigate = new(value => { if (value is SettingsSection section) Section = section; });
         Select = new(value =>
@@ -71,8 +78,10 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         };
         _preference.Changed += OnChanged;
         _chrome.Changed += OnChrome;
+        _appearance.Changed += OnAppearance;
         Refresh();
         NotifyChrome();
+        NotifyAppearance();
     }
     public ActionCommand Close { get; }
     public ActionCommand Navigate { get; }
@@ -91,6 +100,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
             Changed(nameof(ShowConnection));
             Changed(nameof(SectionTitle));
             if (value == SettingsSection.Voice) _ = Devices.RefreshAsync();
+            Connection.SetWatching(value == SettingsSection.Connection);
         }
     }
     public ConnectionSettingsViewModel Connection { get; }
@@ -122,6 +132,14 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public string LoopbackLabel => Devices.LoopbackLabel;
     public ProfileViewModel Profile { get; }
     public VoiceDevicesViewModel Devices { get; }
+    public WallpaperSession Wallpaper { get; }
+    public ObservableCollection<ColorSchemeChoice> ColorSchemes { get; } = [];
+    public ColorSchemeChoice? SelectedColorScheme
+    {
+        get => ColorSchemes.FirstOrDefault(item => item.Scheme == _appearance.ColorScheme);
+        set { if (value is not null && value.Scheme != _appearance.ColorScheme) _appearance.SetColorScheme(value.Scheme); }
+    }
+    public bool ShowLightPlaceholder => _appearance.ColorScheme == ColorScheme.Light;
     public ObservableCollection<LanguageOption> Languages { get; } = [];
     public LanguageOption? SelectedLanguage
     {
@@ -145,9 +163,12 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     {
         _preference.Changed -= OnChanged;
         _chrome.Changed -= OnChrome;
+        _appearance.Changed -= OnAppearance;
+        Connection.Dispose();
     }
     private void OnChanged(Locale _) => Refresh();
     private void OnChrome() => NotifyChrome();
+    private void OnAppearance() => NotifyAppearance();
     private void NotifyChrome()
     {
         Changed(nameof(EnterToSend));
@@ -166,5 +187,14 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         Changed(nameof(SelectedLanguage));
         Changed(nameof(SectionTitle));
         Changed(nameof(SendShortcutChoices));
+        foreach (var option in ColorSchemes)
+            option.Name = _text.Get(option.Scheme == ColorScheme.Light ? TextKey.ColorSchemeLight : TextKey.ColorSchemeDark);
+        Changed(nameof(SelectedColorScheme));
+        Changed(nameof(ShowLightPlaceholder));
+    }
+    private void NotifyAppearance()
+    {
+        Changed(nameof(SelectedColorScheme));
+        Changed(nameof(ShowLightPlaceholder));
     }
 }

@@ -16,10 +16,23 @@ public static class TextKey
     public const string ServerConnection = "ServerConnection";
     public const string ConnectServer = "ConnectServer";
     public const string ConnectingServer = "ConnectingServer";
+    public const string ConnectedServer = "ConnectedServer";
+    public const string DisconnectServer = "DisconnectServer";
+    public const string DisconnectingServer = "DisconnectingServer";
+    public const string ConnectionState = "ConnectionState";
+    public const string ServerName = "ServerName";
+    public const string ServerLatency = "ServerLatency";
+    public const string LatencyMs = "LatencyMs";
+    public const string LatencyMeasuring = "LatencyMeasuring";
+    public const string LatencyUnreachable = "LatencyUnreachable";
+    public const string ServerProtocol = "ServerProtocol";
+    public const string ProtocolDetail = "ProtocolDetail";
 
     public const string PageParticipants = "PageParticipants";
     public const string Settings = "Settings";
     public const string Language = "Language";
+    public const string CloseProfile = "CloseProfile";
+    public const string AudioDevices = "AudioDevices";
     public const string CloseSettings = "CloseSettings";
     public const string AddInstance = "AddInstance";
     public const string Instances = "Instances";
@@ -173,6 +186,7 @@ public static class TextKey
     public const string SaveProfile = "SaveProfile";
     public const string ProfileSaved = "ProfileSaved";
     public const string PickAvatar = "PickAvatar";
+    public const string InviteCopied = "InviteCopied";
     public const string InvalidAvatar = "InvalidAvatar";
     public const string BlockedWord = "BlockedWord";
     public const string CooldownWait = "CooldownWait";
@@ -204,4 +218,13 @@ public static class TextKey
     public const string BlockedWordsHint = "BlockedWordsHint";
     public const string CooldownSeconds = "CooldownSeconds";
     public const string SaveModeration = "SaveModeration";
+    public const string KeyboardShortcuts = "KeyboardShortcuts";
+    public const string ShortcutNavigation = "ShortcutNavigation";
+    public const string ShortcutPreviousChannel = "ShortcutPreviousChannel";
+    public const string ShortcutNextChannel = "ShortcutNextChannel";
+    public const string ShortcutPreviousTab = "ShortcutPreviousTab";
+    public const string ShortcutNextTab = "ShortcutNextTab";
+    public const string ShortcutPressKey = "ShortcutPressKey";
+    public const string ShortcutUnbound = "ShortcutUnbound";
+    public const string ShortcutResetAll = "ShortcutResetAll";
 }

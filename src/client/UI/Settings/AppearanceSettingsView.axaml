@@ -1,16 +1,57 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:vm="using:Chat.UI.Settings" xmlns:appearance="using:Chat.UI.Appearance" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.AppearanceSettingsView" x:DataType="vm:SettingsViewModel">
-  <Border Classes="settingsGroup">
   <StackPanel>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
-      <TextBlock Text="{i18n:T CompactLayout}" Classes="settingsLabel" />
-      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding Compact}" AutomationProperties.Name="{i18n:T CompactLayout}" />
-    </Grid>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
-      <TextBlock Text="{i18n:T ReduceMotion}" Classes="settingsLabel" />
-      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding ReduceMotion}" AutomationProperties.Name="{i18n:T ReduceMotion}" />
-    </Grid>
+    <Border Classes="settingsGroup">
+      <StackPanel>
+        <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24">
+          <TextBlock Text="{i18n:T ColorScheme}" Classes="settingsLabel" />
+          <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding ColorSchemes}"
+            SelectedItem="{Binding SelectedColorScheme}" AutomationProperties.Name="{i18n:T ColorScheme}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="appearance:ColorSchemeChoice"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+        </Grid>
+        <TextBlock Text="{i18n:T NotImplemented}" Classes="muted" FontSize="13" Margin="0,0,0,16" IsVisible="{Binding ShowLightPlaceholder}" />
+        <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
+          <TextBlock Text="{i18n:T CompactLayout}" Classes="settingsLabel" />
+          <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding Compact}" AutomationProperties.Name="{i18n:T CompactLayout}" />
+        </Grid>
+        <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
+          <TextBlock Text="{i18n:T ReduceMotion}" Classes="settingsLabel" />
+          <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding ReduceMotion}" AutomationProperties.Name="{i18n:T ReduceMotion}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+    <Border Classes="settingsGroup" Margin="0,28,0,0">
+      <StackPanel>
+        <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
+          <TextBlock Text="{i18n:T CustomBackground}" Classes="settingsLabel" />
+          <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding Wallpaper.Enabled}" AutomationProperties.Name="{i18n:T CustomBackground}" />
+        </Grid>
+        <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="20">
+          <StackPanel VerticalAlignment="Center" Spacing="4">
+            <TextBlock Text="{Binding Wallpaper.FileLabel}" Classes="settingsLabel" TextTrimming="CharacterEllipsis" IsVisible="{Binding Wallpaper.HasLabel}" />
+            <TextBlock Text="{Binding Wallpaper.Error}" Classes="muted" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding Wallpaper.HasError}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="settingsSecondary" Content="{i18n:T ChooseBackground}" Command="{Binding Wallpaper.Choose}"
+              AutomationProperties.Name="{i18n:T ChooseBackground}" />
+            <Button Content="{i18n:T RemoveBackground}" Command="{Binding Wallpaper.Clear}" FontSize="12"
+              Foreground="{StaticResource MutedTextBrush}" IsVisible="{Binding Wallpaper.HasFile}"
+              AutomationProperties.Name="{i18n:T RemoveBackground}" />
+          </StackPanel>
+        </Grid>
+        <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24" IsEnabled="{Binding Wallpaper.CanAdjust}">
+          <TextBlock Text="{i18n:T BackgroundBlur}" Classes="settingsLabel" />
+          <Slider Grid.Column="1" Classes="settingsSlider" Minimum="0" Maximum="100" Value="{Binding Wallpaper.Blur}"
+            AutomationProperties.Name="{i18n:T BackgroundBlur}" />
+        </Grid>
+        <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24" IsEnabled="{Binding Wallpaper.CanAdjust}">
+          <TextBlock Text="{i18n:T BackgroundBrightness}" Classes="settingsLabel" />
+          <Slider Grid.Column="1" Classes="settingsSlider" Minimum="0" Maximum="100" Value="{Binding Wallpaper.Brightness}"
+            AutomationProperties.Name="{i18n:T BackgroundBrightness}" />
+        </Grid>
+      </StackPanel>
+    </Border>
   </StackPanel>
-  </Border>
 </UserControl>

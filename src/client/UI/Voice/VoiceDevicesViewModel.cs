@@ -25,6 +25,8 @@ public sealed class VoiceDevicesViewModel : ObservableObject
     private Task? _refresh;
     private bool _applying;
     private bool _applyAgain;
+    private string? _defaultInputName;
+    private string? _defaultOutputName;
     public VoiceDevicesViewModel(IVoiceMedia media, IVoiceDevicePreference preference, I18n text,
         Func<InstanceSession?> session, CancellationToken lifetime)
     {
@@ -81,8 +83,10 @@ public sealed class VoiceDevicesViewModel : ObservableObject
         try
         {
             var list = await _media.ListDevicesAsync(_lifetime);
-            Replace(Inputs, list.Inputs);
-            Replace(Outputs, list.Outputs);
+            _defaultInputName = list.Inputs.FirstOrDefault(device => device.IsDefault)?.Name;
+            _defaultOutputName = list.Outputs.FirstOrDefault(device => device.IsDefault)?.Name;
+            Replace(Inputs, list.Inputs, _defaultInputName);
+            Replace(Outputs, list.Outputs, _defaultOutputName);
             Error = "";
         }
         catch (Exception exception)
@@ -97,8 +101,8 @@ public sealed class VoiceDevicesViewModel : ObservableObject
     public void Relabel()
     {
         _updating = true;
-        if (Inputs.Count > 0) Inputs[0] = DefaultChoice();
-        if (Outputs.Count > 0) Outputs[0] = DefaultChoice();
+        if (Inputs.Count > 0) Inputs[0] = DefaultChoice(_defaultInputName);
+        if (Outputs.Count > 0) Outputs[0] = DefaultChoice(_defaultOutputName);
         if (_selectedInput?.Id == DefaultId) _selectedInput = Inputs[0];
         if (_selectedOutput?.Id == DefaultId) _selectedOutput = Outputs[0];
         _updating = false;
@@ -153,12 +157,16 @@ public sealed class VoiceDevicesViewModel : ObservableObject
     private async Task ApplyRouteAsync()
     {
         var route = CurrentRoute();
-        _preference.SetDevices(route.InputDeviceId, route.OutputDeviceId);
         var voice = _session()?.Voice;
         try
         {
-            if (voice is not null) await voice.SetRouteAsync(route, _lifetime);
-            else if (_loopback) await _media.SetDevicesAsync(route, _lifetime);
+            if (voice?.Joined == true) await voice.SetRouteAsync(route, _lifetime);
+            else
+            {
+                voice?.ApplyRoute(route);
+                if (_loopback) await _media.SetDevicesAsync(route, _lifetime);
+            }
+            _preference.SetDevices(route.InputDeviceId, route.OutputDeviceId);
             Error = "";
         }
         catch (Exception exception)
@@ -171,11 +179,11 @@ public sealed class VoiceDevicesViewModel : ObservableObject
         string.IsNullOrEmpty(_selectedInput?.Id) ? null : _selectedInput.Id,
         string.IsNullOrEmpty(_selectedOutput?.Id) ? null : _selectedOutput.Id);
 
-    private void Replace(ObservableCollection<AudioDeviceChoice> target, IReadOnlyList<AudioDevice> devices)
+    private void Replace(ObservableCollection<AudioDeviceChoice> target, IReadOnlyList<AudioDevice> devices, string? defaultName)
     {
         _updating = true;
         target.Clear();
-        target.Add(DefaultChoice());
+        target.Add(DefaultChoice(defaultName));
         foreach (var device in devices)
             if (!string.IsNullOrWhiteSpace(device.Id) && !string.IsNullOrWhiteSpace(device.Name))
                 target.Add(new(device.Id, device.Name));
@@ -192,5 +200,6 @@ public sealed class VoiceDevicesViewModel : ObservableObject
         Changed(nameof(SelectedOutput));
     }
 
-    private AudioDeviceChoice DefaultChoice() => new(DefaultId, _text.Get(TextKey.DefaultDevice));
+    private AudioDeviceChoice DefaultChoice(string? name = null) => new(DefaultId,
+        string.IsNullOrWhiteSpace(name) ? _text.Get(TextKey.DefaultDevice) : $"{_text.Get(TextKey.DefaultDevice)} · {name}");
 }

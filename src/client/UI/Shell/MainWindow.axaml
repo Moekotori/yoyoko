@@ -1,20 +1,22 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:instances="using:Chat.UI.Instances" xmlns:channels="using:Chat.UI.Channels"
   xmlns:auth="using:Chat.UI.Auth" xmlns:chat="using:Chat.UI.Chat" xmlns:voice="using:Chat.UI.Voice"
-  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:settings="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:settings="using:Chat.UI.Settings"
+  xmlns:appearance="using:Chat.UI.Appearance" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Shell.MainWindow" x:DataType="vm:ShellViewModel"
   Title="{Binding ProductName}" Width="1200" Height="820" MinWidth="980" MinHeight="640"
   ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="42"
   Classes.reduceMotion="{Binding ReduceMotion}" motion:Motion.ReduceMotion="{Binding ReduceMotion}">
   <Window.Styles><StyleInclude Source="avares://Chat.UI/Shell/ShellMotion.axaml" /></Window.Styles>
   <Panel>
+  <appearance:WallpaperView DataContext="{Binding Wallpaper}" />
   <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsEnabled="{Binding !IsChannelEditorOpen}" IsHitTestVisible="{Binding !ProfileOpen}">
     <Border Grid.ColumnSpan="3" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" />
     <Border Grid.ColumnSpan="3" Width="292" HorizontalAlignment="Left" IsVisible="{Binding !ShowSettings}" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding InstanceHost}">
         <Grid ColumnDefinitions="*,16" ColumnSpacing="8"><TextBlock Text="{Binding InstanceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></Grid>
         <Button.Flyout>
-          <Flyout Placement="BottomEdgeAlignedLeft">
+          <Flyout Placement="BottomEdgeAlignedLeft" FlyoutPresenterClasses="communityFlyout">
             <channels:CommunityMenu DataContext="{Binding}" />
           </Flyout>
         </Button.Flyout>

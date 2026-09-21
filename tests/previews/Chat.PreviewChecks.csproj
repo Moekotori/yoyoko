@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/client/Core/Chat.Core.csproj" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Headless" />
+    <PackageReference Include="SkiaSharp" />
+    <!-- Exercise the production image owner without unrelated Shell/XAML features. -->
+    <Compile Include="../../src/client/UI/Chat/AttachmentPreviews.cs" Link="AttachmentPreviews.cs" />
+    <Compile Include="../../src/client/UI/Chat/AttachmentRow.cs" Link="AttachmentRow.cs" />
+    <Compile Include="../../src/client/UI/Components/ObservableObject.cs" Link="ObservableObject.cs" />
+    <Compile Include="../../src/client/UI/Components/AsyncCommand.cs" Link="AsyncCommand.cs" />
+  </ItemGroup>
+</Project>

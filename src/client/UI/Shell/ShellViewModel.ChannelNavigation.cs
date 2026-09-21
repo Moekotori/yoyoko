@@ -78,6 +78,7 @@ public sealed partial class ShellViewModel
 
     private void DetachTimeline()
     {
+        _previews.Clear();
         var cancellation = _channelLoad;
         _channelLoad = null;
         cancellation?.Cancel();

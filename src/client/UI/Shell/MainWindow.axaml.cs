@@ -28,6 +28,7 @@ public partial class MainWindow : Window
             shell.PickFiles = PickFilesAsync;
             shell.PickAvatar = PickAvatarAsync;
             shell.OpenSaveStream = OpenSaveStreamAsync;
+            shell.Wallpaper.PickFile = PickWallpaperAsync;
         }
     }
 
@@ -70,6 +71,28 @@ public partial class MainWindow : Window
         return new PickedFile(file.Name, FileKinds.MimeFromFileName(file.Name), stream, (long)(props.Size ?? 0));
     }
 
+    private async Task<PickedFile?> PickWallpaperAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = global::Chat.UI.Localization.I18n.T(TextKey.PickBackground),
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType(global::Chat.UI.Localization.I18n.T(TextKey.CustomBackground))
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.mp4", "*.webm", "*.mov", "*.mkv", "*.m4v"],
+                    MimeTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "video/quicktime", "video/x-matroska"]
+                }
+            ]
+        });
+        var file = files.Count == 0 ? null : files[0];
+        if (file is null) return null;
+        var props = await file.GetBasicPropertiesAsync();
+        var stream = await file.OpenReadAsync();
+        return new PickedFile(file.Name, FileKinds.MimeFromFileName(file.Name), stream, (long)(props.Size ?? 0));
+    }
+
     private async Task<Stream?> OpenSaveStreamAsync(string fileName)
     {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -91,7 +114,10 @@ public partial class MainWindow : Window
         if (e.Handled || DataContext is not ShellViewModel shell) return;
         if (shell.ProfileOpen)
         {
+            var profileChord = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
             if (e.Key == Key.Escape) { shell.CloseProfile.Execute(null); e.Handled = true; }
+            else if (profileChord && e.Key == Key.K) { shell.CloseProfile.Execute(null); shell.OpenJump(); e.Handled = true; }
+            else if (profileChord && e.Key == Key.OemComma) { shell.CloseProfile.Execute(null); shell.OpenSettings.Execute(null); e.Handled = true; }
             return;
         }
         if (shell.IsChannelEditorOpen)
