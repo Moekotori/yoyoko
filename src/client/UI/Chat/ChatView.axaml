@@ -17,10 +17,10 @@
     <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /></Style>
     <Style Selector="Grid.messageRow:pointerover Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
     <Style Selector="Grid.messageRow:focus-within Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
-    <Style Selector="Border.jumpBar"><Setter Property="Background" Value="#D91C1C1C" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="12,7" /></Style>
-    <Style Selector="Border.editBar"><Setter Property="Background" Value="#2E2E2E" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="10,6" /></Style>
-    <Style Selector="Button.authorName"><Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="HorizontalContentAlignment" Value="Left" /></Style>
+    <Style Selector="Button.authorName"><Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Cursor" Value="Hand" /></Style>
     <Style Selector="Button.authorName:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="Button.avatarPick"><Setter Property="Cursor" Value="Hand" /></Style>
+    <Style Selector="Grid.unreadDivider TextBlock"><Setter Property="FontSize" Value="10" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="#C98884" /></Style>
   </UserControl.Styles>
   <Grid ColumnDefinitions="*,Auto">
     <Grid RowDefinitions="Auto,*,Auto">
@@ -36,10 +36,10 @@
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="chat:MessageRow">
               <Panel>
-              <Grid Classes="unreadDivider" ColumnDefinitions="*,Auto,*" Margin="24,10,24,8" IsVisible="{Binding IsUnreadDivider}">
-                <Border Height="1" Background="#8B4A48" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{i18n:T NewMessagesDivider}" Foreground="#D98980" FontSize="11" FontWeight="Medium" Margin="10,0" />
-                <Border Grid.Column="2" Height="1" Background="#8B4A48" VerticalAlignment="Center" />
+              <Grid Classes="unreadDivider" ColumnDefinitions="*,Auto,*" Margin="16,6,16,6" IsVisible="{Binding IsUnreadDivider}">
+                <Border Height="1" Background="#5C3A38" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{i18n:T NewMessagesDivider}" Margin="8,0" />
+                <Border Grid.Column="2" Height="1" Background="#5C3A38" VerticalAlignment="Center" />
               </Grid>
               <Grid Classes="messageRow" Classes.continued="{Binding IsContinuation}" ColumnDefinitions="24,36,13,*,24" IsVisible="{Binding !IsUnreadDivider}">
                 <Grid.ContextMenu><ContextMenu>
@@ -89,11 +89,10 @@
                     </DataTemplate></ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
-                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
+                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="#2A2A2A" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,16,0">
                   <StackPanel Orientation="Horizontal">
-                    <Button Classes="icon" Click="CopyMessage" AutomationProperties.Name="{i18n:T CopyMessage}" ToolTip.Tip="{i18n:T CopyText}"><PathIcon Data="{StaticResource IconCopy}" Width="16" Height="16" /></Button>
-                    <Button Classes="icon" Click="EditMessage" IsVisible="{Binding CanEdit}" AutomationProperties.Name="{i18n:T EditMessage}" ToolTip.Tip="{i18n:T EditMessage}"><PathIcon Data="{StaticResource IconEdit}" Width="16" Height="16" /></Button>
-                    <Button Classes="icon" Click="MarkUnreadFrom" AutomationProperties.Name="{i18n:T MarkAsUnread}" ToolTip.Tip="{i18n:T MarkAsUnread}"><PathIcon Data="{StaticResource IconUnread}" Width="16" Height="16" /></Button>
+                    <Button Classes="icon" Width="26" Height="26" Click="CopyMessage" AutomationProperties.Name="{i18n:T CopyMessage}" ToolTip.Tip="{i18n:T CopyText}"><PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" /></Button>
+                    <Button Classes="icon" Width="26" Height="26" Click="EditMessage" IsVisible="{Binding CanEdit}" AutomationProperties.Name="{i18n:T EditMessage}" ToolTip.Tip="{i18n:T EditMessage}"><PathIcon Data="{StaticResource IconEdit}" Width="14" Height="14" /></Button>
                   </StackPanel>
                 </Border>
               </Grid>
@@ -102,19 +101,13 @@
           </ListBox.ItemTemplate>
         </ListBox>
         <Border Background="#E51C1C1C" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" Margin="12" CornerRadius="8" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False"><TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" /></Border>
+        <Button Classes="jumpPresent" Command="{Binding JumpPresent}" IsVisible="{Binding ShowJumpBar}"
+          HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10"
+          Content="{Binding JumpBarLabel}" AutomationProperties.Name="{Binding JumpBarLabel}" />
       </Panel>
       </motion:MotionHost>
       <StackPanel Grid.Row="2" Margin="24,0,24,22" Spacing="8">
-        <Button HorizontalAlignment="Center" Classes="jumpBar" Command="{Binding JumpPresent}" IsVisible="{Binding ShowJumpBar}" Padding="0">
-          <Border Classes="jumpBar"><TextBlock Text="{Binding JumpBarLabel}" FontSize="12" /></Border>
-        </Button>
         <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasStatus}" />
-        <Border Classes="editBar" IsVisible="{Binding IsEditing}">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{Binding ComposerEditHint}" FontSize="12" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Classes="icon" Width="22" Height="22" Command="{Binding CancelComposerEdit}" ToolTip.Tip="{i18n:T CancelEdit}" AutomationProperties.Name="{i18n:T CancelEdit}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button>
-          </Grid>
-        </Border>
         <ItemsControl ItemsSource="{Binding PendingFiles}" IsVisible="{Binding HasPending}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="chat:PendingFileItem">
@@ -123,13 +116,19 @@
             </Border>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Border Classes="composerFrame" Background="{DynamicResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="10">
+        <Border Classes="composerFrame" Classes.editing="{Binding IsEditing}" Background="{DynamicResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="8,8,8,10">
           <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
-          <Grid ColumnDefinitions="30,*,30" ColumnSpacing="9">
-            <Button Classes="icon" Command="{Binding AttachFile}" IsEnabled="{Binding !IsEditing}" ToolTip.Tip="{Binding AttachTip}" AutomationProperties.Name="{i18n:T AddFile}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
-            <TextBox x:Name="Composer" Grid.Column="1" Classes="composer" Text="{Binding Draft}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" AutomationProperties.Name="{i18n:T MessageInput}" KeyDown="OnComposerKeyDown" />
-            <Button Grid.Column="2" Classes="icon send" Command="{Binding Send}" IsEnabled="{Binding CanSend}" ToolTip.Tip="{Binding SendTip}" AutomationProperties.Name="{i18n:T Send}"><PathIcon Data="{StaticResource IconSendFilled}" Width="18" Height="18" /></Button>
-          </Grid>
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" Height="24" Margin="4,0,4,4" IsVisible="{Binding IsEditing}">
+              <TextBlock Text="{Binding ComposerEditHint}" FontSize="12" Foreground="#C4B4B2" VerticalAlignment="Center" />
+              <Button Classes="icon" Width="22" Height="22" HorizontalAlignment="Right" Command="{Binding CancelComposerEdit}" ToolTip.Tip="{i18n:T CancelEdit}" AutomationProperties.Name="{i18n:T CancelEdit}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button>
+            </Grid>
+            <Grid ColumnDefinitions="30,*,30" ColumnSpacing="9">
+              <Button Classes="icon" Command="{Binding AttachFile}" IsEnabled="{Binding !IsEditing}" ToolTip.Tip="{Binding AttachTip}" AutomationProperties.Name="{i18n:T AddFile}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
+              <TextBox x:Name="Composer" Grid.Column="1" Classes="composer" Text="{Binding Draft}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" AutomationProperties.Name="{i18n:T MessageInput}" KeyDown="OnComposerKeyDown" />
+              <Button Grid.Column="2" Classes="icon send" Command="{Binding Send}" IsEnabled="{Binding CanSend}" ToolTip.Tip="{Binding SendTip}" AutomationProperties.Name="{i18n:T Send}"><PathIcon Data="{StaticResource IconSendFilled}" Width="18" Height="18" /></Button>
+            </Grid>
+          </DockPanel>
         </Border>
       </StackPanel>
     </Grid>

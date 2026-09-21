@@ -1,29 +1,36 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Channels.QuickSwitcher" x:DataType="vm:ShellViewModel" x:Name="Jump">
+  <UserControl.Styles>
+    <Style Selector="Button.channel"><Setter Property="Height" Value="36" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /></Style>
+    <Style Selector="TextBlock.jumpSection"><Setter Property="FontSize" Value="11" /><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="{DynamicResource QuietTextBrush}" /><Setter Property="Margin" Value="8,8,8,4" /></Style>
+  </UserControl.Styles>
   <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="8" Width="420">
     <DockPanel>
-      <TextBox x:Name="Query" DockPanel.Dock="Top" Margin="10,10,10,6" Text="{Binding SwitcherQuery}"
+      <TextBox x:Name="Query" DockPanel.Dock="Top" Margin="10,10,10,4" Height="36" Text="{Binding SwitcherQuery}"
         PlaceholderText="{i18n:T JumpToChannel}" AutomationProperties.Name="{i18n:T JumpToChannel}" />
       <ScrollViewer MaxHeight="320" HorizontalScrollBarVisibility="Disabled" Padding="6,0,6,8">
         <ItemsControl ItemsSource="{Binding SwitcherMatches}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="ch:JumpItem">
-              <Button Classes="channel" Classes.selected="{Binding IsActive}" Margin="0,0,0,2"
-                Command="{Binding #Jump.((vm:ShellViewModel)DataContext).JumpTo}" CommandParameter="{Binding}">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                  <Panel Width="17" Height="17">
-                    <PathIcon Data="{StaticResource IconPeople}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsPerson}" />
-                    <PathIcon Data="{StaticResource IconHash}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsText}" />
-                    <PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsVoice}" />
-                  </Panel>
-                  <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="11" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
-                  <TextBlock Grid.Column="2" Text="{i18n:T Recent}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsRecent}" />
-                </Grid>
-              </Button>
+              <Panel>
+                <TextBlock Classes="jumpSection" Text="{Binding Name}" IsVisible="{Binding IsSection}" />
+                <Button Classes="channel" Classes.selected="{Binding IsActive}" Margin="0,0,0,1"
+                  IsVisible="{Binding !IsSection}"
+                  Command="{Binding #Jump.((vm:ShellViewModel)DataContext).JumpTo}" CommandParameter="{Binding}">
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                    <Panel Width="16" Height="16">
+                      <PathIcon Data="{StaticResource IconPeople}" Width="16" Height="16" Opacity="0.65" IsVisible="{Binding IsPerson}" />
+                      <PathIcon Data="{StaticResource IconHash}" Width="16" Height="16" Opacity="0.65" IsVisible="{Binding IsText}" />
+                      <PathIcon Data="{StaticResource IconSpeaker}" Width="16" Height="16" Opacity="0.65" IsVisible="{Binding IsVoice}" />
+                    </Panel>
+                    <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="11" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Grid>
+                </Button>
+              </Panel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

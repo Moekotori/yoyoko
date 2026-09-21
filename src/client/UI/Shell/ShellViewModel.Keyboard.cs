@@ -78,6 +78,7 @@ public sealed partial class ShellViewModel
     public void ConfirmJump(object? value)
     {
         var picked = value as JumpItem ?? _switcherSelected;
+        if (picked?.IsSection == true) return;
         CloseJump();
         if (picked?.Person is { } person)
         {
@@ -102,8 +103,12 @@ public sealed partial class ShellViewModel
         var index = _switcherSelected is null ? 0 : SwitcherMatches.IndexOf(_switcherSelected);
         if (index < 0) index = 0;
         var count = SwitcherMatches.Count;
-        index = (index + delta) % count;
-        if (index < 0) index += count;
+        for (var step = 0; step < count; step++)
+        {
+            index = (index + delta) % count;
+            if (index < 0) index += count;
+            if (!SwitcherMatches[index].IsSection) break;
+        }
         SetJumpActive(SwitcherMatches[index]);
     }
 
@@ -165,10 +170,19 @@ public sealed partial class ShellViewModel
             .Select(channel => channel.Id)
             .ToHashSet();
         var ranked = JumpRank.Channels(all, channel => channel.Id, channel => channel.Name, visited, query);
-        var next = ranked.Select(channel => new JumpItem(channel, recentIds.Contains(channel.Id))).ToList();
+        var next = new List<JumpItem>();
+        if (query.Length == 0 && recentIds.Count > 0)
+            next.Add(JumpItem.Header(_text.Get(TextKey.Recent)));
+        next.AddRange(ranked.Select(channel => new JumpItem(channel, recentIds.Contains(channel.Id))));
         if (query.Length > 0)
-            foreach (var person in PeopleMatches(query))
-                next.Add(new JumpItem(person));
+        {
+            var people = PeopleMatches(query).ToList();
+            if (people.Count > 0)
+            {
+                next.Add(JumpItem.Header(_text.Get(TextKey.Members)));
+                next.AddRange(people.Select(person => new JumpItem(person)));
+            }
+        }
         for (var i = SwitcherMatches.Count - 1; i >= 0; i--)
             if (next.All(item => !SameJump(item, SwitcherMatches[i]))) SwitcherMatches.RemoveAt(i);
         for (var i = 0; i < next.Count; i++)
@@ -183,7 +197,7 @@ public sealed partial class ShellViewModel
         var keep = _switcherSelected is not null
             ? SwitcherMatches.FirstOrDefault(item => SameJump(item, _switcherSelected))
             : null;
-        SetJumpActive(keep ?? SwitcherMatches.FirstOrDefault());
+        SetJumpActive(keep ?? SwitcherMatches.FirstOrDefault(item => !item.IsSection));
     }
 
     private IEnumerable<MemberProfile> PeopleMatches(string query)
@@ -206,7 +220,10 @@ public sealed partial class ShellViewModel
     }
 
     private static bool SameJump(JumpItem left, JumpItem right) =>
-        left.Person?.Id == right.Person?.Id && left.Channel?.Id == right.Channel?.Id;
+        left.IsSection == right.IsSection
+        && left.SectionTitle == right.SectionTitle
+        && left.Person?.Id == right.Person?.Id
+        && left.Channel?.Id == right.Channel?.Id;
 
     private void SetJumpActive(JumpItem? item)
     {

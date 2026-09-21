@@ -17,6 +17,13 @@ public partial class UserCard : UserControl
         e.Handled = true;
     }
 
+    private async void CopyUsername(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MemberProfile { HasHandle: true } member)
+            await MemberGestures.CopyAsync(this, member.Username);
+        e.Handled = true;
+    }
+
     private void Mention(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MemberProfile member && Shell() is { } shell)

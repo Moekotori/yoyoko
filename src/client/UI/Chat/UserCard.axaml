@@ -1,41 +1,57 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:chat="using:Chat.UI.Chat" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Chat.UserCard" x:DataType="chat:MemberProfile">
-  <Border Width="300" VerticalAlignment="Top" Background="#242424" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+  <UserControl.Styles>
+    <Style Selector="Button.cardAction">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Background" Value="#2E2E2E" />
+    </Style>
+    <Style Selector="Button.handle">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+    <Style Selector="Button.handle:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+  </UserControl.Styles>
+  <Border Width="260" VerticalAlignment="Top" Background="#242424" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
     <StackPanel>
-      <Panel Height="104">
-        <Border Height="68" VerticalAlignment="Top" Background="#1A1A1A" />
-        <Border Width="80" Height="80" CornerRadius="40" Background="#242424" Margin="14,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-          <c:Avatar Width="68" Height="68" HorizontalAlignment="Center" VerticalAlignment="Center"
+      <Panel Height="84">
+        <Border Height="52" VerticalAlignment="Top" Background="#1A1A1A" />
+        <Border Width="64" Height="64" CornerRadius="32" Background="#242424" Margin="12,24,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+          <c:Avatar Width="52" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center"
             Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" />
         </Border>
       </Panel>
-      <Border Margin="12,0,12,12" Background="#1C1C1C" CornerRadius="8" Padding="12">
-        <StackPanel Spacing="10">
-          <StackPanel Spacing="2">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{i18n:T You}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsSelf}" />
-            </StackPanel>
-            <SelectableTextBlock Text="{Binding Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" IsVisible="{Binding HasHandle}" />
+      <StackPanel Margin="12,4,12,12" Spacing="10">
+        <StackPanel Spacing="1">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{i18n:T You}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsSelf}" />
           </StackPanel>
-          <Border Height="1" Background="#2E2E2E" />
-          <StackPanel Spacing="4">
-            <TextBlock Text="{i18n:T UserId}" Classes="section" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-              <SelectableTextBlock Text="{Binding IdText}" FontSize="11" FontFamily="Menlo, Consolas, monospace" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-              <Button Grid.Column="1" Classes="icon" Width="26" Height="26" Padding="5" Click="CopyId"
-                ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
-                <PathIcon Data="{StaticResource IconCopy}" Width="13" Height="13" />
-              </Button>
-            </Grid>
-          </StackPanel>
-          <Button HorizontalAlignment="Stretch" Padding="10,7" Click="Mention" IsVisible="{Binding !IsSelf}"
-            Content="{i18n:T MentionMember}" AutomationProperties.Name="{i18n:T MentionMember}" />
-          <Button HorizontalAlignment="Stretch" Padding="10,7" Click="EditProfile" IsVisible="{Binding IsSelf}"
-            Content="{i18n:T Profile}" AutomationProperties.Name="{i18n:T Profile}" />
+          <Button Classes="handle" Click="CopyUsername" IsVisible="{Binding HasHandle}" ToolTip.Tip="{i18n:T CopyUsername}" AutomationProperties.Name="{i18n:T CopyUsername}">
+            <TextBlock Text="{Binding Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
+          </Button>
         </StackPanel>
-      </Border>
+        <Button Classes="cardAction" Click="Mention" IsVisible="{Binding !IsSelf}"
+          Content="{i18n:T MentionMember}" AutomationProperties.Name="{i18n:T MentionMember}" />
+        <Button Classes="cardAction" Click="EditProfile" IsVisible="{Binding IsSelf}"
+          Content="{i18n:T Profile}" AutomationProperties.Name="{i18n:T Profile}" />
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" Opacity="0.7">
+          <SelectableTextBlock Text="{Binding IdText}" FontSize="10" FontFamily="Menlo, Consolas, monospace" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="{DynamicResource QuietTextBrush}" />
+          <Button Grid.Column="1" Classes="icon" Width="22" Height="22" Padding="4" Click="CopyId"
+            ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
+            <PathIcon Data="{StaticResource IconCopy}" Width="11" Height="11" />
+          </Button>
+        </Grid>
+      </StackPanel>
     </StackPanel>
   </Border>
 </UserControl>

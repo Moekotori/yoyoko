@@ -32,17 +32,11 @@
         </Button>
       </StackPanel>
     </Border>
-    <Grid Grid.Column="1" Margin="40,32,40,0" RowDefinitions="48,*">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{Binding SectionTitle}" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center" />
-        <Button Grid.Column="1" Classes="settingsClose" Command="{Binding Close}" ToolTip.Tip="{i18n:T CloseSettings}"
-          AutomationProperties.Name="{i18n:T CloseSettings}">
-          <PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" />
-        </Button>
-      </Grid>
-      <ScrollViewer x:Name="SettingsScroll" Grid.Row="1" Margin="0,0,8,0"
+    <Grid Grid.Column="1" Margin="40,32,0,0" RowDefinitions="48,*">
+      <TextBlock Text="{Binding SectionTitle}" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center" />
+      <ScrollViewer x:Name="SettingsScroll" Grid.Row="1"
         HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <motion:MotionHost Margin="0,16,20,40" HorizontalAlignment="Stretch" VerticalAlignment="Top" Trigger="{Binding Section}">
+        <motion:MotionHost Margin="0,16,16,40" HorizontalAlignment="Stretch" VerticalAlignment="Top" Trigger="{Binding Section}">
         <Panel>
           <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>

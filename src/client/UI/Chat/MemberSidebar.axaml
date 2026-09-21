@@ -7,8 +7,11 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="CornerRadius" Value="2" />
-      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Padding" Value="6,5" />
       <Setter Property="Margin" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Button.memberRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#323232" />
     </Style>
   </UserControl.Styles>
   <Border Width="220" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,0,0,0">
@@ -40,9 +43,9 @@
                     <MenuItem Header="{i18n:T BanMember}" Foreground="#E3A09A" />
                   </ContextMenu>
                 </Button.ContextMenu>
-                <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
-                  <c:Avatar Width="28" Height="28" Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" />
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                <Grid ColumnDefinitions="32,*" ColumnSpacing="8">
+                  <c:Avatar Width="32" Height="32" Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
                     <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="11" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
                   </StackPanel>

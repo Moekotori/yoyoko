@@ -18,13 +18,19 @@ public sealed class JumpItem : ObservableObject
         Person = person;
     }
 
+    public static JumpItem Header(string title) => new(title);
+
+    private JumpItem(string title) => SectionTitle = title;
+
     public ChannelItem? Channel { get; }
     public MemberProfile? Person { get; }
+    public string SectionTitle { get; } = "";
+    public bool IsSection => SectionTitle.Length > 0;
     public bool IsPerson => Person is not null;
     public bool IsVoice => Channel?.IsVoice == true;
     public bool IsText => Channel is { IsVoice: false };
     public bool IsRecent { get; }
-    public string Name => Person?.Name ?? Channel?.Name ?? "";
+    public string Name => IsSection ? SectionTitle : Person?.Name ?? Channel?.Name ?? "";
     public string Handle => Person?.Handle ?? "";
     public bool HasHandle => Handle.Length > 0;
     public bool IsActive

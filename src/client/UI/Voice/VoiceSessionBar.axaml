@@ -8,7 +8,7 @@
         <TextBlock Text="{Binding ConnectedVoiceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
         <TextBlock Text="{Binding VoiceSessionLabel}" Classes="quiet" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding VoiceStatus}" />
       </StackPanel>
-      <Button Grid.Column="2" Content="{i18n:T LeaveVoice}" Command="{Binding LeaveVoice}" Padding="10,6" VerticalAlignment="Center" />
+      <Button Grid.Column="2" Content="{i18n:T LeaveVoice}" Command="{Binding LeaveVoice}" Padding="8,4" FontSize="12" CornerRadius="2" VerticalAlignment="Center" />
     </Grid>
   </Border>
 </UserControl>
