@@ -32,7 +32,7 @@
   <Style Selector="TextBlock.section"><Setter Property="FontSize" Value="11" /><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
   <Style Selector="PathIcon"><Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" /></Style>
   <Style Selector="Button">
-    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
@@ -66,10 +66,12 @@
   <Style Selector="Grid.channelTab.selected Button.tabClose"><Setter Property="Opacity" Value="0.6" /></Style>
   <Style Selector="Button.tabClose:focus-visible"><Setter Property="Opacity" Value="1" /></Style>
   <Style Selector="Button.primary"><Setter Property="Background" Value="{StaticResource AccentBrush}" /><Setter Property="Foreground" Value="#212121" /><Setter Property="Padding" Value="16,10" /></Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#F0F0F0" /><Setter Property="Foreground" Value="#212121" /></Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#BBBBBB" /><Setter Property="Foreground" Value="#212121" /></Style>
   <Style Selector="Button.send"><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="Background" Value="#343434" /></Style>
   <Style Selector="Button.send:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#717171" /></Style>
   <Style Selector="TextBox">
-    <Setter Property="CornerRadius" Value="5" /><Setter Property="FontSize" Value="14" />
+    <Setter Property="CornerRadius" Value="8" /><Setter Property="FontSize" Value="14" />
     <Setter Property="Background" Value="{StaticResource RaisedBrush}" /><Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
     <Setter Property="Padding" Value="10,8" /><Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" /><Setter Property="SelectionBrush" Value="#484848" />
   </Style>
@@ -82,10 +84,11 @@
   <Style Selector="TextBox.composer:focus /template/ Border#PART_BorderElement"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
   <Style Selector="Border.composerFrame:focus-within"><Setter Property="BorderBrush" Value="{StaticResource FocusBrush}" /></Style>
   <Style Selector="ComboBox">
-    <Setter Property="CornerRadius" Value="2" /><Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="6" /><Setter Property="BorderThickness" Value="0" />
     <Setter Property="Background" Value="{StaticResource RaisedBrush}" /><Setter Property="Padding" Value="10,8" />
     <Setter Property="MinHeight" Value="36" />
   </Style>
+  <StyleInclude Source="avares://Chat.UI/Styles/Inputs.axaml" />
   <Style Selector="Window.reduceMotion Button">
     <Setter Property="Transitions">
       <Transitions />
@@ -97,6 +100,6 @@
     </Setter>
   </Style>
   <Style Selector="ListBox"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="0" /></Style>
-  <Style Selector="ListBoxItem"><Setter Property="CornerRadius" Value="2" /></Style>
-  <Style Selector="ToolTip"><Setter Property="FontSize" Value="12" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Background" Value="#303030" /><Setter Property="Padding" Value="9,6" /></Style>
+  <Style Selector="ListBoxItem"><Setter Property="CornerRadius" Value="6" /></Style>
+  <Style Selector="ToolTip"><Setter Property="FontSize" Value="12" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="#303030" /><Setter Property="Padding" Value="9,6" /></Style>
 </Styles>

@@ -74,9 +74,9 @@ public partial class ConversationView : UserControl
     {
         if (sender is not Control { DataContext: MessageItem message }) return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-        if (clipboard is null) { _subscribed?.ShowNotice(global::Chat.UI.Localization.I18n.Presenter.Get(TextKey.ClipboardUnavailable)); return; }
+        if (clipboard is null) { _subscribed?.ShowNotice(global::Chat.UI.Localization.I18n.T(TextKey.ClipboardUnavailable)); return; }
         try { await clipboard.SetTextAsync(message.Text); }
-        catch (Exception) { _subscribed?.ShowNotice(global::Chat.UI.Localization.I18n.Presenter.Get(TextKey.ClipboardFailed)); }
+        catch (Exception) { _subscribed?.ShowNotice(global::Chat.UI.Localization.I18n.T(TextKey.ClipboardFailed)); }
         args.Handled = true;
     }
 }

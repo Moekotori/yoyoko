@@ -43,6 +43,8 @@ public sealed class ChatApiClient : IChatApi
         => Send(HttpMethod.Patch, "users/me", request, ProtocolJson.Default.PatchMeRequest, ProtocolJson.Default.UserDto, cancellationToken)!;
     public Task<ServerDto> CreateServerAsync(string name, CancellationToken cancellationToken)
         => Send(HttpMethod.Post, "servers", new CreateServerRequest(name), ProtocolJson.Default.CreateServerRequest, ProtocolJson.Default.ServerDto, cancellationToken)!;
+    public Task<ChannelDto> CreateChannelAsync(Guid serverId, CreateChannelRequest request, CancellationToken cancellationToken)
+        => Send(HttpMethod.Post, $"servers/{serverId}/channels", request, ProtocolJson.Default.CreateChannelRequest, ProtocolJson.Default.ChannelDto, cancellationToken)!;
     public async Task<IReadOnlyList<ServerDto>> ListServersAsync(CancellationToken cancellationToken)
         => await Send(HttpMethod.Get, "servers", (object?)null, null, ProtocolJson.Default.ServerDtoArray, cancellationToken) ?? [];
     public async Task<IReadOnlyList<ChannelDto>> ListChannelsAsync(Guid serverId, CancellationToken cancellationToken)
@@ -60,6 +62,8 @@ public sealed class ChatApiClient : IChatApi
         => Send<object, object>(HttpMethod.Post, "voice/leave", null, null, null, cancellationToken);
     public Task<VoiceStateDto> PatchVoiceAsync(bool mute, bool deaf, string? quality, CancellationToken cancellationToken)
         => Send(HttpMethod.Patch, "voice/state", new VoiceFlags(mute, deaf, quality), ProtocolJson.Default.VoiceFlags, ProtocolJson.Default.VoiceStateDto, cancellationToken)!;
+    public Task DeleteChannelAsync(Guid channelId, CancellationToken cancellationToken)
+        => Send<object, object>(HttpMethod.Delete, $"channels/{channelId}", null, null, null, cancellationToken);
     public Task<ChannelDto> PatchChannelAsync(Guid channelId, PatchChannelRequest request, CancellationToken cancellationToken)
         => Send(HttpMethod.Patch, $"channels/{channelId}", request, ProtocolJson.Default.PatchChannelRequest, ProtocolJson.Default.ChannelDto, cancellationToken)!;
     public Task<ServerDto> PatchModerationAsync(Guid serverId, PatchModerationRequest request, CancellationToken cancellationToken)

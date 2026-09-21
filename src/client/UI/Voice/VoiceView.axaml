@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization" xmlns:voice="using:Chat.UI.Voice"
   x:Class="Chat.UI.Voice.VoiceView" x:DataType="vm:ShellViewModel">
-  <Grid RowDefinitions="*,Auto" Margin="28">
+  <Grid RowDefinitions="*,Auto" Margin="32,24" MaxWidth="560">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <StackPanel Spacing="10">
       <TextBlock Text="{Binding PaneTitle}" FontSize="22" FontWeight="SemiBold" />
       <TextBlock Text="{Binding VoiceStatus}" Classes="muted" TextWrapping="Wrap" />
@@ -58,10 +59,11 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </StackPanel>
-    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-      <Button Content="{Binding MuteLabel}" Command="{Binding ToggleMute}" Padding="16,10" />
-      <Button Content="{Binding DeafLabel}" Command="{Binding ToggleDeaf}" Padding="16,10" />
-      <Button Content="{i18n:T LeaveVoice}" Command="{Binding LeaveVoice}" Padding="16,10" />
+    </ScrollViewer>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,24,0,0">
+      <Button Content="{Binding MuteLabel}" Command="{Binding ToggleMute}" Background="{StaticResource RaisedBrush}" Padding="16,10" />
+      <Button Content="{Binding DeafLabel}" Command="{Binding ToggleDeaf}" Background="{StaticResource RaisedBrush}" Padding="16,10" />
+      <Button Content="{i18n:T LeaveVoice}" Command="{Binding LeaveVoice}" Background="{StaticResource RaisedBrush}" Padding="16,10" />
     </StackPanel>
   </Grid>
 </UserControl>

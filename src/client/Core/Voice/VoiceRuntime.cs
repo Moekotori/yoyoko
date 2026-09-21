@@ -7,6 +7,7 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
 {
     private readonly Dictionary<Guid, VoiceStateDto> _states = [];
     private bool _resync;
+    private bool _muteBeforeDeaf;
     public Guid? ChannelId { get; private set; }
     public bool SelfMute { get; private set; }
     public bool SelfDeaf { get; private set; }
@@ -83,20 +84,41 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
 
     public async Task SetMuteAsync(bool muted, CancellationToken cancellationToken)
     {
-        if (!Joined) return;
+        if (!Joined)
+        {
+            SelfMute = muted;
+            SelfDeaf = SelfDeaf && muted;
+            Changed?.Invoke();
+            return;
+        }
         var state = await api.PatchVoiceAsync(muted, SelfDeaf && muted, Preferred, cancellationToken);
         SelfMute = state.SelfMute;
         SelfDeaf = state.SelfDeaf;
         Apply(state);
-        try { await media.SetMutedAsync(SelfMute, cancellationToken); }
+        try
+        {
+            await media.SetDeafenedAsync(SelfDeaf, cancellationToken);
+            await media.SetMutedAsync(SelfMute, cancellationToken);
+        }
         catch (Exception exception) { MediaError = exception.Message; }
         Changed?.Invoke();
     }
 
     public async Task SetDeafAsync(bool deafened, CancellationToken cancellationToken)
     {
-        if (!Joined) return;
-        var state = await api.PatchVoiceAsync(deafened || SelfMute, deafened, Preferred, cancellationToken);
+        if (deafened == SelfDeaf) return;
+        var previousMute = SelfMute;
+        var muted = deafened || _muteBeforeDeaf;
+        if (!Joined)
+        {
+            if (deafened) _muteBeforeDeaf = previousMute;
+            SelfMute = muted;
+            SelfDeaf = deafened;
+            Changed?.Invoke();
+            return;
+        }
+        var state = await api.PatchVoiceAsync(muted, deafened, Preferred, cancellationToken);
+        if (deafened) _muteBeforeDeaf = previousMute;
         SelfMute = state.SelfMute;
         SelfDeaf = state.SelfDeaf;
         Apply(state);
@@ -130,8 +152,18 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
     public async Task SetQualityAsync(string quality, CancellationToken cancellationToken)
     {
         Preferred = quality;
-        if (!Joined || ChannelId is not Guid channel) { Quality = AudioQualities.Clamp(quality, MaxQuality); Changed?.Invoke(); return; }
-        await JoinAsync(channel, quality, cancellationToken);
+        if (!Joined)
+        {
+            Quality = AudioQualities.Clamp(quality, MaxQuality);
+            Changed?.Invoke();
+            return;
+        }
+        var state = await api.PatchVoiceAsync(SelfMute, SelfDeaf, Preferred, cancellationToken);
+        Quality = string.IsNullOrEmpty(state.AudioQuality) ? AudioQualities.Clamp(Preferred, MaxQuality) : state.AudioQuality;
+        Apply(state);
+        try { await media.SetQualityAsync(AudioQualities.Profile(Quality), cancellationToken); }
+        catch (Exception exception) { MediaError = exception.Message; }
+        Changed?.Invoke();
     }
 
     public async Task SetChannelMaxQualityAsync(Guid channelId, string quality, CancellationToken cancellationToken)
@@ -147,7 +179,7 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
         if (MaxQuality == cap && Quality == next) return;
         MaxQuality = cap;
         if (Joined && ChannelId == channelId && next != Quality)
-            await JoinAsync(channelId, Preferred, cancellationToken);
+            await SetQualityAsync(Preferred, cancellationToken);
         else
         {
             Quality = next;
@@ -157,9 +189,9 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
 
     public async Task SyncEncoderAsync(CancellationToken cancellationToken)
     {
-        if (!_resync || ChannelId is not Guid channel) return;
+        if (!_resync || ChannelId is null) return;
         _resync = false;
-        await JoinAsync(channel, Preferred, cancellationToken);
+        await SetQualityAsync(Preferred, cancellationToken);
     }
 
     public ValueTask DisposeAsync() => new(LeaveAsync(CancellationToken.None));

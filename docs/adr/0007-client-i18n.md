@@ -9,6 +9,7 @@ Status: Accepted · 2026-09-20
 ## Decision
 
 - 独立 `Chat.Localization` 项目持有 `Locale`、`ILocalePreference`、`ITextCatalog` 和三语文案目录；不依赖 Avalonia、UI、网络或存储。
+- 每条文案只写一行（key / 英 / 中 / 日）。XAML `{i18n:T Key}` 随语言切换刷新。C# 用 `I18n.T(TextKey.X)` 或注入的 `I18n.Get`。缺键回退到英文，再缺则显示 key。
 - App 实现 `FileLocalePreference`，组合 `TextCatalog` 与 `I18n`。UI 只通过 `I18n.Get` / `{i18n:T Key}` 取文案。
 - Core 与 Networking 抛 `ClientFault(key)`，不查文案表；Shell 在展示层翻译。
 - 当前支持 `zh-Hans`、`en`、`ja`。首次启动跟随系统语言，未覆盖的语言回退到英文。

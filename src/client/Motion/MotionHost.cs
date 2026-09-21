@@ -20,6 +20,10 @@ public sealed class MotionHost : Decorator
         AvaloniaProperty.Register<MotionHost, TimeSpan>(nameof(Duration), MotionTokens.Page,
             validate: value => value >= TimeSpan.Zero && value <= TimeSpan.FromMilliseconds(500));
 
+    public static readonly StyledProperty<double> StartOpacityProperty =
+        AvaloniaProperty.Register<MotionHost, double>(nameof(StartOpacity), 0,
+            validate: value => double.IsFinite(value) && value >= 0 && value <= 1);
+
     private readonly TranslateTransform _translation = new();
     private CancellationTokenSource? _running;
     private DispatcherOperation? _pending;
@@ -35,6 +39,7 @@ public sealed class MotionHost : Decorator
     public object? Trigger { get => GetValue(TriggerProperty); set => SetValue(TriggerProperty, value); }
     public MotionPreset Preset { get => GetValue(PresetProperty); set => SetValue(PresetProperty, value); }
     public TimeSpan Duration { get => GetValue(DurationProperty); set => SetValue(DurationProperty, value); }
+    public double StartOpacity { get => GetValue(StartOpacityProperty); set => SetValue(StartOpacityProperty, value); }
     public bool IsRunning => _running is not null;
 
     /// <summary>Coalesces requests in the same UI turn; an active transition continues from its current values.</summary>
@@ -48,7 +53,7 @@ public sealed class MotionHost : Decorator
             _pending = null;
             if (!CanAnimate) { Stop(); return; }
             var interrupted = IsRunning;
-            var opacity = interrupted ? Opacity : 0;
+            var opacity = interrupted ? Opacity : StartOpacity;
             var x = interrupted ? _translation.X : Preset switch
             {
                 MotionPreset.SlideLeft => MotionTokens.Distance,
@@ -125,7 +130,7 @@ public sealed class MotionHost : Decorator
             else Stop();
         }
         else if (change.Property == Motion.ReduceMotionProperty || change.Property == PresetProperty ||
-                 change.Property == DurationProperty)
+                 change.Property == DurationProperty || change.Property == StartOpacityProperty)
             Stop(); // A preference change never introduces motion by itself.
     }
 

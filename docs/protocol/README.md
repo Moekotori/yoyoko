@@ -1,6 +1,6 @@
 # Protocol v1
 
-状态：发现、认证 REST、社区/频道、消息分页与发送、图片上传、Gateway READY / heartbeat / resume 已实现。编辑/删除、mention、reaction 仍为 **Not implemented yet**。
+状态：发现、认证 REST、社区/频道、消息分页与发送、图片上传、Gateway READY / heartbeat / resume 已实现。消息编辑/删除、mention、reaction 仍为 **Not implemented yet**。
 
 ## 标识和编码
 
@@ -35,10 +35,13 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 | GET /attachments/{id}/thumbnail | 图片 JPEG 缩略图 |
 | POST /channels/{id}/rtc-token | 校验 ConnectVoice 后签发短期 LiveKit token（已实现；可发布取决于 Speak） |
 | POST /channels/{id}/voice/join | 加入语音频道；可带 `audio_quality`（standard/high/very_high/studio），服务端按频道上限钳制 |
-| PATCH /channels/{id} | 拥有 MANAGE_CHANNEL 的成员设置语音频道 `audio_quality` 上限 |
-| POST /voice/leave、PATCH /voice/state | 离开；更新 mute/deafen，以及可选的发送音质 |
+| PATCH /channels/{id} | 拥有 MANAGE_CHANNEL 的成员修改可选 `name` 和语音频道 `audio_quality` 上限 |
+| DELETE /channels/{id} | MANAGE_CHANNEL 权限；删除频道及消息，成功返回 204 |
+| POST /voice/leave、PATCH /voice/state | 离开；更新 mute/deafen 与可选发送音质。PATCH 不重新签发 LiveKit token、不让成员退出频道 |
 
 业务接口使用 Bearer access token；refresh rotation、Argon2id、限流、body/field limits 和服务端授权检查在 Phase 1 接入。错误 envelope `{ "code": "...", "message": "..." }`，冷却拒绝时额外带 `retry_after_seconds`。发送消息可能返回 `blocked_word`（400）或 `cooldown`（429）。不得泄露数据库或密钥。普通 WebSocket 不接管 CRUD、文件或媒体数据。Server DTO 含 `blocked_words` 与 `cooldown_seconds`（默认 `[]` / `0`）。
+
+客户端已接通既有 `POST /servers/{id}/channels`：请求 `{name, kind, audio_quality}`，`kind` 为 `text` 或 `voice`，客户端创建时 `audio_quality` 传 null，采用服务端默认值。创建仍由服务端校验社区 owner 身份，成功后同步社区缓存。没有 DTO 或协议版本变更。
 
 ## Gateway
 
@@ -68,3 +71,11 @@ Phase 1：验证 token 和 origin（原生无 Origin 的客户端仍需 token）
 计划事件：READY、MESSAGE_CREATE/UPDATE/DELETE、CHANNEL_CREATE/UPDATE/DELETE、SERVER_CREATE/UPDATE、MEMBER_JOIN/LEAVE、USER_UPDATE、PRESENCE_UPDATE、TYPING_START、VOICE_STATE_UPDATE。User 含可选 `avatar`（download/thumbnail URL、`animated`）；JPEG/PNG/GIF/WebP，GIF/APNG/动态 WebP 为 animated，上限 8 MiB、边长 4096。`VOICE_STATE_UPDATE` 已实现：`channel_id` 为 null 表示离开。语音状态含 `audio_quality`。音质档位：`standard` 48 kHz 单声道 64 kbps、`high` 立体声 128 kbps、`very_high` 立体声 384 kbps、`studio` 510 kbps（Opus 上限）。用户在频道上限内自选发送音质；加入响应带 `audio` 编码参数与 `max_audio_quality`。降低上限时服务端钳制已在频道内的发送档位并广播 `VOICE_STATE_UPDATE`。typing 不持久化；presence/voice 高频状态不写 PostgreSQL。语音状态保存在 API 进程内存中；单进程模块化单体足够，多节点需 Redis。消息含 text/system/encrypted、reply、mention、attachment、embed、reaction；见 Message DTO。
 
 官方与自托管走同一套协议与版本协商；无官方专用权限后门。当前不做 federation；未来 Web/移动端不需依赖 C# 逻辑。
+
+### 频道管理增量（2026-09-21）
+
+`api_version=1` / `protocol_version=1` 保持不变：PATCH 新增可选 `name`（trim 后 1–100 UTF-8 字节），兼容只提交 `audio_quality` 的客户端。名称/音质在同一存储操作更新；文字频道不能指定音质。创建仍限定社区所有者，修改/删除由服务端校验 MANAGE_CHANNEL。桌面目前仅向所有者显示管理入口，完整角色管理仍未实现。
+
+`CHANNEL_CREATE` / `CHANNEL_UPDATE` / `CHANNEL_DELETE` 均已实现，data 为 Channel，seq 为十进制字符串。客户端刷新并提交 SQLite 社区快照后推进游标，删除/失去访问权的频道清除消息缓存、打开标签和选中状态；所处语音频道消失时退出媒体会话。旧客户端可忽略新增 DELETE 事件，但需重新同步才能移除频道。删除不等于立即回收对象存储中的附件文件，附件物理清理由独立保留策略处理（目前未实现）。
+
+共享示例：`fixtures/channel-patch.json`、`fixtures/channel-delete.json`。

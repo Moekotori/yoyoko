@@ -22,5 +22,9 @@ internal sealed class MediaVoiceAdapter(IMediaService media) : IVoiceMedia
         => media.ListDevicesAsync(cancellationToken);
     public Task SetDevicesAsync(AudioRoute route, CancellationToken cancellationToken)
         => media.SetDevicesAsync(route, cancellationToken);
+    public Task StartLoopbackAsync(AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken)
+        => media.StartLoopbackAsync(audio, route, cancellationToken);
+    public Task StopLoopbackAsync(CancellationToken cancellationToken)
+        => media.StopLoopbackAsync(cancellationToken);
     public ValueTask DisposeAsync() => media.DisposeAsync();
 }

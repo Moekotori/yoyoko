@@ -10,5 +10,7 @@ public interface IVoiceMedia : IAsyncDisposable
     Task SetQualityAsync(AudioCaptureOptions audio, CancellationToken cancellationToken);
     Task<AudioDeviceList> ListDevicesAsync(CancellationToken cancellationToken);
     Task SetDevicesAsync(AudioRoute route, CancellationToken cancellationToken);
+    Task StartLoopbackAsync(AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken);
+    Task StopLoopbackAsync(CancellationToken cancellationToken);
     event Action<string>? Faulted;
 }

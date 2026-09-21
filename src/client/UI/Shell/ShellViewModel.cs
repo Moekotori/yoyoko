@@ -45,9 +45,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private long _bitmapBytes;
     private string _address = "";
     private string _status = "";
-    private string _username = "";
-    private string _displayName = "";
-    private string _password = "";
     private string _draft = "";
     private string _communityName = "";
     private string _inviteInput = "";
@@ -58,10 +55,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private AudioQualityChoice? _selectedAudioQuality;
     private AudioQualityChoice? _selectedChannelQuality;
     private bool _qualityUpdating;
+    private string _qualityUi = "";
     public ShellViewModel(InstanceManager instances, IMessageCache cache, ICredentialVault vault,
         IInstanceDiscovery discovery, IChatApiFactory apis, Func<IGatewayConnection> gateways,
-        IVoiceMedia media, ILocalePreference locale, IChatChrome chrome, IVoiceDevicePreference devices, I18n text, string productName, CancellationToken lifetime)
+        IVoiceMedia media, ILocalePreference locale, IChatChrome chrome, IVoiceDevicePreference devices, I18n text, string productName, CancellationToken lifetime, WorkspaceConnection connection)
     {
+        _connection = connection;
         _instances = instances;
         _cache = cache;
         _vault = vault;
@@ -74,29 +73,33 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         ProductName = productName;
         _lifetime = lifetime;
         Devices = new(media, devices, text, () => SelectedInstance?.Context.Session, lifetime);
-        Settings = new(locale, chrome, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices);
+        AuthForm = new(AuthenticateAsync, error => { AuthForm!.Status = _text.Error(error); OnError(error); });
+        Connection = new(ConnectWorkspaceAsync, OnError);
+        Settings = new(locale, chrome, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm);
         chrome.Changed += OnChromeChanged;
         OpenAddInstance = new(_ =>
         {
-            ShowSettings = false;
-            SelectedInstance = null;
+            OpenConnectionSettings();
         });
         OpenSettings = new(_ => { ShowSettings = true; Settings.Profile.Reload(); _ = Devices.RefreshAsync(); });
         _text.PropertyChanged += OnTextChanged;
         AddInstance = new(AddAsync, OnError);
-        AuthForm = new(AuthenticateAsync, OnError);
+
         Send = new(SendAsync, OnError);
         AttachFile = new(AttachAsync, OnError);
         CreateServer = new(CreateServerAsync, OnError);
+        CreateChannel = new(CreateChannelAsync, OnError);
         JoinServer = new(JoinAsync, OnError);
         SaveModeration = new(SaveModerationAsync, OnError);
         SignOut = new(SignOutAsync, OnError);
         ToggleMute = new(() => SetMuteAsync(true), OnError);
         ToggleDeaf = new(() => SetDeafAsync(true), OnError);
         LeaveVoice = new(LeaveVoiceAsync, OnError);
-        BeginAddInstance = new(_ => { SelectedInstance = null; });
+        BeginAddInstance = new(_ => OpenConnectionSettings());
         Workspace = new(false, text);
         InitializePresentation();
+        OpenProfile = new(_ => { if (!IsSignedIn) return; CloseJump(); Settings.Profile.Reload(); ProfileOpen = !ProfileOpen; });
+        CloseProfile = new(_ => ProfileOpen = false);
     }
     public string ProductName { get; }
     public WorkspaceViewModel Workspace { get; }
@@ -161,11 +164,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public Func<string, Task<Stream?>>? OpenSaveStream { get; set; }
     public Action? ScrollToLatest { get; set; }
     public Func<bool>? IsNearBottom { get; set; }
+    public Action? FocusComposer { get; set; }
     public string Address { get => _address; set { _address = value; Changed(); } }
     public string Status { get => _status; private set { _status = value; Changed(); } }
-    public string Username { get => _username; set { _username = value; Changed(); } }
-    public string DisplayName { get => _displayName; set { _displayName = value; Changed(); } }
-    public string Password { get => _password; set { _password = value; Changed(); } }
+    public string Username { get => AuthForm.Username; set => AuthForm.Username = value; }
+    public string DisplayName { get => AuthForm.DisplayName; set => AuthForm.DisplayName = value; }
+    public string Password { get => AuthForm.Password; set => AuthForm.Password = value; }
     public string Draft { get => _draft; set { _draft = value; Changed(); Changed(nameof(CanSend)); } }
     public string CommunityName { get => _communityName; set { _communityName = value; Changed(); } }
     public string InviteInput { get => _inviteInput; set { _inviteInput = value; Changed(); } }
@@ -226,6 +230,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             Changed(nameof(PaneTitle));
             Changed(nameof(AccountName));
             Changed(nameof(AccountHandle));
+            Changed(nameof(AccountInitial));
             Changed(nameof(AccountPlayback));
             Changed(nameof(InviteHint));
             _ = LoadSessionVisualsAsync();
@@ -236,6 +241,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         get => _selectedChannel;
         set
         {
+            if (ReferenceEquals(_selectedChannel, value)) return;
             _selectedChannel = value;
             Changed();
             Changed(nameof(PaneTitle));
@@ -266,8 +272,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             Changed(nameof(PaneTitle));
         }
     }
-    public bool ShowAddInstance => SelectedInstance is null && !ShowSettings;
-    public bool ShowAuth => SelectedInstance is not null && !IsSignedIn && !ShowSettings;
+    public bool ShowAddInstance => false;
+    public bool ShowAuth => !IsSignedIn && !ShowSettings;
     public bool ShowGuest => !IsSignedIn;
     public bool ShowChat => IsSignedIn && SelectedChannel is { Kind: "text" } && !ShowSettings;
     public bool ShowVoice => IsSignedIn && SelectedChannel is { Kind: "voice" } && !ShowSettings;
@@ -293,8 +299,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 + (state.SelfDeaf ? _text.Get(TextKey.DeafenedSuffix) : ""))
         ?? [];
     public string PaneTitle => ShowSettings ? _text.Get(TextKey.Settings)
-        : SelectedChannel?.Label ?? (ShowAuth ? _text.Get(TextKey.SignIn) : ProductName);
+        : SelectedChannel?.Label ?? (ShowAuth ? _text.Get(TextKey.ConnectServer) : ProductName);
     public string AccountName => SelectedInstance?.Context.Account?.DisplayName ?? "";
+    public string AccountInitial => Avatar.FromName(AccountName);
     public string AccountHandle => SelectedInstance?.Context.Account is { Username: { Length: > 0 } name } ? "@" + name : "";
     public AvatarPlayback? AccountPlayback { get; private set; }
     public string InviteHint
@@ -318,18 +325,42 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task InitializeAsync(Func<CancellationToken, Task> initializeCache)
+    public async Task InitializeAsync(Func<CancellationToken, Task> initializeCache,
+        Func<CancellationToken, Task<InstanceContext?>>? prepareWorkspace = null)
     {
         try
         {
             await initializeCache(_lifetime);
             await _instances.LoadCachedAsync(_lifetime);
+            Connection.Address = await _connection.StartupAddressAsync(_lifetime);
+            Connection.IsBusy = true;
+            Connection.Status = _text.Get(TextKey.ConnectingServer);
+            InstanceContext? preferred = null;
+            Exception? preparationError = null;
+            if (prepareWorkspace is not null)
+            {
+                try { preferred = await prepareWorkspace(_lifetime); }
+                catch (Exception exception) { preparationError = exception; }
+            }
             foreach (var item in _instances.Contexts) Instances.Add(new(item));
-            SelectedInstance = Instances.FirstOrDefault();
+            SelectedInstance = Instances.FirstOrDefault(item => item.Context == preferred)
+                ?? Instances.FirstOrDefault(item => item.Context.Descriptor.BaseUrl.AbsoluteUri.TrimEnd('/') == Connection.Address.TrimEnd('/'))
+                ?? Instances.FirstOrDefault();
             foreach (var item in Instances.ToList())
-                await RestoreAsync(item);
+            {
+                if (item.Context.Session is { } session)
+                {
+                    BindSession(session);
+                    if (SelectedInstance == item) RefreshCommunity();
+                }
+                else await RestoreAsync(item);
+            }
+            if (preparationError is not null) OnError(preparationError);
+            Connection.Status = preparationError is null ? "" : _text.Error(preparationError);
+            Settings.Profile.Reload();
         }
-        catch (Exception exception) { Status = _text.Get(TextKey.CacheLoadFailed, exception.Message); }
+        catch (Exception exception) { Connection.Status = Status = _text.Get(TextKey.CacheLoadFailed, exception.Message); }
+        finally { Connection.IsBusy = false; }
     }
 
     private async Task RestoreAsync(InstanceItem item)
@@ -350,13 +381,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     private async Task AddAsync()
     {
-        Status = _text.Get(TextKey.Discovering);
-        var instance = await _instances.AddAsync(Address, _lifetime);
-        var item = Instances.FirstOrDefault(item => item.Context.Descriptor.Id == instance.Descriptor.Id);
-        if (item is null) { item = new(instance); Instances.Add(item); }
-        SelectedInstance = item;
-        Status = _text.Get(TextKey.InstanceSaved);
-        Address = "";
+        Connection.Address = Address;
+        await ConnectWorkspaceAsync();
+        if (Connection.Status.Length == 0) Address = "";
     }
 
     private async Task AuthenticateAsync(bool register)
@@ -368,15 +395,25 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             _cache, _vault, _gateways, _media, Username.Trim(), Password, string.IsNullOrWhiteSpace(DisplayName) ? Username.Trim() : DisplayName.Trim(),
             register, _lifetime);
         session.ApplyDiscovery(info);
+        if (item.Context.Session is { } previous)
+        {
+            _boundSessions.Remove(previous);
+            await previous.DisposeAsync();
+        }
+        item.Context.AttachSessionClear();
         item.Context.AttachSession(session);
         BindSession(session);
         Password = "";
+        AuthForm.Status = "";
         Status = "";
+        Settings.Profile.Reload();
+        Connection.Status = "";
         RefreshCommunity();
     }
 
     private void BindSession(InstanceSession session)
     {
+        if (!_boundSessions.Add(session)) return;
         session.Voice.ApplyRoute(Devices.Route);
         session.CommunityChanged += () => Dispatcher.UIThread.Post(RefreshCommunity);
         session.Voice.Changed += () => Dispatcher.UIThread.Post(NotifyVoice);
@@ -400,7 +437,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         foreach (var channel in session.Channels)
             Channels.Add(new(channel.Id, channel.ServerId, channel.Name, channel.Kind, channel.AudioQuality));
         if (SelectedChannel is null || Channels.All(item => item.Id != SelectedChannel.Id))
-            SelectedChannel = Channels.FirstOrDefault();
+            SelectedChannel = Channels.FirstOrDefault(channel => channel.Kind == "text") ?? Channels.FirstOrDefault();
+        if (SelectedChannel is { } selected && Channels.FirstOrDefault(item => item.Id == selected.Id) is { } updated)
+            selected.Name = updated.Name;
         FillModeration();
         NotifySession();
         _ = SyncVoiceCapAsync();
@@ -423,6 +462,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(ShowChat));
         Changed(nameof(AccountName));
         Changed(nameof(AccountHandle));
+        Changed(nameof(AccountInitial));
         Changed(nameof(AccountPlayback));
         Changed(nameof(InviteHint));
         Changed(nameof(PaneTitle));
@@ -447,10 +487,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(InviteHint));
         Changed(nameof(MuteLabel));
         Changed(nameof(DeafLabel));
+        Changed(nameof(MuteTip));
+        Changed(nameof(DeafTip));
         Changed(nameof(VoiceStatus));
         Changed(nameof(VoiceMembers));
         Changed(nameof(FileLimitTip));
+        Changed(nameof(AttachTip));
         Changed(nameof(ComposerPlaceholder));
+        Changed(nameof(SendTip));
         RebuildQualityChoices();
         Devices.Relabel();
     }
@@ -460,11 +504,22 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(ShowVoice));
         Changed(nameof(ShowChat));
         Changed(nameof(InVoice));
+        Changed(nameof(IsSelfMuted));
+        Changed(nameof(IsSelfDeafened));
         Changed(nameof(MuteLabel));
         Changed(nameof(DeafLabel));
+        Changed(nameof(MuteTip));
+        Changed(nameof(DeafTip));
         Changed(nameof(VoiceStatus));
         Changed(nameof(VoiceMembers));
-        RebuildQualityChoices();
+        var voice = SelectedInstance?.Context.Session?.Voice;
+        var key = (voice?.MaxQuality ?? "") + "/" + (voice?.Quality ?? "");
+        if (key != _qualityUi)
+        {
+            _qualityUi = key;
+            RebuildQualityChoices();
+        }
+        else Changed(nameof(CanSetChannelQuality));
         _ = SyncEncoderAsync();
     }
 
@@ -504,45 +559,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _ => new(id, _text.Get(TextKey.QualityStudio), _text.Get(TextKey.QualityStudioDetail))
     };
 
-    private async Task LoadSessionVisualsAsync()
+    private Task LoadSessionVisualsAsync()
     {
         RefreshCommunity();
-        if (SelectedChannel is not null) await OpenChannelAsync();
-    }
-
-    private async Task OpenChannelAsync()
-    {
-        var session = SelectedInstance?.Context.Session;
-        DetachTimeline();
-        if (session is null || SelectedChannel is null)
-        {
-            Messages.Clear();
-            return;
-        }
-        if (SelectedChannel.Kind == "voice")
-        {
-            Messages.Clear();
-            session.Voice.ApplyRoute(Devices.Route);
-            await session.Voice.JoinAsync(SelectedChannel.Id, SelectedAudioQuality?.Id, _lifetime);
-            NotifyVoice();
-            _ = Devices.RefreshAsync();
-            return;
-        }
-        _timeline = session.OpenChannel(SelectedChannel.Id);
-        _timelineChanged = () => Dispatcher.UIThread.Post(SyncMessages);
-        _timeline.Changed += _timelineChanged;
-        await _timeline.LoadLatestAsync(_lifetime);
-        SyncMessages();
-        ScrollToLatest?.Invoke();
-    }
-
-    private void DetachTimeline()
-    {
-        if (_timeline is not null && _timelineChanged is not null)
-            _timeline.Changed -= _timelineChanged;
-        _timeline?.ReleaseUnsent();
-        _timeline = null;
-        _timelineChanged = null;
+        return Task.CompletedTask;
     }
 
     private void SyncMessages()
@@ -564,7 +584,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 row = new(item, session?.AuthorName(item.Message.AuthorId) ?? "", SaveAttachmentAsync, RetryFailedAsync, OnError);
             else
             {
-                row.Update();
+                row.Update(item);
                 row.SetAuthor(session?.AuthorName(item.Message.AuthorId) ?? row.Author);
             }
             if (_playbacks.TryGetValue(item.Message.AuthorId, out var cached))
@@ -655,6 +675,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             await _timeline.SendAsync(text.Length == 0 ? null : text, files, _lifetime);
             ScrollToLatest?.Invoke();
             BeginCooldown(ActiveServer?.CooldownSeconds ?? 0);
+            FocusComposer?.Invoke();
         }
         catch (ChatApiException exception) when (exception.Code == "blocked_word")
         {
@@ -681,6 +702,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         await _timeline.RetryAsync(item.LocalId, _lifetime);
         ScrollToLatest?.Invoke();
         BeginCooldown(ActiveServer?.CooldownSeconds ?? 0);
+        FocusComposer?.Invoke();
     }
 
     public async Task QueueFilesAsync(IReadOnlyList<PickedFile> files)
@@ -755,9 +777,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     {
         var session = SelectedInstance?.Context.Session ?? throw new InvalidOperationException(_text.Get(TextKey.NeedSignIn));
         var name = string.IsNullOrWhiteSpace(CommunityName) ? "Community" : CommunityName.Trim();
-        await session.CreateServerAsync(name, _lifetime);
+        var server = await session.CreateServerAsync(name, _lifetime);
+        if (SelectedInstance?.Context.Session != session) return;
         CommunityName = "";
         RefreshCommunity();
+        SelectedChannel = Channels.FirstOrDefault(channel => channel.ServerId == server.Id && channel.Kind == "text");
     }
 
     private async Task JoinAsync()
@@ -771,7 +795,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private async Task SignOutAsync()
     {
         var item = SelectedInstance ?? throw new InvalidOperationException(_text.Get(TextKey.NoInstanceSelected));
-        if (item.Context.Session is { } session) await session.SignOutAsync();
+        if (item.Context.Session is { } session)
+        {
+            _boundSessions.Remove(session);
+            await session.SignOutAsync();
+        }
         ClearAccountDrafts();
         item.Context.AttachSessionClear();
         DetachTimeline();
@@ -922,6 +950,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(EnterToSend));
         Changed(nameof(CompactLayout));
         Changed(nameof(ReduceMotion));
+        Changed(nameof(SendTip));
     }
 
     private void NotifyCooldown()
@@ -930,6 +959,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(OnCooldown));
         Changed(nameof(CanSend));
         Changed(nameof(ComposerPlaceholder));
+        Changed(nameof(SendTip));
     }
 
     private void BeginCooldown(int seconds)
@@ -947,9 +977,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public async Task LoadOlderAsync()
     {
-        if (_timeline is null) return;
-        await _timeline.LoadOlderAsync(_lifetime);
-        SyncMessages();
+        var timeline = _timeline;
+        var cancellation = _channelLoad;
+        if (timeline is null || cancellation is null || IsChannelLoading) return;
+        try
+        {
+            await timeline.LoadOlderAsync(cancellation.Token);
+            if (ReferenceEquals(_timeline, timeline)) SyncMessages();
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
     }
 
     private async Task SaveModerationAsync()
@@ -965,6 +1001,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        DetachTimeline();
         DisposePresentation();
         _text.PropertyChanged -= OnTextChanged;
         _chrome.Changed -= OnChromeChanged;

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Chat.Core.Sessions;
+using Chat.UI.Auth;
 using Chat.Localization;
 using Chat.UI.Components;
 using Chat.UI.Localization;
@@ -30,7 +31,7 @@ public sealed class LanguageOption(Locale locale, bool selected) : ObservableObj
     }
 }
 
-public enum SettingsSection { General, Appearance, Voice, Profile }
+public enum SettingsSection { General, Appearance, Voice, Profile, Connection }
 
 public sealed class SettingsViewModel : ObservableObject, IDisposable
 {
@@ -39,13 +40,15 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private readonly I18n _text;
     private SettingsSection _section;
     public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, Action close, Func<InstanceSession?> session,
-        Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices)
+        Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth)
     {
         _preference = preference;
         _chrome = chrome;
         _text = text;
         Profile = new(session, pickAvatar, onError, text);
         Devices = devices;
+        Connection = connection;
+        Auth = auth;
         Close = new(_ => close());
         Navigate = new(value => { if (value is SettingsSection section) Section = section; });
         Select = new(value =>
@@ -60,6 +63,12 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         UseCompactLayout = new(_ => _chrome.SetCompact(true));
         ToggleCompact = new(_ => _chrome.SetCompact(!_chrome.Compact));
         ToggleReduceMotion = new(_ => _chrome.SetReduceMotion(!_chrome.ReduceMotion));
+        ToggleLoopback = new(devices.ToggleLoopbackAsync, onError);
+        devices.PropertyChanged += (_, _) =>
+        {
+            Changed(nameof(LoopbackLabel));
+            Changed(nameof(LoopbackActive));
+        };
         _preference.Changed += OnChanged;
         _chrome.Changed += OnChrome;
         Refresh();
@@ -70,7 +79,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public SettingsSection Section
     {
         get => _section;
-        private set
+        internal set
         {
             if (_section == value) return;
             _section = value;
@@ -79,10 +88,14 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
             Changed(nameof(ShowAppearance));
             Changed(nameof(ShowVoice));
             Changed(nameof(ShowProfile));
+            Changed(nameof(ShowConnection));
             Changed(nameof(SectionTitle));
             if (value == SettingsSection.Voice) _ = Devices.RefreshAsync();
         }
     }
+    public ConnectionSettingsViewModel Connection { get; }
+    public AuthFormViewModel Auth { get; }
+    public bool ShowConnection => Section == SettingsSection.Connection;
     public bool ShowGeneral => Section == SettingsSection.General;
     public bool ShowAppearance => Section == SettingsSection.Appearance;
     public bool ShowVoice => Section == SettingsSection.Voice;
@@ -92,6 +105,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         SettingsSection.Appearance => TextKey.Appearance,
         SettingsSection.Voice => TextKey.Voice,
         SettingsSection.Profile => TextKey.Profile,
+        SettingsSection.Connection => TextKey.ServerConnection,
         _ => TextKey.GeneralSettings
     });
     public ActionCommand Select { get; }
@@ -103,6 +117,9 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public string ModifierKey => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";
     public ActionCommand ToggleCompact { get; }
     public ActionCommand ToggleReduceMotion { get; }
+    public AsyncCommand ToggleLoopback { get; }
+    public bool LoopbackActive => Devices.LoopbackActive;
+    public string LoopbackLabel => Devices.LoopbackLabel;
     public ProfileViewModel Profile { get; }
     public VoiceDevicesViewModel Devices { get; }
     public ObservableCollection<LanguageOption> Languages { get; } = [];
@@ -111,6 +128,11 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         get => Languages.FirstOrDefault(option => option.Locale == _preference.Current);
         set { if (value is not null && value.Locale != _preference.Current) _preference.Set(value.Locale); }
     }
+    public IReadOnlyList<string> SendShortcutChoices =>
+    [
+        _text.Get(TextKey.EnterToSend),
+        _text.Get(TextKey.CtrlEnterToSend)
+    ];
     public int SendMode
     {
         get => _chrome.EnterToSend ? 0 : 1;
@@ -143,5 +165,6 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
                 option.IsSelected = option.Locale == _preference.Current;
         Changed(nameof(SelectedLanguage));
         Changed(nameof(SectionTitle));
+        Changed(nameof(SendShortcutChoices));
     }
 }

@@ -23,6 +23,7 @@ public interface IChatApi : IDisposable
     Task<UserDto> GetMeAsync(CancellationToken cancellationToken);
     Task<UserDto> PatchMeAsync(PatchMeRequest request, CancellationToken cancellationToken);
     Task<ServerDto> CreateServerAsync(string name, CancellationToken cancellationToken);
+    Task<ChannelDto> CreateChannelAsync(Guid serverId, CreateChannelRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<ServerDto>> ListServersAsync(CancellationToken cancellationToken);
     Task<IReadOnlyList<ChannelDto>> ListChannelsAsync(Guid serverId, CancellationToken cancellationToken);
     Task<ServerDto> JoinAsync(string inviteCode, CancellationToken cancellationToken);
@@ -34,6 +35,7 @@ public interface IChatApi : IDisposable
     Task<VoiceJoinDto> JoinVoiceAsync(Guid channelId, bool mute, bool deaf, string? quality, CancellationToken cancellationToken);
     Task LeaveVoiceAsync(CancellationToken cancellationToken);
     Task<VoiceStateDto> PatchVoiceAsync(bool mute, bool deaf, string? quality, CancellationToken cancellationToken);
+    Task DeleteChannelAsync(Guid channelId, CancellationToken cancellationToken);
     Task<ChannelDto> PatchChannelAsync(Guid channelId, PatchChannelRequest request, CancellationToken cancellationToken);
     Task<ServerDto> PatchModerationAsync(Guid serverId, PatchModerationRequest request, CancellationToken cancellationToken);
 }

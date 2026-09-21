@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Voice" xmlns:i18n="using:Chat.UI.Localization"
+ x:Class="Chat.UI.Voice.AccountDevicePicker" x:DataType="vm:VoiceDevicesViewModel" Width="300">
+  <StackPanel Spacing="10">
+    <TextBlock Text="{i18n:T InputDevice}" FontWeight="Medium" />
+    <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedInput}" HorizontalAlignment="Stretch" AutomationProperties.Name="{i18n:T InputDevice}" CornerRadius="2">
+      <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:AudioDeviceChoice"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
+    </ComboBox>
+    <TextBlock Text="{i18n:T OutputDevice}" FontWeight="Medium" Margin="0,8,0,0" />
+    <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding SelectedOutput}" HorizontalAlignment="Stretch" AutomationProperties.Name="{i18n:T OutputDevice}" CornerRadius="2">
+      <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:AudioDeviceChoice"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
+    </ComboBox>
+    <TextBlock Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" Foreground="#ED9292" />
+  </StackPanel>
+</UserControl>

@@ -32,4 +32,10 @@ public static class AudioQualities
         VeryHigh => new(VeryHigh, 48000, 2, 384_000, 20, false, true),
         _ => new(Studio, 48000, 2, 510_000, 20, false, true)
     };
+
+    public static int FrameSamples(string id)
+    {
+        var profile = Profile(id);
+        return profile.SampleRateHz / 1000 * profile.FrameMs * profile.Channels;
+    }
 }

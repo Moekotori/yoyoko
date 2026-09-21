@@ -23,5 +23,8 @@ public sealed class UnavailableMediaService : IMediaService
     public Task<AudioDeviceList> ListDevicesAsync(CancellationToken cancellationToken)
         => Task.FromResult(new AudioDeviceList([], []));
     public Task SetDevicesAsync(AudioRoute route, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartLoopbackAsync(AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken)
+        => Task.FromException(new NotSupportedException("Not implemented yet: LiveKit media worker is not available."));
+    public Task StopLoopbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

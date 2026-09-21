@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Chat.App;
 
-internal sealed record AppSettings(string ProductName = "LightChat", string CacheDirectory = "")
+internal sealed record AppSettings(string ProductName = "LightChat", string CacheDirectory = "", string DefaultInstanceUrl = "")
 {
     public static AppSettings Load()
     {
@@ -13,7 +13,8 @@ internal sealed record AppSettings(string ProductName = "LightChat", string Cach
         return settings with
         {
             ProductName = Environment.GetEnvironmentVariable("CHAT_PRODUCT_NAME") ?? settings.ProductName,
-            CacheDirectory = Environment.GetEnvironmentVariable("CHAT_CACHE_DIRECTORY") ?? settings.CacheDirectory
+            CacheDirectory = Environment.GetEnvironmentVariable("CHAT_CACHE_DIRECTORY") ?? settings.CacheDirectory,
+            DefaultInstanceUrl = Environment.GetEnvironmentVariable("CHAT_DEFAULT_INSTANCE_URL") ?? settings.DefaultInstanceUrl
         };
     }
     public string DataDirectory => string.IsNullOrWhiteSpace(CacheDirectory)

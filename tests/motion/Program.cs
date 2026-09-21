@@ -78,6 +78,18 @@ foreach (var preset in new[] { MotionPreset.None, MotionPreset.Fade, MotionPrese
     Pump(240);
     Settled(preset.ToString());
 }
+host.Preset = MotionPreset.Fade;
+host.StartOpacity = 0.82;
+host.Duration = TimeSpan.FromMilliseconds(120);
+host.Play();
+Pump(25);
+Check(host.IsRunning && host.Opacity >= 0.82 && host.Opacity < 1, "channel content stays visible during feedback");
+var channelOpacity = host.Opacity;
+for (var i = 0; i < 20; i++) host.Trigger = new object();
+Dispatcher.UIThread.RunJobs();
+Check(host.Opacity >= channelOpacity - 0.01, "rapid channel feedback does not flash");
+Pump(180);
+Settled("channel content feedback");
 host.Duration = TimeSpan.Zero;
 host.Play();
 Pump(20);

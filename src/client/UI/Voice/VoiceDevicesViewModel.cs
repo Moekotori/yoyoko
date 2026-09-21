@@ -21,6 +21,10 @@ public sealed class VoiceDevicesViewModel : ObservableObject
     private AudioDeviceChoice? _selectedOutput;
     private string _error = "";
     private bool _updating;
+    private bool _loopback;
+    private Task? _refresh;
+    private bool _applying;
+    private bool _applyAgain;
     public VoiceDevicesViewModel(IVoiceMedia media, IVoiceDevicePreference preference, I18n text,
         Func<InstanceSession?> session, CancellationToken lifetime)
     {
@@ -31,8 +35,10 @@ public sealed class VoiceDevicesViewModel : ObservableObject
         _lifetime = lifetime;
         Inputs.Add(DefaultChoice());
         Outputs.Add(DefaultChoice());
-        _selectedInput = Inputs[0];
-        _selectedOutput = Outputs[0];
+        _selectedInput = string.IsNullOrEmpty(preference.InputDeviceId) ? Inputs[0] : new(preference.InputDeviceId, preference.InputDeviceId);
+        _selectedOutput = string.IsNullOrEmpty(preference.OutputDeviceId) ? Outputs[0] : new(preference.OutputDeviceId, preference.OutputDeviceId);
+        if (_selectedInput.Id != DefaultId) Inputs.Add(_selectedInput);
+        if (_selectedOutput.Id != DefaultId) Outputs.Add(_selectedOutput);
     }
     public ObservableCollection<AudioDeviceChoice> Inputs { get; } = [];
     public ObservableCollection<AudioDeviceChoice> Outputs { get; } = [];
@@ -60,9 +66,17 @@ public sealed class VoiceDevicesViewModel : ObservableObject
     }
     public string Error { get => _error; private set { _error = value; Changed(); Changed(nameof(HasError)); } }
     public bool HasError => Error.Length > 0;
+    public bool LoopbackActive => _loopback;
+    public string LoopbackLabel => _text.Get(_loopback ? TextKey.StopDeviceCheck : TextKey.CheckDevices);
     public AudioRoute Route => CurrentRoute();
 
-    public async Task RefreshAsync()
+    public Task RefreshAsync()
+    {
+        if (_refresh is { IsCompleted: false }) return _refresh;
+        return _refresh = RefreshDevicesAsync();
+    }
+
+    private async Task RefreshDevicesAsync()
     {
         try
         {
@@ -73,9 +87,8 @@ public sealed class VoiceDevicesViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            Replace(Inputs, []);
-            Replace(Outputs, []);
             Error = _text.Get(TextKey.DevicesUnavailable, exception.Message);
+            return;
         }
         Select(_preference.InputDeviceId, _preference.OutputDeviceId);
         _session()?.Voice.ApplyRoute(CurrentRoute());
@@ -91,9 +104,53 @@ public sealed class VoiceDevicesViewModel : ObservableObject
         _updating = false;
         Changed(nameof(SelectedInput));
         Changed(nameof(SelectedOutput));
+        Changed(nameof(LoopbackLabel));
+    }
+
+    public async Task ToggleLoopbackAsync()
+    {
+        if (_loopback) { await StopLoopbackAsync(); return; }
+        try
+        {
+            var capture = _session()?.Voice.Capture ?? AudioQualities.Profile(AudioQualities.Studio);
+            await _media.StartLoopbackAsync(capture, CurrentRoute(), _lifetime);
+            _loopback = true;
+            Error = "";
+        }
+        catch (Exception exception)
+        {
+            _loopback = false;
+            Error = _text.Get(TextKey.DevicesUnavailable, exception.Message);
+        }
+        Changed(nameof(LoopbackActive));
+        Changed(nameof(LoopbackLabel));
+    }
+
+    public async Task StopLoopbackAsync()
+    {
+        if (!_loopback) return;
+        _loopback = false;
+        try { await _media.StopLoopbackAsync(_lifetime); } catch (Exception) { }
+        Changed(nameof(LoopbackActive));
+        Changed(nameof(LoopbackLabel));
     }
 
     private async Task ApplyAsync()
+    {
+        if (_applying) { _applyAgain = true; return; }
+        _applying = true;
+        try
+        {
+            do
+            {
+                _applyAgain = false;
+                await ApplyRouteAsync();
+            } while (_applyAgain && !_lifetime.IsCancellationRequested);
+        }
+        finally { _applying = false; }
+    }
+
+    private async Task ApplyRouteAsync()
     {
         var route = CurrentRoute();
         _preference.SetDevices(route.InputDeviceId, route.OutputDeviceId);
@@ -101,7 +158,7 @@ public sealed class VoiceDevicesViewModel : ObservableObject
         try
         {
             if (voice is not null) await voice.SetRouteAsync(route, _lifetime);
-            else await _media.SetDevicesAsync(route, _lifetime);
+            else if (_loopback) await _media.SetDevicesAsync(route, _lifetime);
             Error = "";
         }
         catch (Exception exception)

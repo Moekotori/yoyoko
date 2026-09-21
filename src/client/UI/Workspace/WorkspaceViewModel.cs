@@ -40,6 +40,7 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     }
     public bool IsPreview { get; }
     public string AccountName => IsPreview ? "林" : _text.Get(TextKey.SignedOut);
+    public string AccountInitial => Avatar.FromName(AccountName);
     public string AccountStatus => IsPreview ? _text.Get(TextKey.DesignPreview) : _text.Get(TextKey.Offline);
     public Bitmap? AccountAvatar => Members.FirstOrDefault()?.Avatar;
     public Bitmap? VoiceAvatar => Members.Skip(1).FirstOrDefault()?.Avatar;
@@ -141,6 +142,7 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     private void OnLocaleChanged(object? sender, PropertyChangedEventArgs args)
     {
         Changed(nameof(AccountName));
+        Changed(nameof(AccountInitial));
         Changed(nameof(AccountStatus));
         Changed(nameof(ChannelName));
         Changed(nameof(ComposerPlaceholder));
@@ -164,5 +166,8 @@ public sealed class ChannelItem(string name, IReadOnlyList<MessageItem> messages
     public bool IsSelected { get => _selected; set { _selected = value; Changed(); } }
 }
 public sealed record PreviewServerItem(string Name, Bitmap Avatar, bool IsSelected);
-public sealed record MemberItem(string Name, Bitmap Avatar);
+public sealed record MemberItem(string Name, Bitmap Avatar)
+{
+    public string Initial => global::Chat.UI.Components.Avatar.FromName(Name);
+}
 public sealed record MessageItem(string Name, string Time, string Text, Bitmap Avatar, bool HasReaction = false);

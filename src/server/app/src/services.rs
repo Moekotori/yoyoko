@@ -160,7 +160,7 @@ pub async fn patch_moderation(
     Ok(to_protocol_server(updated))
 }
 
-fn to_protocol_channel(channel: Channel) -> chat_protocol::Channel {
+pub(crate) fn to_protocol_channel(channel: Channel) -> chat_protocol::Channel {
     chat_protocol::Channel {
         id: channel.id,
         server_id: channel.server_id,
@@ -174,7 +174,7 @@ fn to_protocol_channel(channel: Channel) -> chat_protocol::Channel {
     }
 }
 
-fn parse_quality(value: Option<&str>) -> ApiResult<chat_domain::voice::AudioQuality> {
+pub(crate) fn parse_quality(value: Option<&str>) -> ApiResult<chat_domain::voice::AudioQuality> {
     match value.map(str::trim).filter(|s| !s.is_empty()) {
         None => Ok(chat_domain::voice::AudioQuality::DEFAULT),
         Some(value) => chat_domain::voice::AudioQuality::parse(value).ok_or_else(|| {
@@ -247,7 +247,7 @@ pub fn message_dto(tokens: &TokenService, api: &str, message: &Message) -> chat_
     }
 }
 
-async fn require(
+pub(crate) async fn require(
     store: &dyn Store,
     user: Uuid,
     channel: Uuid,
@@ -591,36 +591,6 @@ pub async fn create_channel(
     Ok(to_protocol_channel(channel))
 }
 
-pub async fn patch_channel(
-    state: &AppState,
-    user: Uuid,
-    channel_id: Uuid,
-    audio_quality: Option<String>,
-) -> ApiResult<chat_protocol::Channel> {
-    let channel = require(&*state.store, user, channel_id, Permissions::MANAGE_CHANNEL).await?;
-    if channel.kind != ChannelKind::Voice {
-        return Err(ApiErr::bad(
-            "invalid_channel",
-            "audio_quality only applies to voice channels.",
-        ));
-    }
-    let Some(requested) = audio_quality.filter(|value| !value.trim().is_empty()) else {
-        return Ok(to_protocol_channel(channel));
-    };
-    let quality = parse_quality(Some(&requested))?;
-    let updated = state
-        .store
-        .set_channel_audio_quality(channel_id, quality)
-        .await?;
-    for voice in state.voice.clamp_channel(channel_id, quality).await {
-        publish_voice(state, &voice, false).await?;
-    }
-    let members = state.store.list_members(updated.server_id).await?;
-    let payload = serde_json::to_value(to_protocol_channel(updated.clone())).unwrap_or_default();
-    dispatch(state, &members, "CHANNEL_UPDATE", payload).await?;
-    Ok(to_protocol_channel(updated))
-}
-
 pub async fn join_server(
     state: &AppState,
     user: Uuid,
@@ -921,11 +891,14 @@ pub async fn join_voice(
         display_name,
         audio_quality: quality,
     };
+    let unchanged = previous.as_ref() == Some(&voice);
     state.voice.put(voice.clone()).await;
     if let Some(prev) = previous.filter(|prev| prev.channel_id != channel_id) {
         publish_voice(state, &prev, true).await?;
     }
-    publish_voice(state, &voice, false).await?;
+    if !unchanged {
+        publish_voice(state, &voice, false).await?;
+    }
     let token = crate::rtc::mint_voice_token(
         &state.settings.rtc,
         &user.to_string(),
@@ -952,25 +925,41 @@ pub async fn join_voice(
 pub async fn patch_voice(
     state: &AppState,
     user: Uuid,
-    self_mute: bool,
+    mut self_mute: bool,
     self_deaf: bool,
     requested_quality: Option<&str>,
 ) -> ApiResult<chat_protocol::VoiceState> {
+    if self_deaf {
+        self_mute = true;
+    }
     let current = state
         .voice
         .get(user)
         .await
         .ok_or_else(|| ApiErr::conflict("Not connected to a voice channel."))?;
-    Ok(join_voice(
-        state,
-        user,
-        current.channel_id,
+    let channel = state
+        .store
+        .find_channel(current.channel_id)
+        .await?
+        .ok_or_else(ApiErr::not_found)?;
+    let quality = match requested_quality {
+        Some(value) => parse_quality(Some(value))?.clamp(channel.audio_quality),
+        None => current.audio_quality.clamp(channel.audio_quality),
+    };
+    let voice = chat_domain::voice::VoiceState {
+        user_id: current.user_id,
+        server_id: current.server_id,
+        channel_id: current.channel_id,
         self_mute,
         self_deaf,
-        requested_quality,
-    )
-    .await?
-    .state)
+        display_name: current.display_name.clone(),
+        audio_quality: quality,
+    };
+    if voice != current {
+        state.voice.put(voice.clone()).await;
+        publish_voice(state, &voice, false).await?;
+    }
+    Ok(to_protocol_voice(voice))
 }
 
 pub async fn leave_voice(
@@ -999,7 +988,7 @@ pub async fn list_voice(
         .collect())
 }
 
-async fn publish_voice(
+pub(crate) async fn publish_voice(
     state: &AppState,
     voice: &chat_domain::voice::VoiceState,
     left: bool,
@@ -1018,7 +1007,7 @@ async fn publish_voice(
     dispatch(state, &members, "VOICE_STATE_UPDATE", payload).await
 }
 
-async fn dispatch(
+pub(crate) async fn dispatch(
     state: &AppState,
     members: &[Uuid],
     event: &str,
@@ -1059,7 +1048,7 @@ fn validate_username(value: &str) -> ApiResult<()> {
     }
 }
 
-fn validate_display(value: &str) -> ApiResult<()> {
+pub(crate) fn validate_display(value: &str) -> ApiResult<()> {
     let trimmed = value.trim();
     if (1..=100).contains(&trimmed.len()) {
         Ok(())

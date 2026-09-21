@@ -35,7 +35,7 @@ public sealed record PatchModerationRequest(string[]? BlockedWords, int? Cooldow
 public sealed record ChannelDto(Guid Id, Guid ServerId, string Name, string Kind, string? AudioQuality);
 public sealed record CreateServerRequest(string Name);
 public sealed record CreateChannelRequest(string Name, string Kind, string? AudioQuality);
-public sealed record PatchChannelRequest(string? AudioQuality);
+public sealed record PatchChannelRequest(string? AudioQuality = null, string? Name = null);
 public sealed record JoinRequest(string InviteCode);
 public sealed record VoiceFlags(bool SelfMute, bool SelfDeaf, string? AudioQuality);
 public sealed record AudioProfileDto(string Id, int SampleRateHz, int Channels, int BitrateBps, int FrameMs, bool Dtx, bool Fec);

@@ -54,6 +54,14 @@ impl AudioQuality {
         20
     }
 
+    pub fn frame_samples(self) -> usize {
+        (self.sample_rate_hz() as usize / 1000)
+            * self.frame_ms() as usize
+            * self.channels() as usize
+    }
+
+    pub const JITTER_FRAMES: usize = 3;
+
     pub fn dtx(self) -> bool {
         matches!(self, Self::Standard)
     }
@@ -93,6 +101,9 @@ mod tests {
         assert_eq!(AudioQuality::VeryHigh.bitrate_bps(), 384_000);
         assert_eq!(AudioQuality::Studio.bitrate_bps(), 510_000);
         assert_eq!(AudioQuality::Studio.channels(), 2);
+        assert_eq!(AudioQuality::Standard.frame_samples(), 960);
+        assert_eq!(AudioQuality::Studio.frame_samples(), 1920);
+        assert_eq!(AudioQuality::JITTER_FRAMES, 3);
         assert_eq!(
             AudioQuality::Studio.clamp(AudioQuality::High),
             AudioQuality::High

@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Settings.ConnectionSettingsView" x:DataType="vm:ConnectionSettingsViewModel">
+  <StackPanel Spacing="24">
+    <StackPanel Spacing="10">
+      <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
+      <TextBox Classes="settingsField" Text="{Binding Address}" IsEnabled="{Binding !IsBusy}"
+        AutomationProperties.Name="{i18n:T InstanceAddress}" />
+    </StackPanel>
+    <Button Classes="primary settingsPrimary" Content="{i18n:T ConnectServer}" Command="{Binding Connect}"
+      IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Left" />
+    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" />
+  </StackPanel>
+</UserControl>

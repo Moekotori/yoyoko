@@ -1,26 +1,96 @@
 use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::Host;
 use serde_json::{Value, json};
 use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+const CACHE_TTL: Duration = Duration::from_millis(1500);
+static CACHE: Mutex<Option<(Instant, Value)>> = Mutex::new(None);
 
 pub fn list() -> Result<Value, String> {
-    let (inputs, outputs) = enumerate()?;
-    Ok(json!({ "inputs": inputs, "outputs": outputs }))
+    let mut cache = CACHE.lock().unwrap_or_else(|err| err.into_inner());
+    if let Some((at, value)) = cache.as_ref()
+        && at.elapsed() < CACHE_TTL
+    {
+        return Ok(value.clone());
+    }
+    let value = list_uncached()?;
+    *cache = Some((Instant::now(), value.clone()));
+    Ok(value)
+}
+
+pub fn invalidate() {
+    *CACHE.lock().unwrap_or_else(|err| err.into_inner()) = None;
 }
 
 pub fn validate(kind: &str, id: Option<&str>) -> Result<(), String> {
     let Some(id) = id.map(str::trim).filter(|value| !value.is_empty()) else {
         return Ok(());
     };
-    let (inputs, outputs) = enumerate()?;
-    let list = if kind == "in" { &inputs } else { &outputs };
-    if list.iter().any(|device| device["id"] == id) {
+    let list = list()?;
+    let key = if kind == "in" { "inputs" } else { "outputs" };
+    let found = list
+        .get(key)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .any(|device| device["id"] == id);
+    if found {
         Ok(())
     } else {
         Err(format!("unknown_{kind}put_device"))
     }
 }
 
-fn enumerate() -> Result<(Vec<Value>, Vec<Value>), String> {
+pub fn input(host: &Host, id: Option<&str>) -> Result<cpal::Device, String> {
+    pick(
+        id,
+        "in",
+        host.default_input_device(),
+        host.input_devices().map_err(|err| err.to_string())?,
+        "no_input_device",
+    )
+}
+
+pub fn output(host: &Host, id: Option<&str>) -> Result<cpal::Device, String> {
+    pick(
+        id,
+        "out",
+        host.default_output_device(),
+        host.output_devices().map_err(|err| err.to_string())?,
+        "no_output_device",
+    )
+}
+
+fn pick(
+    id: Option<&str>,
+    prefix: &str,
+    default: Option<cpal::Device>,
+    devices: impl Iterator<Item = cpal::Device>,
+    missing: &str,
+) -> Result<cpal::Device, String> {
+    let Some(id) = id.map(str::trim).filter(|value| !value.is_empty()) else {
+        return default.ok_or_else(|| missing.into());
+    };
+    let mut seen: HashMap<String, u32> = HashMap::new();
+    for device in devices {
+        let name = device.name().unwrap_or_else(|_| "Unknown".into());
+        let count = seen.entry(name.clone()).or_insert(0);
+        *count += 1;
+        let generated = if *count == 1 {
+            format!("{prefix}:{name}")
+        } else {
+            format!("{prefix}:{name}:{count}")
+        };
+        if generated == id {
+            return Ok(device);
+        }
+    }
+    Err(format!("unknown_{prefix}put_device"))
+}
+
+fn list_uncached() -> Result<Value, String> {
     let host = cpal::default_host();
     let inputs = collect(
         host.input_devices()
@@ -34,7 +104,7 @@ fn enumerate() -> Result<(Vec<Value>, Vec<Value>), String> {
         host.default_output_device(),
         "out",
     )?;
-    Ok((inputs, outputs))
+    Ok(json!({ "inputs": inputs, "outputs": outputs }))
 }
 
 fn collect(

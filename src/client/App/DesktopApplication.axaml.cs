@@ -28,8 +28,8 @@ public partial class DesktopApplication : Application
             if (desktop.Args?.Contains("--design-preview") == true)
             {
                 var previewLocale = FileLocalePreference.Load(settings.PreferencesPath);
-                _i18n = new I18n(new TextCatalog(), previewLocale);
-                I18n.Use(_i18n);
+                I18n.Attach(new TextCatalog(), previewLocale);
+                _i18n = I18n.Presenter;
                 desktop.MainWindow = new DesignPreviewWindow(settings.ProductName, _i18n);
                 desktop.Exit += (_, _) => { _i18n.Dispose(); _lifetime.Dispose(); };
                 base.OnFrameworkInitializationCompleted();
@@ -41,14 +41,22 @@ public partial class DesktopApplication : Application
             _instances = new(cache, new HttpInstanceDiscovery(_http));
             var media = WorkerMediaService.Create();
             var locale = FileLocalePreference.Load(settings.PreferencesPath);
-            _i18n = new I18n(new TextCatalog(), locale);
-            I18n.Use(_i18n);
+            I18n.Attach(new TextCatalog(), locale);
+            _i18n = I18n.Presenter;
+            var apis = new ChatApiFactory();
+            var voice = new MediaVoiceAdapter(media);
+            var defaultAddress = desktop.Args?.Contains("--local-workspace") == true
+                ? "http://localhost:8080" : settings.DefaultInstanceUrl;
+            var connection = new WorkspaceConnection(_instances, cache, vault, apis,
+                () => new WebSocketConnection(), voice, defaultAddress);
             var shell = new ShellViewModel(_instances, cache, vault, new HttpInstanceDiscovery(_http),
-                new ChatApiFactory(), () => new WebSocketConnection(), new MediaVoiceAdapter(media),
-                locale, locale, locale, _i18n, settings.ProductName, _lifetime.Token);
+                apis, () => new WebSocketConnection(), voice,
+                locale, locale, locale, _i18n, settings.ProductName, _lifetime.Token, connection);
             var window = new MainWindow { DataContext = shell };
             desktop.MainWindow = window;
-            window.Opened += async (_, _) => await shell.InitializeAsync(cache.InitializeAsync);
+            var workspace = new DefaultWorkspace(connection);
+            window.Opened += async (_, _) => await shell.InitializeAsync(cache.InitializeAsync,
+                workspace.PrepareAsync);
             desktop.Exit += (_, _) =>
             {
                 _lifetime.Cancel();

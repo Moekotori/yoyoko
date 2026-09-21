@@ -1,3 +1,5 @@
+mod channel;
+
 use crate::store::{
     GatewaySession, NewServer, OutboxEvent, PermissionSnapshot, SessionRecord, Store, StoreError,
 };

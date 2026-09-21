@@ -1,18 +1,34 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Workspace.MemberSidebar" x:DataType="vm:WorkspaceViewModel">
-  <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0" Width="208">
+  <UserControl.Styles>
+    <Style Selector="Border.memberRow">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Margin" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Border.memberRow:pointerover"><Setter Property="Background" Value="{StaticResource HoverBrush}" /></Style>
+  </UserControl.Styles>
+  <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0" Width="220">
     <Grid RowDefinitions="52,*">
-      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="20,0"><TextBlock Text="{i18n:T Members}" FontSize="13" Classes="muted" VerticalAlignment="Center" /></Border>
+      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+        <TextBlock Text="{i18n:T Members}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" />
+      </Border>
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="16,20" Spacing="12">
-          <TextBlock Text="{Binding MemberHeading}" Classes="section" Margin="4,0,0,3" />
+        <StackPanel Margin="8,12,8,16" Spacing="2">
+          <TextBlock Text="{Binding MemberHeading}" Classes="section" Margin="8,0,8,8" />
           <ItemsControl ItemsSource="{Binding Members}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:MemberItem">
-                <Grid ColumnDefinitions="32,*" ColumnSpacing="10" Margin="4,0,0,18">
-                  <c:Avatar Width="32" Height="32" Source="{Binding Avatar}" IsOnline="True" />
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2"><TextBlock Text="{Binding Name}" FontSize="13" /><TextBlock Text="{i18n:T Online}" Classes="muted" FontSize="11" /></StackPanel>
-                </Grid>
+                <Border Classes="memberRow">
+                  <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
+                    <c:Avatar Width="28" Height="28" Source="{Binding Avatar}" Initial="{Binding Initial}" IsOnline="True" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                      <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{i18n:T Online}" Classes="quiet" FontSize="11" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

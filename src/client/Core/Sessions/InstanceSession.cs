@@ -11,7 +11,7 @@ using Chat.Protocol;
 
 namespace Chat.Core.Sessions;
 
-public sealed class InstanceSession : IAsyncDisposable
+public sealed partial class InstanceSession : IAsyncDisposable
 {
     private readonly IChatApi _api;
     private readonly IMessageCache _cache;
@@ -88,7 +88,7 @@ public sealed class InstanceSession : IAsyncDisposable
             session.Start();
             return session;
         }
-        catch { return null; }
+        catch (ChatApiException exception) when (exception.Code == "unauthorized") { return null; }
     }
 
     public string AuthorName(Guid userId) =>
@@ -186,14 +186,17 @@ public sealed class InstanceSession : IAsyncDisposable
         _users[Me.Id] = Me;
     }
 
-    private async Task RefreshCommunityAsync(CancellationToken cancellationToken)
+    public async Task RefreshCommunityAsync(CancellationToken cancellationToken)
     {
         var servers = await _api.ListServersAsync(cancellationToken);
         var channels = new List<ChannelDto>();
         foreach (var server in servers)
             channels.AddRange(await _api.ListChannelsAsync(server.Id, cancellationToken));
-        ApplyCommunity(new(servers, channels, [.. _users.Values]));
-        await _cache.SaveCommunityAsync(Scope, new(Servers, Channels, [.. _users.Values]), cancellationToken);
+        if (Voice.ChannelId is Guid joined && channels.All(channel => channel.Id != joined))
+            await Voice.LeaveAsync(cancellationToken);
+        var snapshot = new CommunitySnapshot(servers, channels, [.. _users.Values]);
+        await _cache.SaveCommunityAsync(Scope, snapshot, cancellationToken);
+        ApplyCommunity(snapshot);
         CommunityChanged?.Invoke();
     }
 
@@ -345,9 +348,9 @@ public sealed class InstanceSession : IAsyncDisposable
             MessageArrived?.Invoke(message);
             return;
         }
-        if (envelope.Event is "CHANNEL_CREATE" or "CHANNEL_UPDATE" or "SERVER_CREATE" or "MEMBER_JOIN")
+        if (envelope.Event is "CHANNEL_CREATE" or "CHANNEL_UPDATE" or "CHANNEL_DELETE" or "SERVER_CREATE" or "MEMBER_JOIN")
         {
-            try { await RefreshCommunityAsync(cancellationToken); } catch { /* next READY/resync */ }
+            await RefreshCommunityAsync(cancellationToken);
             if (envelope.Seq is long seq)
             {
                 var cursor = await _cache.LoadCursorAsync(Scope, cancellationToken);

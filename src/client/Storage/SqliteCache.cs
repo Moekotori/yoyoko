@@ -151,6 +151,10 @@ public sealed class SqliteCache : IInstanceStore, IMessageCache
             command.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(channel, ProtocolJson.Default.ChannelDto));
             command.ExecuteNonQuery();
         }
+        command.Parameters.Clear();
+        Scope(command, scope);
+        command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id NOT IN (SELECT id FROM channels WHERE instance_id=$instance AND account_id=$account)";
+        command.ExecuteNonQuery();
         foreach (var user in snapshot.Users)
         {
             command.CommandText = "INSERT INTO users VALUES ($instance,$account,$id,$payload)";

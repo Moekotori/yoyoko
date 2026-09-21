@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
+  x:Class="Chat.UI.Chat.MemberSidebar" x:DataType="vm:ShellViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.memberRow">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Margin" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Border.memberRow:pointerover"><Setter Property="Background" Value="{StaticResource HoverBrush}" /></Style>
+  </UserControl.Styles>
+  <Border Width="220" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0">
+    <Grid RowDefinitions="52,*">
+      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBlock Text="{i18n:T PageParticipants}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="1" Text="{Binding ParticipantCount}" Classes="quiet" FontSize="12" VerticalAlignment="Center" IsVisible="{Binding HasParticipants}" />
+        </Grid>
+      </Border>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Participants}" Margin="8,12,8,16" AutomationProperties.Name="{i18n:T PageParticipants}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="chat:MessageRow">
+              <Border Classes="memberRow">
+                <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
+                  <c:Avatar Width="28" Height="28" Playback="{Binding Playback}" Initial="{Binding Initial}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Author}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </Border>
+</UserControl>

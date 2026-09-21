@@ -71,6 +71,7 @@ public sealed class MessageRow : ObservableObject
     private readonly Func<AttachmentDto, Task> _save;
     private string _author;
     private AvatarPlayback? _playback;
+    private bool _continuation;
     public MessageRow(TimelineItem item, string author, Func<AttachmentDto, Task> save,
         Func<TimelineItem, Task> retry, Action<Exception> onError)
     {
@@ -81,9 +82,10 @@ public sealed class MessageRow : ObservableObject
         Update();
     }
     public ICommand Retry { get; }
-    public TimelineItem Item { get; }
+    public TimelineItem Item { get; private set; }
     public Guid Id => Item.Message.Id;
-    public string Author { get => _author; private set { _author = value; Changed(); } }
+    public string Author { get => _author; private set { _author = value; Changed(); Changed(nameof(Initial)); } }
+    public string Initial => Avatar.FromName(_author);
     public void SetAuthor(string author) => Author = author;
     public AvatarPlayback? Playback
     {
@@ -93,12 +95,27 @@ public sealed class MessageRow : ObservableObject
     public string Content => Item.Message.Content ?? "";
     public bool HasText => !string.IsNullOrEmpty(Content);
     public string Time => Item.Message.CreatedAt.ToLocalTime().ToString("HH:mm");
+    public bool IsContinuation
+    {
+        get => _continuation;
+        private set
+        {
+            if (_continuation == value) return;
+            _continuation = value;
+            Changed();
+            Changed(nameof(ShowHeader));
+        }
+    }
+    public bool ShowHeader => !IsContinuation;
     public bool IsPending => Item.Status == SendStatus.Sending;
     public bool IsFailed => Item.Status == SendStatus.Failed;
+    public bool ShowSendState => IsPending || IsFailed;
+    public void SetContinuation(bool value) => IsContinuation = value;
     public ObservableCollection<AttachmentRow> Files { get; } = [];
     public bool HasFiles => Files.Count > 0;
-    public void Update()
+    public void Update(TimelineItem? item = null)
     {
+        if (item is not null) Item = item;
         var next = Item.Message.Attachments ?? [];
         for (var i = Files.Count - 1; i >= 0; i--)
             if (!next.Any(dto => Same(Files[i].Dto, dto)))
@@ -113,6 +130,7 @@ public sealed class MessageRow : ObservableObject
         Changed(nameof(HasText));
         Changed(nameof(IsPending));
         Changed(nameof(IsFailed));
+        Changed(nameof(ShowSendState));
         Changed(nameof(HasFiles));
         Changed(nameof(Time));
     }

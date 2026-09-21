@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Channels.CommunityMenu" x:DataType="vm:ShellViewModel" Classes="communityMenu">
+  <UserControl.Styles>
+    <Style Selector="Button.menuAction"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="12,8" /></Style>
+    <Style Selector="Expander"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="CornerRadius" Value="6" /></Style>
+    <Style Selector=".communityMenu Expander /template/ ToggleButton#ExpanderHeader"><Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="12,8" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
+  </UserControl.Styles>
+  <ScrollViewer MaxHeight="480" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Width="280" Spacing="4">
+      <StackPanel Margin="12,8,12,12" Spacing="6">
+        <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" FontSize="16" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+      </StackPanel>
+      <Button Classes="menuAction" Command="{Binding OpenAddInstance}" Content="{i18n:T AddInstance}" />
+      <StackPanel IsVisible="{Binding IsSignedIn}" Spacing="4">
+        <Border Height="1" Background="{StaticResource DividerBrush}" Margin="12,8" />
+        <TextBlock Text="{Binding InviteHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" Margin="12,4,12,12" />
+        <Expander Header="{i18n:T CreateCommunity}">
+          <StackPanel Spacing="12" Margin="12,4,12,12">
+            <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" AutomationProperties.Name="{i18n:T NewCommunity}" Tag="create" KeyDown="OnSubmitKeyDown" />
+            <Button Classes="primary" Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </Expander>
+        <Expander Header="{i18n:T JoinCommunity}">
+          <StackPanel Spacing="12" Margin="12,4,12,12">
+            <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" AutomationProperties.Name="{i18n:T InviteCode}" Tag="join" KeyDown="OnSubmitKeyDown" />
+            <Button Classes="primary" Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </Expander>
+        <Button Classes="menuAction" Content="{i18n:T CreateTextChannel}" Command="{Binding AddTextChannel}" IsVisible="{Binding CanModerate}" />
+        <Button Classes="menuAction" Content="{i18n:T CreateVoiceChannel}" Command="{Binding AddVoiceChannel}" IsVisible="{Binding CanModerate}" />
+        <Expander Header="{i18n:T Moderation}" IsVisible="{Binding CanModerate}">
+          <StackPanel Spacing="10" Margin="12,4,12,12">
+            <TextBlock Text="{i18n:T BlockedWordsHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+            <TextBox Text="{Binding ModerationWords}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="96" AutomationProperties.Name="{i18n:T BlockedWordsHint}" />
+            <TextBlock Text="{i18n:T CooldownSeconds}" Classes="muted" FontSize="12" />
+            <TextBox Text="{Binding CooldownInput}" AutomationProperties.Name="{i18n:T CooldownSeconds}" Tag="cooldown" KeyDown="OnSubmitKeyDown" />
+            <Button Classes="primary" Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </Expander>
+        <Border Height="1" Background="{StaticResource DividerBrush}" Margin="12,8" />
+        <Button Classes="menuAction" Content="{i18n:T SignOut}" Command="{Binding SignOut}" Foreground="#DDA49C" />
+      </StackPanel>
+      <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="12,8" IsVisible="{Binding HasStatus}" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

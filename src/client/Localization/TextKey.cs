@@ -2,6 +2,21 @@ namespace Chat.Localization;
 
 public static class TextKey
 {
+    public const string RenameChannel = "RenameChannel";
+    public const string DeleteChannel = "DeleteChannel";
+    public const string DeleteChannelConfirm = "DeleteChannelConfirm";
+    public const string ChannelNameInvalid = "ChannelNameInvalid";
+    public const string OpenChannel = "OpenChannel";
+    public const string ChannelSave = "ChannelSave";
+    public const string ChannelCancel = "ChannelCancel";
+    public const string CreateTextChannel = "CreateTextChannel";
+    public const string CreateVoiceChannel = "CreateVoiceChannel";
+
+    public const string SessionRecoveryRequired = "SessionRecoveryRequired";
+    public const string ServerConnection = "ServerConnection";
+    public const string ConnectServer = "ConnectServer";
+    public const string ConnectingServer = "ConnectingServer";
+
     public const string PageParticipants = "PageParticipants";
     public const string Settings = "Settings";
     public const string Language = "Language";
@@ -22,6 +37,9 @@ public static class TextKey
     public const string ChannelList = "ChannelList";
     public const string NewCommunity = "NewCommunity";
     public const string CreateCommunity = "CreateCommunity";
+    public const string CreateChannel = "CreateChannel";
+    public const string NewChannelName = "NewChannelName";
+    public const string VoiceChannel = "VoiceChannel";
     public const string InviteCode = "InviteCode";
     public const string JoinCommunity = "JoinCommunity";
     public const string SignOut = "SignOut";
@@ -62,6 +80,8 @@ public static class TextKey
     public const string OutputDevice = "OutputDevice";
     public const string DefaultDevice = "DefaultDevice";
     public const string DevicesUnavailable = "DevicesUnavailable";
+    public const string CheckDevices = "CheckDevices";
+    public const string StopDeviceCheck = "StopDeviceCheck";
     public const string MutedSuffix = "MutedSuffix";
     public const string DeafenedSuffix = "DeafenedSuffix";
     public const string CacheLoadFailed = "CacheLoadFailed";
@@ -105,6 +125,12 @@ public static class TextKey
     public const string VoiceChannels = "VoiceChannels";
     public const string ExpandTextChannels = "ExpandTextChannels";
     public const string ExpandVoiceChannels = "ExpandVoiceChannels";
+    public const string JumpToChannel = "JumpToChannel";
+    public const string MembersShortcut = "MembersShortcut";
+    public const string SettingsShortcut = "SettingsShortcut";
+    public const string CloseTabShortcut = "CloseTabShortcut";
+    public const string SendEnterTip = "SendEnterTip";
+    public const string SendChordTip = "SendChordTip";
     public const string SearchMessages = "SearchMessages";
     public const string SearchShortcut = "SearchShortcut";
     public const string Members = "Members";
@@ -141,6 +167,7 @@ public static class TextKey
     public const string TooManyFiles = "TooManyFiles";
     public const string FileSaved = "FileSaved";
     public const string Profile = "Profile";
+    public const string ProfileImage = "ProfileImage";
     public const string ChangeAvatar = "ChangeAvatar";
     public const string RemoveAvatar = "RemoveAvatar";
     public const string SaveProfile = "SaveProfile";
@@ -161,6 +188,18 @@ public static class TextKey
     public const string CtrlEnterToSend = "CtrlEnterToSend";
     public const string CompactLayout = "CompactLayout";
     public const string ReduceMotion = "ReduceMotion";
+    public const string ColorScheme = "ColorScheme";
+    public const string ColorSchemeDark = "ColorSchemeDark";
+    public const string ColorSchemeLight = "ColorSchemeLight";
+    public const string CustomBackground = "CustomBackground";
+    public const string ChooseBackground = "ChooseBackground";
+    public const string RemoveBackground = "RemoveBackground";
+    public const string BackgroundBlur = "BackgroundBlur";
+    public const string BackgroundBrightness = "BackgroundBrightness";
+    public const string PickBackground = "PickBackground";
+    public const string InvalidWallpaper = "InvalidWallpaper";
+    public const string WallpaperTooLarge = "WallpaperTooLarge";
+    public const string WallpaperVideoUnavailable = "WallpaperVideoUnavailable";
     public const string Moderation = "Moderation";
     public const string BlockedWordsHint = "BlockedWordsHint";
     public const string CooldownSeconds = "CooldownSeconds";

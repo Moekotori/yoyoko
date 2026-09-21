@@ -107,7 +107,7 @@ pub struct NewServer {
 }
 
 #[async_trait]
-pub trait Store: Send + Sync {
+pub trait Store: Send + Sync + crate::channel::repository::ChannelManagementStore {
     async fn ping(&self) -> Result<(), StoreError>;
 
     async fn create_user(

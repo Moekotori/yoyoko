@@ -1,17 +1,20 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Instances.AddInstanceView" x:DataType="vm:ShellViewModel">
-  <StackPanel MaxWidth="480" Margin="40" Spacing="18" VerticalAlignment="Center" HorizontalAlignment="Center">
-    <TextBlock Text="{i18n:T ConnectCommunity}" FontSize="30" FontWeight="SemiBold" />
-    <TextBlock Text="{i18n:T InstanceAddress}" FontSize="13" />
-    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-      <TextBox Text="{Binding Address}" PlaceholderText="{i18n:T InstanceAddressPlaceholder}"
-        AutomationProperties.Name="{i18n:T InstanceAddress}" MinWidth="200">
-        <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding AddInstance}" /></TextBox.KeyBindings>
-      </TextBox>
-      <Button Grid.Column="1" Classes="primary" Content="{i18n:T AddInstance}" Command="{Binding AddInstance}" />
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Grid MaxWidth="380" Margin="36,40" VerticalAlignment="Center" RowDefinitions="Auto,Auto,Auto,Auto">
+      <TextBlock Text="{i18n:T ConnectCommunity}" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,32" />
+      <StackPanel Grid.Row="1" Spacing="10">
+        <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
+        <TextBox Text="{Binding Address}" PlaceholderText="{i18n:T InstanceAddressPlaceholder}"
+          Height="48" Padding="14,12" VerticalContentAlignment="Center" AutomationProperties.Name="{i18n:T InstanceAddress}">
+          <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding AddInstance}" /></TextBox.KeyBindings>
+        </TextBox>
+      </StackPanel>
+      <Button Grid.Row="2" Classes="primary" Content="{i18n:T AddInstance}" Command="{Binding AddInstance}"
+        Height="46" FontWeight="SemiBold" HorizontalAlignment="Stretch" Margin="0,24,0,0" />
+      <TextBlock Grid.Row="3" Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" MinHeight="20" Margin="0,16,0,0"
+        AutomationProperties.Name="{i18n:T ActionStatus}" />
     </Grid>
-    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" MinHeight="40"
-      AutomationProperties.Name="{i18n:T ActionStatus}" />
-  </StackPanel>
+  </ScrollViewer>
 </UserControl>

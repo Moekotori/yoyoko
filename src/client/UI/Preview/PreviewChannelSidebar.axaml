@@ -31,7 +31,7 @@
             <Button Classes="channel" Command="{Binding Unavailable}" AutomationProperties.Name="深夜电台（尚未实现）">
               <StackPanel Orientation="Horizontal" Spacing="10"><PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" /><TextBlock Text="深夜电台" FontSize="14" /></StackPanel>
             </Button>
-            <StackPanel Orientation="Horizontal" Spacing="9" Margin="38,6,0,0"><c:Avatar Width="22" Height="22" Source="{Binding VoiceAvatar}" /><TextBlock Text="Mika" Classes="muted" VerticalAlignment="Center" FontSize="12" /></StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="9" Margin="38,6,0,0"><c:Avatar Width="22" Height="22" Source="{Binding VoiceAvatar}" Initial="M" /><TextBlock Text="Mika" Classes="muted" VerticalAlignment="Center" FontSize="12" /></StackPanel>
           </StackPanel>
         </StackPanel>
       </StackPanel>

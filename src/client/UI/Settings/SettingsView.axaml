@@ -2,34 +2,46 @@
   xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel" Classes="settingsRoot" motion:Motion.ReduceMotion="{Binding ReduceMotion}">
   <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" /><StyleInclude Source="avares://Chat.UI/Settings/SettingsMotion.axaml" /></UserControl.Styles>
-  <Grid ColumnDefinitions="148,*">
+  <Grid ColumnDefinitions="184,*">
     <Border Background="{StaticResource SidebarBrush}">
-      <StackPanel Margin="12,30" Spacing="4">
-        <TextBlock Text="{i18n:T Settings}" FontSize="18" FontWeight="SemiBold" Margin="12,0,0,28" />
-        <Button Classes="settingsNav" Classes.selected="{Binding ShowGeneral}" Content="{i18n:T GeneralSettings}"
-          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.General}" />
-        <Button Classes="settingsNav" Classes.selected="{Binding ShowAppearance}" Content="{i18n:T Appearance}"
-          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Appearance}" />
-        <Button Classes="settingsNav" Classes.selected="{Binding ShowVoice}" Content="{i18n:T Voice}"
-          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Voice}" />
-        <Button Classes="settingsNav" Classes.selected="{Binding ShowProfile}" Content="{i18n:T Profile}"
-          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Profile}" />
+      <StackPanel Margin="16,36" Spacing="4">
+        <TextBlock Text="{i18n:T Settings}" FontSize="20" FontWeight="SemiBold" Margin="14,0,0,32" />
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowGeneral}" AutomationProperties.Name="{i18n:T GeneralSettings}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.General}">
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconSettings}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T GeneralSettings}" VerticalAlignment="Center" /></Grid>
+        </Button>
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowAppearance}" AutomationProperties.Name="{i18n:T Appearance}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Appearance}">
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconEmoji}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T Appearance}" VerticalAlignment="Center" /></Grid>
+        </Button>
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowVoice}" AutomationProperties.Name="{i18n:T Voice}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Voice}">
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconHeadphones}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T Voice}" VerticalAlignment="Center" /></Grid>
+        </Button>
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowProfile}" AutomationProperties.Name="{i18n:T Profile}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Profile}">
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconPeople}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T Profile}" VerticalAlignment="Center" /></Grid>
+        </Button>
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowConnection}" Content="{i18n:T ServerConnection}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Connection}" />
       </StackPanel>
     </Border>
-    <Grid Grid.Column="1" MaxWidth="656" Margin="28,24,28,0" RowDefinitions="48,*">
+    <Grid Grid.Column="1" Margin="40,32,40,0" RowDefinitions="48,*">
       <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{Binding SectionTitle}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding SectionTitle}" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center" />
         <Button Grid.Column="1" Classes="settingsClose" Command="{Binding Close}" ToolTip.Tip="{i18n:T CloseSettings}"
           AutomationProperties.Name="{i18n:T CloseSettings}">
-          <PathIcon Data="{StaticResource IconClose}" Width="16" Height="16" />
+          <PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" />
         </Button>
       </Grid>
-      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <motion:MotionHost Margin="0,18,0,32" VerticalAlignment="Top" Trigger="{Binding Section}">
+      <ScrollViewer x:Name="SettingsScroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <motion:MotionHost Margin="0,16,0,40" HorizontalAlignment="Left"
+          Width="{Binding #SettingsScroll.Viewport.Width}" VerticalAlignment="Top" Trigger="{Binding Section}">
         <Panel>
           <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowVoice}" IsVisible="{Binding ShowVoice}"><vm:VoiceSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowConnection}" IsVisible="{Binding ShowConnection}"><vm:ConnectionSettingsView DataContext="{Binding Connection}" /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowProfile}" IsVisible="{Binding ShowProfile}"><vm:ProfileSettingsView /></Border>
         </Panel>
         </motion:MotionHost>

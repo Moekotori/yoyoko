@@ -2,7 +2,7 @@
   x:Class="Chat.UI.Workspace.AccountBar" x:DataType="vm:WorkspaceViewModel">
   <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,1,0" Padding="16,12">
     <Grid ColumnDefinitions="34,*,Auto" ColumnSpacing="10">
-      <c:Avatar Width="34" Height="34" Source="{Binding AccountAvatar}" VerticalAlignment="Center" />
+      <c:Avatar Width="34" Height="34" Source="{Binding AccountAvatar}" Initial="{Binding AccountInitial}" VerticalAlignment="Center" />
       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
         <TextBlock Text="{Binding AccountName}" FontSize="13" FontWeight="Medium" />
         <TextBlock Text="{Binding AccountStatus}" Classes="muted" FontSize="10" />

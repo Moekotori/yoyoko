@@ -10,9 +10,10 @@ public sealed class ChannelItem(Guid id, Guid serverId, string name, string kind
     public bool IsVoice => Kind == "voice";
     public Guid Id { get; } = id;
     public Guid ServerId { get; } = serverId;
-    public string Name { get; } = name;
+    private string _name = name;
+    public string Name { get => _name; set { if (_name == value) return; _name = value; Changed(); Changed(nameof(Label)); } }
     public string Kind { get; } = kind;
     public string AudioQuality { get; set; } = audioQuality ?? "studio";
-    public string Label => Kind == "voice" ? Name + " · " + global::Chat.UI.Localization.I18n.Presenter.Get(TextKey.Voice) : "# " + Name;
+    public string Label => Kind == "voice" ? Name + " · " + global::Chat.UI.Localization.I18n.T(TextKey.Voice) : "# " + Name;
     public void Refresh() => Changed(nameof(Label));
 }

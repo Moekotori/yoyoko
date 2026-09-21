@@ -1,25 +1,78 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
  x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel" x:Name="Sidebar">
+  <UserControl.Styles>
+    <Style Selector="Button.groupHeader"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Height" Value="30" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+    <Style Selector="Button.groupAdd"><Setter Property="Width" Value="26" /><Setter Property="Height" Value="26" /><Setter Property="Padding" Value="7" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{StaticResource QuietTextBrush}" /></Style>
+    <Style Selector="Button.channel"><Setter Property="CornerRadius" Value="2" /><Setter Property="Height" Value="32" /><Setter Property="Padding" Value="10,0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+    <Style Selector="Button.channel.selected"><Setter Property="Background" Value="#343434" /></Style>
+    <Style Selector="Button.channel.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#3A3A3A" /></Style>
+    <Style Selector="Button.channel.selected PathIcon"><Setter Property="Foreground" Value="#D5D5D5" /></Style>
+    <Style Selector="Button.channel.selected TextBlock"><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="#E8E8E8" /></Style>
+  </UserControl.Styles>
   <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="10,16" Spacing="2">
-        <Button Command="{Binding ToggleTextChannels}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,0,0,5">
-          <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{i18n:T TextChannels}" Classes="section" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronUp}" Width="12" Height="12" IsVisible="{Binding TextExpanded}" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" IsVisible="{Binding !TextExpanded}" /></Grid>
-        </Button>
+      <StackPanel Margin="8,13,8,16" Spacing="0" IsVisible="{Binding IsSignedIn}">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+          <Button Classes="groupHeader" Command="{Binding ToggleTextChannels}" AutomationProperties.Name="{i18n:T TextChannels}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <Panel Width="10" Height="10" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IconChevronDown}" Width="9" Height="9" IsVisible="{Binding TextExpanded}" />
+                <PathIcon Data="M 2,0 L 7,5 L 2,10 L 1,9 L 5,5 L 1,1 Z" Width="9" Height="9" IsVisible="{Binding !TextExpanded}" />
+              </Panel>
+              <TextBlock Text="{i18n:T TextChannels}" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="1" Classes="groupAdd" Command="{Binding AddTextChannel}" IsVisible="{Binding CanModerate}" ToolTip.Tip="{i18n:T CreateTextChannel}" AutomationProperties.Name="{i18n:T CreateTextChannel}">
+            <PathIcon Data="{StaticResource IconAdd}" Width="12" Height="12" />
+          </Button>
+        </Grid>
         <ItemsControl ItemsSource="{Binding TextChannels}" IsVisible="{Binding TextExpanded}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
-            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,3">
-              <StackPanel Orientation="Horizontal" Spacing="10"><PathIcon Data="{StaticResource IconHash}" Width="17" Height="17" Opacity="0.65" /><TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" /></StackPanel>
+            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
+              <Button.ContextMenu><ContextMenu Opening="OnChannelMenuOpening">
+                <MenuItem Header="{i18n:T OpenChannel}" />
+                <Separator />
+                <MenuItem Header="{i18n:T RenameChannel}" />
+                <MenuItem Header="{i18n:T CreateChannel}" />
+                <Separator />
+                <MenuItem Header="{i18n:T DeleteChannel}" Foreground="#E3A09A" />
+              </ContextMenu></Button.ContextMenu>
+              <Grid ColumnDefinitions="16,*" ColumnSpacing="9">
+                <PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" Foreground="{StaticResource QuietTextBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+              </Grid>
             </Button>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Button Command="{Binding ToggleVoiceChannels}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,23,0,5">
-          <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{i18n:T VoiceChannels}" Classes="section" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronUp}" Width="12" Height="12" IsVisible="{Binding VoiceExpanded}" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" IsVisible="{Binding !VoiceExpanded}" /></Grid>
-        </Button>
+        <Grid ColumnDefinitions="*,Auto" Margin="0,19,0,5">
+          <Button Classes="groupHeader" Command="{Binding ToggleVoiceChannels}" AutomationProperties.Name="{i18n:T VoiceChannels}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <Panel Width="10" Height="10" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IconChevronDown}" Width="9" Height="9" IsVisible="{Binding VoiceExpanded}" />
+                <PathIcon Data="M 2,0 L 7,5 L 2,10 L 1,9 L 5,5 L 1,1 Z" Width="9" Height="9" IsVisible="{Binding !VoiceExpanded}" />
+              </Panel>
+              <TextBlock Text="{i18n:T VoiceChannels}" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="1" Classes="groupAdd" Command="{Binding AddVoiceChannel}" IsVisible="{Binding CanModerate}" ToolTip.Tip="{i18n:T CreateVoiceChannel}" AutomationProperties.Name="{i18n:T CreateVoiceChannel}">
+            <PathIcon Data="{StaticResource IconAdd}" Width="12" Height="12" />
+          </Button>
+        </Grid>
         <ItemsControl ItemsSource="{Binding VoiceChannels}" IsVisible="{Binding VoiceExpanded}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
-            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,3">
-              <StackPanel Orientation="Horizontal" Spacing="10"><PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" /><TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" /></StackPanel>
+            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
+              <Button.ContextMenu><ContextMenu Opening="OnChannelMenuOpening">
+                <MenuItem Header="{i18n:T OpenChannel}" />
+                <Separator />
+                <MenuItem Header="{i18n:T RenameChannel}" />
+                <MenuItem Header="{i18n:T CreateChannel}" />
+                <Separator />
+                <MenuItem Header="{i18n:T DeleteChannel}" Foreground="#E3A09A" />
+              </ContextMenu></Button.ContextMenu>
+              <Grid ColumnDefinitions="16,*" ColumnSpacing="9">
+                <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" Foreground="{StaticResource QuietTextBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+              </Grid>
             </Button>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>

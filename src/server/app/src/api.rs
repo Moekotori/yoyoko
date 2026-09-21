@@ -17,7 +17,7 @@ use axum::{
 use chat_protocol::{
     API_VERSION, ApiError, AuthResponse, Channel, CreateChannelRequest, CreateServerRequest,
     InstanceDiscovery, JoinRequest, LoginRequest, MAX_ATTACHMENTS_PER_MESSAGE, Message,
-    MessagePage, PROTOCOL_VERSION, PatchChannelRequest, PatchMeRequest, RefreshRequest,
+    MessagePage, PROTOCOL_VERSION, PatchMeRequest, RefreshRequest,
     PatchModerationRequest, RegisterRequest, SendMessageRequest, Server, User, VoiceFlags,
     VoiceJoin, VoiceState,
 };
@@ -106,7 +106,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         )
         .route("/api/v1/servers/join", post(join_server))
         .route("/api/v1/servers/{id}/moderation", patch(patch_moderation))
-        .route("/api/v1/channels/{id}", patch(patch_channel))
+        .route("/api/v1/channels/{id}", patch(crate::channel::handler::patch).delete(crate::channel::handler::delete))
         .route(
             "/api/v1/channels/{id}/messages",
             get(list_messages).post(send_message),
@@ -396,17 +396,6 @@ async fn voice_join(
             flags.audio_quality.as_deref(),
         )
         .await?,
-    ))
-}
-
-async fn patch_channel(
-    State(state): State<Arc<AppState>>,
-    Auth(user, _): Auth,
-    Path(id): Path<Uuid>,
-    Json(body): Json<PatchChannelRequest>,
-) -> ApiResult<Json<Channel>> {
-    Ok(Json(
-        services::patch_channel(&state, user, id, body.audio_quality).await?,
     ))
 }
 
@@ -866,6 +855,17 @@ mod tests {
         assert_eq!(session.audio.channels, 2);
         assert_eq!(session.max_audio_quality, "studio");
         assert_eq!(voice.audio_quality.as_deref(), Some("studio"));
+        let muted = patch_json(
+            &app,
+            "/api/v1/voice/state",
+            &alice.access_token,
+            r#"{"self_mute":true}"#,
+        )
+        .await;
+        assert_eq!(muted.status(), StatusCode::OK);
+        let muted: VoiceState = json(muted).await;
+        assert!(muted.self_mute);
+        assert_eq!(muted.audio_quality, "studio");
         let high = post_json(
             &app,
             &format!("/api/v1/channels/{}/voice/join", voice.id),

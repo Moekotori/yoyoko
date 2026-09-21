@@ -11,6 +11,7 @@ public sealed class WorkerMediaService : IMediaService
     private Process? _process;
     private int _nextId = 1;
     private bool _session;
+    private bool _loopback;
     public WorkerMediaService(string path) => _path = path;
     public MediaCapabilities Capabilities => MediaCapabilities.Voice;
     public bool Available => true;
@@ -24,8 +25,8 @@ public sealed class WorkerMediaService : IMediaService
 
     public async Task ConnectAsync(Uri endpoint, string token, bool muted, bool deafened, AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken)
     {
-        await LeaveAsync(cancellationToken);
         await EnsureProcessAsync(cancellationToken);
+        _loopback = false;
         _session = true;
         await SendDiscardAsync(new Dictionary<string, object?>
         {
@@ -92,9 +93,39 @@ public sealed class WorkerMediaService : IMediaService
         }, cancellationToken);
     }
 
+    public async Task StartLoopbackAsync(AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken)
+    {
+        await EnsureProcessAsync(cancellationToken);
+        await SendDiscardAsync(new Dictionary<string, object?>
+        {
+            ["id"] = _nextId++,
+            ["op"] = "loopback",
+            ["channels"] = audio.Channels,
+            ["sample_rate_hz"] = audio.SampleRateHz,
+            ["frame_ms"] = audio.FrameMs,
+            ["input_device"] = route.InputDeviceId,
+            ["output_device"] = route.OutputDeviceId
+        }, cancellationToken);
+        _loopback = true;
+    }
+
+    public async Task StopLoopbackAsync(CancellationToken cancellationToken)
+    {
+        if (!_loopback && (_process is null || _process.HasExited))
+            return;
+        _loopback = false;
+        if (_process is { HasExited: false })
+        {
+            try { await SendDiscardAsync(new Dictionary<string, object?> { ["id"] = _nextId++, ["op"] = "loopback_stop" }, cancellationToken); }
+            catch (Exception) { }
+        }
+        if (!_session) await StopAsync();
+    }
+
     public async Task LeaveAsync(CancellationToken cancellationToken)
     {
         _session = false;
+        _loopback = false;
         await StopAsync();
     }
 
@@ -158,17 +189,25 @@ public sealed class WorkerMediaService : IMediaService
             var json = JsonSerializer.Serialize(payload);
             await process.StandardInput.WriteLineAsync(json.AsMemory(), cancellationToken);
             await process.StandardInput.FlushAsync(cancellationToken);
-            var line = await process.StandardOutput.ReadLineAsync(cancellationToken)
-                ?? throw new InvalidOperationException("Media worker closed.");
-            var doc = JsonDocument.Parse(line);
-            if (doc.RootElement.TryGetProperty("ok", out var ok) && !ok.GetBoolean())
+            while (true)
             {
-                var message = doc.RootElement.TryGetProperty("error", out var error)
-                    ? error.GetString() ?? "Media worker failed." : "Media worker failed.";
-                doc.Dispose();
-                throw new InvalidOperationException(message);
+                var line = await process.StandardOutput.ReadLineAsync(cancellationToken)
+                    ?? throw new InvalidOperationException("Media worker closed.");
+                var doc = JsonDocument.Parse(line);
+                if (doc.RootElement.TryGetProperty("event", out _))
+                {
+                    doc.Dispose();
+                    continue;
+                }
+                if (doc.RootElement.TryGetProperty("ok", out var ok) && !ok.GetBoolean())
+                {
+                    var message = doc.RootElement.TryGetProperty("error", out var error)
+                        ? error.GetString() ?? "Media worker failed." : "Media worker failed.";
+                    doc.Dispose();
+                    throw new InvalidOperationException(message);
+                }
+                return doc;
             }
-            return doc;
         }
         finally { _gate.Release(); }
     }

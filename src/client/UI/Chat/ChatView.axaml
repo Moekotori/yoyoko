@@ -1,5 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
   x:Class="Chat.UI.Chat.ChatView" x:DataType="vm:ShellViewModel" x:Name="ChatRoot"
   Classes.compact="{Binding CompactLayout}" Classes.reduceMotion="{Binding ReduceMotion}">
   <UserControl.Styles>
@@ -9,6 +9,9 @@
     <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /><Setter Property="Margin" Value="0,0,0,12" /></Style>
     <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#232323" /></Style>
     <Style Selector="UserControl.compact Grid.messageRow"><Setter Property="Margin" Value="0,0,0,2" /></Style>
+    <Style Selector="Grid.messageRow.continued"><Setter Property="Margin" Value="0,0,0,2" /></Style>
+    <Style Selector="UserControl.compact Grid.messageRow.continued"><Setter Property="Margin" Value="0" /></Style>
+    <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,0,1" /></Style>
     <Style Selector="SelectableTextBlock.messageText"><Setter Property="FontSize" Value="16" /><Setter Property="LineHeight" Value="25" /><Setter Property="Foreground" Value="#CCCCCC" /></Style>
     <Style Selector="UserControl.compact SelectableTextBlock.messageText"><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="22" /></Style>
     <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /></Style>
@@ -21,19 +24,22 @@
         <TextBox x:Name="SearchBox" Text="{Binding SearchQuery}" PlaceholderText="{i18n:T SearchInChannel}" AutomationProperties.Name="{i18n:T SearchContent}" />
         <Button Grid.Column="1" Classes="icon" Command="{Binding ToggleSearch}" AutomationProperties.Name="{i18n:T CloseSearch}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button>
       </Grid>
-      <Panel Grid.Row="1" x:Name="TimelineSurface">
+      <motion:MotionHost Grid.Row="1" Trigger="{Binding ChannelContentVersion}" Preset="Fade" Duration="0:0:0.12" StartOpacity="0.82">
+      <Panel x:Name="TimelineSurface">
         <TextBlock Text="{Binding EmptyMessageTitle}" Classes="muted" FontSize="14" IsVisible="{Binding EmptyMessages}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         <ListBox x:Name="Messages" ItemsSource="{Binding VisibleMessages}" Margin="0,22,0,12" AutomationProperties.Name="{i18n:T Messages}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="chat:MessageRow">
-              <Grid Classes="messageRow" ColumnDefinitions="24,36,13,*,24">
+              <Grid Classes="messageRow" Classes.continued="{Binding IsContinuation}" ColumnDefinitions="24,36,13,*,24">
                 <Grid.ContextMenu><ContextMenu><MenuItem Header="{i18n:T CopyText}" Click="CopyMessage" /></ContextMenu></Grid.ContextMenu>
-                <c:Avatar Grid.Column="1" Width="36" Height="36" Playback="{Binding Playback}" VerticalAlignment="Top" Margin="0,12,0,0" />
-                <StackPanel Grid.Column="3" Spacing="4" Margin="0,11,0,9">
-                  <StackPanel Orientation="Horizontal" Spacing="9">
+                <c:Avatar Grid.Column="1" Width="36" Height="36" Playback="{Binding Playback}" Initial="{Binding Initial}" VerticalAlignment="Top" Margin="0,12,0,0" IsVisible="{Binding ShowHeader}" />
+                <StackPanel Grid.Column="3" Classes="body" Spacing="4" Margin="0,11,0,9">
+                  <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowHeader}">
                     <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
                     <TextBlock Text="{Binding Time}" Classes="quiet" FontSize="11" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowSendState}">
                     <TextBlock Text="{i18n:T Sending}" Classes="muted" FontSize="11" IsVisible="{Binding IsPending}" />
                     <Button Padding="8,2" Command="{Binding Retry}" IsVisible="{Binding IsFailed}"
                       ToolTip.Tip="{i18n:T RetrySend}" AutomationProperties.Name="{i18n:T RetrySend}">
@@ -54,45 +60,36 @@
                     </DataTemplate></ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
-                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
+                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
                   <Button Classes="icon" Click="CopyMessage" AutomationProperties.Name="{i18n:T CopyMessage}" ToolTip.Tip="{i18n:T CopyText}"><PathIcon Data="{StaticResource IconCopy}" Width="16" Height="16" /></Button>
                 </Border>
               </Grid>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <Border Background="#E51C1C1C" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" Margin="12" CornerRadius="2" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False"><TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" /></Border>
+        <Border Background="#E51C1C1C" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" Margin="12" CornerRadius="8" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False"><TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" /></Border>
       </Panel>
+      </motion:MotionHost>
       <StackPanel Grid.Row="2" Margin="24,0,24,22" Spacing="8">
         <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasStatus}" />
         <ItemsControl ItemsSource="{Binding PendingFiles}" IsVisible="{Binding HasPending}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="chat:PendingFileItem">
-            <Border Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="2" Padding="8,4" Margin="0,0,6,2">
+            <Border Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="8" Padding="8,4" Margin="0,0,6,2">
               <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" /><Button Classes="icon" Width="22" Height="22" Padding="4" Command="{Binding Remove}" ToolTip.Tip="{i18n:T RemoveFile}" AutomationProperties.Name="{i18n:T RemoveFile}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button></StackPanel>
             </Border>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
         <Border Classes="composerFrame" Background="{StaticResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="10">
           <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
-          <Grid ColumnDefinitions="30,*,1,30" ColumnSpacing="9">
-            <Button Classes="icon" Command="{Binding AttachFile}" ToolTip.Tip="{Binding FileLimitTip}" AutomationProperties.Name="{i18n:T AddFile}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
+          <Grid ColumnDefinitions="30,*,30" ColumnSpacing="9">
+            <Button Classes="icon" Command="{Binding AttachFile}" ToolTip.Tip="{Binding AttachTip}" AutomationProperties.Name="{i18n:T AddFile}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
             <TextBox x:Name="Composer" Grid.Column="1" Classes="composer" Text="{Binding Draft}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" AutomationProperties.Name="{i18n:T MessageInput}" KeyDown="OnComposerKeyDown" />
-            <Border Grid.Column="2" Background="{StaticResource DividerBrush}" Margin="0,7" />
-            <Button Grid.Column="3" Classes="icon send" Command="{Binding Send}" IsEnabled="{Binding CanSend}" ToolTip.Tip="{i18n:T Send}" AutomationProperties.Name="{i18n:T Send}"><PathIcon Data="{StaticResource IconSendFilled}" Width="18" Height="18" /></Button>
+            <Button Grid.Column="2" Classes="icon send" Command="{Binding Send}" IsEnabled="{Binding CanSend}" ToolTip.Tip="{Binding SendTip}" AutomationProperties.Name="{i18n:T Send}"><PathIcon Data="{StaticResource IconSendFilled}" Width="18" Height="18" /></Button>
           </Grid>
         </Border>
       </StackPanel>
     </Grid>
-    <Border Grid.Column="1" Width="208" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0" IsVisible="{Binding ParticipantsOpen}">
-      <StackPanel Margin="20,22" Spacing="20">
-        <TextBlock Text="{i18n:T PageParticipants}" Classes="section" />
-        <ItemsControl ItemsSource="{Binding Participants}">
-          <ItemsControl.ItemTemplate><DataTemplate x:DataType="chat:MessageRow">
-            <Grid ColumnDefinitions="32,*" ColumnSpacing="10" Margin="0,0,0,16"><c:Avatar Width="32" Height="32" Playback="{Binding Playback}" /><TextBlock Grid.Column="1" Text="{Binding Author}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" /></Grid>
-          </DataTemplate></ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-    </Border>
+    <chat:MemberSidebar Grid.Column="1" IsVisible="{Binding ParticipantsOpen}" />
   </Grid>
 </UserControl>

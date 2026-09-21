@@ -167,6 +167,8 @@ pub struct CreateChannelRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PatchChannelRequest {
     #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
     pub audio_quality: Option<String>,
 }
 

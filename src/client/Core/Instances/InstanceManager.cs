@@ -22,7 +22,7 @@ public sealed class InstanceManager(IInstanceStore store, IInstanceDiscovery dis
         return info;
     }
 
-    public async Task<InstanceContext> AddAsync(string address, CancellationToken cancellationToken)
+    public async Task<InstanceContext> AddAsync(string address, CancellationToken cancellationToken, bool updateSavedAddress = false)
     {
         var uri = NormalizeAddress(address);
         var info = await discovery.DiscoverAsync(uri, cancellationToken);
@@ -31,15 +31,17 @@ public sealed class InstanceManager(IInstanceStore store, IInstanceDiscovery dis
         var id = new InstanceId(info.InstanceId);
         if (_contexts.TryGetValue(id, out var existing))
         {
-            if (existing.Descriptor.BaseUrl != uri) throw new ClientFault(TextKey.InstanceAddressConflict);
-            return existing;
+            if (existing.Descriptor.BaseUrl == uri) return existing;
+            // Only an explicitly configured startup address may replace a saved alias before login.
+            if (!updateSavedAddress || existing.Session is not null)
+                throw new ClientFault(TextKey.InstanceAddressConflict);
         }
-        if (_contexts.Count >= 32) throw new ClientFault(TextKey.TooManyInstances);
+        if (existing is null && _contexts.Count >= 32) throw new ClientFault(TextKey.TooManyInstances);
         var descriptor = new InstanceDescriptor(id, uri, info.Name);
         await store.SaveAsync(descriptor, cancellationToken);
         var context = new InstanceContext(descriptor);
         context.AttachDiscovery(info);
-        _contexts.Add(id, context);
+        _contexts[id] = context;
         return context;
     }
 

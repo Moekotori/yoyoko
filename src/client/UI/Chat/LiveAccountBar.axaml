@@ -1,16 +1,35 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components" xmlns:voice="using:Chat.UI.Voice"
  x:Class="Chat.UI.Chat.LiveAccountBar" x:DataType="vm:ShellViewModel">
-  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,1,0" Padding="12,10">
-    <Grid ColumnDefinitions="30,*,Auto" ColumnSpacing="8">
-      <c:Avatar Width="30" Height="30" Playback="{Binding AccountPlayback}" VerticalAlignment="Center" />
-      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-        <TextBlock Text="{Binding AccountName}" FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsSignedIn}" />
-        <TextBlock Text="{i18n:T SignedOut}" FontSize="12" IsVisible="{Binding ShowGuest}" />
-        <TextBlock Text="{Binding AccountHandle}" Classes="muted" FontSize="10" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsSignedIn}" />
-      </StackPanel>
-      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-        <Button Classes="icon" Width="26" Padding="5" Command="{Binding ToggleMute}" IsEnabled="{Binding InVoice}" ToolTip.Tip="{Binding MuteLabel}" AutomationProperties.Name="{i18n:T Mic}"><PathIcon Data="{StaticResource IconMic}" Width="16" Height="16" /></Button>
-        <Button Classes="icon" Width="26" Padding="5" Command="{Binding ToggleDeaf}" IsEnabled="{Binding InVoice}" ToolTip.Tip="{Binding DeafLabel}" AutomationProperties.Name="{i18n:T Headphones}"><PathIcon Data="{StaticResource IconHeadphones}" Width="16" Height="16" /></Button>
+  <UserControl.Styles>
+    <Style Selector="Button.account"><Setter Property="Padding" Value="4,6" /><Setter Property="CornerRadius" Value="2" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+    <Style Selector="Button.off"><Setter Property="Foreground" Value="#ED9292" /></Style>
+    <Style Selector="Button.off /template/ ContentPresenter"><Setter Property="Foreground" Value="#ED9292" /></Style>
+  </UserControl.Styles>
+  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,1,0" Padding="6,8">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="2">
+      <Button x:Name="ProfileButton" Classes="account" Command="{Binding OpenProfile}" IsEnabled="{Binding IsSignedIn}" ToolTip.Tip="{i18n:T Profile}" AutomationProperties.Name="{i18n:T Profile}">
+        <Grid ColumnDefinitions="30,*" ColumnSpacing="8">
+          <c:Avatar Width="30" Height="30" Playback="{Binding AccountPlayback}" Initial="{Binding AccountInitial}" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+            <TextBlock Text="{Binding AccountName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsSignedIn}" />
+            <TextBlock Text="{i18n:T SignedOut}" FontSize="12" IsVisible="{Binding ShowGuest}" />
+            <TextBlock Text="{Binding AccountHandle}" Classes="quiet" FontSize="11" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsSignedIn}" />
+          </StackPanel>
+        </Grid>
+      </Button>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" PointerEntered="OnDevicesHover">
+        <Button Classes="icon" Classes.off="{Binding IsSelfMuted}" Width="26" Padding="5" Command="{Binding ToggleMute}" IsEnabled="{Binding IsSignedIn}" AutomationProperties.Name="{Binding MuteLabel}" ToolTip.ShowDelay="250">
+          <Button.ToolTip.Tip><StackPanel MaxWidth="320" Spacing="4"><TextBlock Text="{Binding MuteTip}" /><TextBlock Text="{Binding Devices.SelectedInput.Name}" TextWrapping="Wrap" /><TextBlock Text="{Binding Devices.Error}" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" /></StackPanel></Button.ToolTip.Tip>
+          <Panel Width="16" Height="16"><PathIcon Data="{StaticResource IconMic}" Width="16" Height="16" /><Path Data="M1,1 L15,15" Stroke="#ED9292" StrokeThickness="1.8" IsVisible="{Binding IsSelfMuted}" /></Panel>
+        </Button>
+        <Button Classes="icon" Classes.off="{Binding IsSelfDeafened}" Width="26" Padding="5" Command="{Binding ToggleDeaf}" IsEnabled="{Binding IsSignedIn}" AutomationProperties.Name="{Binding DeafLabel}" ToolTip.ShowDelay="250">
+          <Button.ToolTip.Tip><StackPanel MaxWidth="320" Spacing="4"><TextBlock Text="{Binding DeafTip}" /><TextBlock Text="{Binding Devices.SelectedOutput.Name}" TextWrapping="Wrap" /><TextBlock Text="{Binding Devices.Error}" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" /></StackPanel></Button.ToolTip.Tip>
+          <Panel Width="16" Height="16"><PathIcon Data="{StaticResource IconHeadphones}" Width="16" Height="16" /><Path Data="M1,1 L15,15" Stroke="#ED9292" StrokeThickness="1.8" IsVisible="{Binding IsSelfDeafened}" /></Panel>
+        </Button>
+        <Button Classes="icon" Width="16" Padding="2" ToolTip.Tip="{i18n:T VoiceSettings}" AutomationProperties.Name="{i18n:T VoiceSettings}">
+          <PathIcon Data="{StaticResource IconChevronDown}" Width="9" Height="9" />
+          <Button.Flyout><Flyout Placement="TopEdgeAlignedRight" Opened="OnDevicesOpened"><voice:AccountDevicePicker DataContext="{Binding Devices}" /></Flyout></Button.Flyout>
+        </Button>
       </StackPanel>
     </Grid>
   </Border>

@@ -9,6 +9,15 @@ pub struct VoiceRoster {
 }
 
 impl VoiceRoster {
+    pub async fn remove_channel(&self, channel_id: Uuid) -> Vec<VoiceState> {
+        let mut inner = self.inner.lock().await;
+        let mut removed = Vec::new();
+        inner.retain(|_, state| {
+            if state.channel_id == channel_id { removed.push(state.clone()); false } else { true }
+        });
+        removed
+    }
+
     pub async fn put(&self, state: VoiceState) -> Option<VoiceState> {
         self.inner.lock().await.insert(state.user_id, state)
     }

@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Channels.QuickSwitcher" x:DataType="vm:ShellViewModel" x:Name="Jump">
+  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="8" Width="420">
+    <DockPanel>
+      <TextBox x:Name="Query" DockPanel.Dock="Top" Margin="10,10,10,6" Text="{Binding SwitcherQuery}"
+        PlaceholderText="{i18n:T JumpToChannel}" AutomationProperties.Name="{i18n:T JumpToChannel}" />
+      <ScrollViewer MaxHeight="320" HorizontalScrollBarVisibility="Disabled" Padding="6,0,6,8">
+        <ItemsControl ItemsSource="{Binding SwitcherMatches}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="ch:JumpItem">
+              <Button Classes="channel" Classes.selected="{Binding IsActive}" Margin="0,0,0,2"
+                Command="{Binding #Jump.((vm:ShellViewModel)DataContext).JumpTo}" CommandParameter="{Binding}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <PathIcon Data="{StaticResource IconHash}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding !IsVoice}" />
+                  <PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsVoice}" />
+                  <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>

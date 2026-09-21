@@ -11,9 +11,11 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 | 能力 | 状态 |
 | --- | --- |
 | Avalonia 桌面外壳、轻量 MVVM、独立客户端项目 | 已实现 |
-| 轻量动画系统 `Chat.Motion` | 已实现入场/切换预设、可中断动画、隐藏/最小化清理与减少动效；[调用与验证](docs/ui/MOTION.md) |
-| 登录 / 注册表单 | 独立页签、居中等宽输入、密码框回车提交；视觉验收状态见 [UI 说明](docs/ui/README.md#authentication-form) |
-| 设置页面 | 左下角入口，打开时动画收起频道栏；侧边分类导航、语言 / 快捷键 / 设备下拉框、紧凑布局与动效开关；[界面验证记录](docs/ui/README.md#settings) |
+| 轻量动画系统 `Chat.Motion` | 已实现入场/切换预设、可中断动画、隐藏/最小化清理与减少动效；文字频道仅消息区轻微淡入，过期加载取消；[调用与验证](docs/ui/MOTION.md) |
+| 自动连接 / 账号设置 | 首次自动创建实例账号，之后恢复会话；个人资料内修改用户名、昵称和头像；设置中更换服务器并记住选择，登录/注册仅保留在设置内用于账号恢复 |
+| 设置页面 | 左下角入口，打开时动画收起频道栏；统一左对齐排版与分类导航、轻圆角资料分组、语言 / 快捷键 / 设备下拉框、紧凑布局与动效开关；[界面验证记录](docs/ui/README.md#settings) |
+| 界面细节 | 统一圆角选择框与输入框、简化设置分隔、登录分段切换、社区操作按需展开；[本轮视觉与验证](docs/ui/README.md#product-surface-polish-2026-09-21) |
+| 工作区快捷键 | 跳转频道、搜索、频道/标签切换、设置、成员栏、附件与语音 mute/deafen；[快捷键](docs/ui/README.md#keyboard) |
 | 客户端界面语言（中文 / English / 日本語），设置中切换 | 已实现；跟随系统，可覆盖并写入本地偏好 |
 | 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
 | 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
@@ -25,7 +27,7 @@ LightChat 是暂用名，显示名称由配置决定，代码模块使用中性�
 | 注册、登录、社区/频道、文字消息 | 已接通控制面；完整验收见路线图 |
 | 社区屏蔽词与发言冷却 | 已实现；owner / MANAGE_MESSAGES 可 PATCH，发送时服务端强制 |
 | 聊天附件（拖拽/选择图片与文件、可配置上限、对端下载） | 已实现；默认 24 MiB，服务端 `storage.max_bytes` 可改 |
-| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 控制面与设备枚举已实现；真实麦克风/听筒需 LiveKit 与媒体 worker |
+| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 控制面不因 mute/改音质重连；本机 20 ms/3 帧设备检查已实现；对端听筒需 LiveKit |
 | 屏幕共享 | **Not implemented yet** |
 
 本机已通过 .NET Release 构建、Rust 聚焦测试与 Clippy、Native C ABI 检查，并验证了实例添加和离线恢复。Windows/Linux 的实际构建、GUI、安装包及媒体硬件尚未验证。
@@ -122,7 +124,9 @@ docs/                协议、数据库、ADR 与验证记录
 
 ## 快速开始
 
-macOS 上双击仓库根目录的 `start.command`，或在终端运行 `./start.command`，即可构建并打开桌面 UI。脚本会启动本地服务端；若 `http://localhost:8080` 已有可用的聊天服务则复用。关闭客户端时只停止脚本自己启动的服务。首次启动需要安装 .NET SDK 10 和 Rust，且需要联网下载构建依赖。
+macOS 上双击仓库根目录的 `start.command`，或在终端运行 `./start.command`，即可构建并打开桌面 UI。客户端默认连接 `http://10.19.144.83:8080` 的局域网服务器；脚本不启动或停止服务端。首次启动需要安装 .NET SDK 10，且需要联网下载构建依赖。
+
+所有普通启动入口（含直接 `dotnet run`）都会连接默认服务器、恢复账号并选中文字频道；首次无账号时自动注册独立账号；内网实例无社区时创建社区及默认 `general`。社区菜单可自由创建社区；社区拥有者可创建文字／语音频道，文字频道创建后自动打开，语音频道不会自动加入。真实数据保存在所连接服务器。首次默认地址集中在 `src/client/App/appsettings.json` 的 `default_instance_url`，可用 `CHAT_DEFAULT_INSTANCE_URL` 覆盖；在「设置 → 服务器」连接成功后优先使用记住的地址。已有账号会话失效时提示在设置恢复，不会静默创建替代账号。
 
 调 UI 时双击 `dev.command`（或运行 `./dev.command`）：使用 Debug 模式，保存 `.axaml` 后由 HotAvalonia 实时重载；C# 修改由 `dotnet watch` 热重载，无法应用时自动重启客户端。按 Ctrl+C 停止开发模式。Rust 服务端不随客户端修改重启。具体限制见 [开发热重载](DEVELOPMENT.md#开发热重载)。
 
@@ -134,14 +138,16 @@ macOS 上双击仓库根目录的 `start.command`，或在终端运行 `./start.
 cargo run --locked -p chat-server
 ```
 
-终端二，启动桌面客户端：
+终端二，连接上面单独启动的回环服务（覆盖默认局域网地址）：
 
 ```sh
 dotnet restore Chat.sln --locked-mode
-dotnet run --project src/client/App -c Release
+CHAT_CACHE_DIRECTORY=/tmp/chat-local CHAT_DEFAULT_INSTANCE_URL=http://localhost:8080 dotnet run --project src/client/App -c Release
 ```
 
-在客户端输入 `http://localhost:8080`，添加实例后注册或登录。创建社区会得到邀请码；第二个客户端用同一地址登录并加入，即可互发文字和图片。本机 `cargo run` 默认使用 `local:data/chat.json` 与 `data/objects`，不需要 PostgreSQL、Docker 或 MinIO。两个客户端请用不同的 `CHAT_CACHE_DIRECTORY`，避免抢同一份 SQLite。
+输入 `localhost`（也支持 `http://localhost`）会连接配置的默认服务器，当前为 `http://10.19.144.83:8080`，无需输入端口。显式填写 `localhost:8080` 等带端口地址仍连接本机服务。此快捷地址仅在客户端内生效。
+
+也可以通过「设置 → 服务器」输入其他服务器地址并连接；加号也打开这个设置入口。用户名、显示名和头像在「设置 → 资料」修改。创建社区会得到邀请码；第二个客户端用同一地址登录并加入，即可互发文字和图片。本机 `cargo run` 默认使用 `local:data/chat.json` 与 `data/objects`，不需要 PostgreSQL、Docker 或 MinIO。两个客户端请用不同的 `CHAT_CACHE_DIRECTORY`，避免抢同一份 SQLite。
 
 ```sh
 CHAT_CACHE_DIRECTORY=/tmp/chat-b dotnet run --project src/client/App -c Release
@@ -235,3 +241,9 @@ ctest --test-dir build/native -C Release --output-on-failure
 | [性能测量](benchmarks/README.md) | 性能指标与复现条件 |
 | [验证记录](docs/VALIDATION.md) | 实测结果、未达目标和未验证范围 |
 | [Phase 0 交付索引](docs/DELIVERY.md) | 原始需求的 19 项输出对应位置 |
+
+### 侧栏与频道管理（2026-09-21）
+
+已实现紧凑频道分组、2 px 选中行圆角和分组旁的新增按钮。所有者可添加文字/语音频道，右键打开、重命名、添加同类频道或删除；删除需确认，失败保留弹窗与错误，创建语音频道不会自动加入通话。管理请求走 HTTP，变更通过 Gateway 与 SQLite 同步。
+
+验证：macOS Release 构建、本地 API / Gateway 聚焦检查；远端部署、PostgreSQL 实际删除和三平台窗口尚未验证。

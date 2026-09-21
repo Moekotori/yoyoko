@@ -1,0 +1,36 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.profileGroup">
+    <Setter Property="Background" Value="#242424" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+  <Style Selector="Grid.profileRow">
+    <Setter Property="MinHeight" Value="80" />
+    <Setter Property="Margin" Value="20,12" />
+  </Style>
+  <Style Selector="Border.profileSeparator">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="#303030" />
+  </Style>
+  <Style Selector="TextBox.settingsField.profileField">
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="#292929" />
+    <Setter Property="BorderBrush" Value="#424242" />
+  </Style>
+  <Style Selector="Button.settingsSecondary.profileAction">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,4,8,4" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="#454545" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.settingsPrimary.profileSave">
+    <Setter Property="MinWidth" Value="88" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+</Styles>

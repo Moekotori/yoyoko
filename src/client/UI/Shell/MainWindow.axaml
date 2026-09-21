@@ -7,40 +7,15 @@
   ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="42"
   Classes.reduceMotion="{Binding ReduceMotion}" motion:Motion.ReduceMotion="{Binding ReduceMotion}">
   <Window.Styles><StyleInclude Source="avares://Chat.UI/Shell/ShellMotion.axaml" /></Window.Styles>
-  <Window.KeyBindings>
-    <KeyBinding Gesture="Meta+F" Command="{Binding ToggleSearch}" />
-    <KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearch}" />
-    <KeyBinding Gesture="Escape" Command="{Binding DismissPresentation}" />
-  </Window.KeyBindings>
-  <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66">
+  <Panel>
+  <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsEnabled="{Binding !IsChannelEditorOpen}" IsHitTestVisible="{Binding !ProfileOpen}">
     <Border Grid.ColumnSpan="3" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" />
     <Border Grid.ColumnSpan="3" Width="292" HorizontalAlignment="Left" IsVisible="{Binding !ShowSettings}" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding InstanceHost}">
         <Grid ColumnDefinitions="*,16" ColumnSpacing="8"><TextBlock Text="{Binding InstanceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></Grid>
         <Button.Flyout>
           <Flyout Placement="BottomEdgeAlignedLeft">
-            <StackPanel Width="260" Spacing="10">
-              <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" />
-              <Button Content="{i18n:T AddInstance}" Command="{Binding OpenAddInstance}" HorizontalAlignment="Stretch" />
-              <StackPanel IsVisible="{Binding IsSignedIn}" Spacing="9">
-                <TextBlock Text="{Binding InviteHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" />
-                <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" />
-                <Button Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
-                <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" />
-                <Button Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
-                <StackPanel Spacing="8" IsVisible="{Binding CanModerate}">
-                  <TextBlock Text="{i18n:T Moderation}" Classes="muted" FontSize="12" />
-                  <TextBox Text="{Binding ModerationWords}" AcceptsReturn="True" TextWrapping="Wrap"
-                    MinHeight="56" MaxHeight="96" FontSize="12" PlaceholderText="{i18n:T BlockedWordsHint}"
-                    AutomationProperties.Name="{i18n:T BlockedWordsHint}" />
-                  <TextBox Text="{Binding CooldownInput}" PlaceholderText="{i18n:T CooldownSeconds}"
-                    AutomationProperties.Name="{i18n:T CooldownSeconds}" />
-                  <Button Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="{i18n:T SaveModeration}" />
-                </StackPanel>
-                <Button Content="{i18n:T SignOut}" Command="{Binding SignOut}" HorizontalAlignment="Stretch" />
-              </StackPanel>
-            </StackPanel>
+            <channels:CommunityMenu DataContext="{Binding}" />
           </Flyout>
         </Button.Flyout>
       </Button>
@@ -61,14 +36,22 @@
           <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" IsVisible="{Binding ShowChat}">
             <Button Classes="icon" Classes.active="{Binding SearchOpen}" Command="{Binding ToggleSearch}" ToolTip.Tip="{i18n:T SearchShortcut}" AutomationProperties.Name="{i18n:T SearchMessages}"><PathIcon Data="{StaticResource IconSearch}" /></Button>
-            <Button Classes="icon" Classes.active="{Binding ParticipantsOpen}" Command="{Binding ToggleParticipants}" ToolTip.Tip="{i18n:T PageParticipants}" AutomationProperties.Name="{i18n:T ToggleMembers}"><PathIcon Data="{StaticResource IconPeople}" /></Button>
+            <Button Classes="icon" Classes.active="{Binding ParticipantsOpen}" Command="{Binding ToggleParticipants}" ToolTip.Tip="{i18n:T MembersShortcut}" AutomationProperties.Name="{i18n:T ToggleMembers}"><PathIcon Data="{StaticResource IconPeople}" /></Button>
           </StackPanel>
         </Grid>
       </Border>
       <Panel Grid.Row="1">
         <motion:MotionHost IsVisible="{Binding ShowAddInstance}"><instances:AddInstanceView /></motion:MotionHost>
-        <motion:MotionHost IsVisible="{Binding ShowAuth}"><auth:AuthView /></motion:MotionHost>
-        <motion:MotionHost IsVisible="{Binding ShowChat}" Trigger="{Binding SelectedChannel}" Preset="Fade"><chat:ChatView /></motion:MotionHost>
+        <motion:MotionHost IsVisible="{Binding ShowAuth}">
+          <StackPanel MaxWidth="420" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+            <TextBlock Text="{Binding Connection.Status}" TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+              <Button Content="{i18n:T ConnectServer}" Command="{Binding Connection.Connect}" IsEnabled="{Binding !Connection.IsBusy}" />
+              <Button Content="{i18n:T Settings}" Command="{Binding OpenSettings}" />
+            </StackPanel>
+          </StackPanel>
+        </motion:MotionHost>
+        <chat:ChatView IsVisible="{Binding ShowChat}" />
         <motion:MotionHost IsVisible="{Binding ShowVoice}" Trigger="{Binding SelectedChannel}" Preset="Fade"><voice:VoiceView /></motion:MotionHost>
         <TextBlock Text="{i18n:T SelectChannel}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowChannelEmpty}" />
       </Panel>
@@ -76,8 +59,19 @@
     <Panel Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding ShowSettings}">
       <settings:SettingsView DataContext="{Binding Settings}" />
     </Panel>
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="#333333" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" Padding="14,6" MinWidth="280">
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="#333333" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" CornerRadius="8" Padding="14,6" MinWidth="280">
       <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Workspace.Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding Workspace.DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
     </Border>
   </Grid>
+  <chat:ProfileDrawer ZIndex="20" />
+  <Panel IsVisible="{Binding SwitcherOpen}" ZIndex="10">
+    <Border Background="#59000000" PointerPressed="OnJumpBackdrop" />
+    <channels:QuickSwitcher HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,56,0,0" />
+  </Panel>
+  <Border Background="#88000000" IsVisible="{Binding IsChannelEditorOpen}">
+    <ContentControl Content="{Binding ChannelEditor}" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <ContentControl.ContentTemplate><DataTemplate x:DataType="channels:ChannelEditorViewModel"><channels:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
+    </ContentControl>
+  </Border>
+  </Panel>
 </Window>

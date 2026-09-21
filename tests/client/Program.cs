@@ -25,6 +25,10 @@ Check(envelope.Seq == 9007199254740993, "64-bit sequence survives wire decoding"
 Check(JsonSerializer.Serialize(envelope, ProtocolJson.Default.GatewayEnvelope).Contains("\"seq\":\"9007199254740993\""), "sequence encodes as decimal string");
 Check(discovery.ProtocolVersion == 1 && message.Kind == "text", "shared protocol fixtures");
 Check(discovery.MaxAttachmentBytes == ProtocolVersion.MaxAttachmentBytes && discovery.MaxAttachmentsPerMessage == ProtocolVersion.MaxAttachmentsPerMessage, "discovery advertises attachment limits");
+var channelPatch = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/channel-patch.json")), ProtocolJson.Default.PatchChannelRequest)!;
+Check(channelPatch.Name == "讨论" && channelPatch.AudioQuality is null, "optional channel rename fixture");
+var channelDelete = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/channel-delete.json")), ProtocolJson.Default.GatewayEnvelope)!;
+Check(channelDelete.Event == "CHANNEL_DELETE" && channelDelete.Data.Deserialize(ProtocolJson.Default.ChannelDto)!.Name == "讨论", "channel deletion event fixture");
 var voice = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/voice-state.json")), ProtocolJson.Default.GatewayEnvelope)!;
 Check(voice.Event == "VOICE_STATE_UPDATE", "voice state fixture");
 var voiceState = voice.Data.Deserialize(ProtocolJson.Default.VoiceStateDto)!;
@@ -32,6 +36,8 @@ Check(voiceState.DisplayName == "Ada", "voice state display name");
 Check(voiceState.AudioQuality == AudioQualities.Studio, "voice state fixture uses studio");
 Check(AudioQualities.Profile(AudioQualities.VeryHigh).BitrateBps == 384_000, "very high is 384 kbps stereo");
 Check(AudioQualities.Profile(AudioQualities.Studio).BitrateBps == 510_000, "studio is Opus maximum");
+Check(AudioQualities.FrameSamples(AudioQualities.Standard) == 960, "standard frame is 20 ms mono");
+Check(AudioQualities.FrameSamples(AudioQualities.Studio) == 1920, "studio frame is 20 ms stereo");
 Check(AudioQualities.Clamp(AudioQualities.Studio, AudioQualities.High) == AudioQualities.High, "send quality clamps to channel max");
 var userUpdate = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/user-update.json")), ProtocolJson.Default.GatewayEnvelope)!;
 Check(userUpdate.Event == "USER_UPDATE", "user update fixture");
@@ -40,6 +46,12 @@ var server = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext
 Check(server.CooldownSeconds == 5 && server.BlockedWords is ["spam"], "server moderation fixture");
 Check(InstanceManager.NormalizeAddress("friends.example.com").Scheme == "https", "discovery defaults to HTTPS");
 Check(InstanceManager.NormalizeAddress("localhost:8080").Scheme == "http", "loopback defaults to HTTP");
+Check(WorkspaceAddress.Resolve(" localhost ", "http://10.19.144.83:8080") == "http://10.19.144.83:8080/", "localhost shortcut uses configured LAN server and port");
+Check(WorkspaceAddress.Resolve("HTTP://LOCALHOST/", "http://192.168.1.10:9090") == "http://192.168.1.10:9090/", "localhost shortcut follows configured default changes");
+Check(WorkspaceAddress.Resolve("localhost:8081", "http://10.19.144.83:8080") == "http://localhost:8081/", "explicit loopback port is not redirected");
+Check(WorkspaceAddress.Resolve("localhost.example.com", "http://10.19.144.83:8080") == "https://localhost.example.com/", "localhost-like domain is not redirected");
+try { WorkspaceAddress.Resolve("localhost", "localhost"); throw new Exception("Recursive alias accepted"); }
+catch (ClientFault) { Check(true, "recursive default shortcut is rejected"); }
 Check(InstanceManager.NormalizeAddress("192.168.1.10:8080").Host == "192.168.1.10", "LAN IP defaults to HTTP");
 try { InstanceManager.NormalizeAddress("http://example.com"); throw new Exception("Insecure URL accepted"); }
 catch (ClientFault fault) { Check(fault.Key == TextKey.InvalidInstanceAddress, "remote cleartext URL rejected"); }
@@ -50,6 +62,15 @@ Check(PermissionResolver.Resolve(Permission.Administrator, [], default, [], new(
 Check(ReconnectPolicy.Delay(99, 1) <= TimeSpan.FromSeconds(37.5), "backoff remains bounded");
 var catalog = new TextCatalog();
 Check(catalog.SameKeys(), "zh/en/ja catalogs share keys");
+var keyConsts = typeof(TextKey).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+    .Where(field => field.IsLiteral)
+    .Select(field => (string)field.GetRawConstantValue()!)
+    .ToHashSet(StringComparer.Ordinal);
+var missingKeys = catalog.Keys.Except(keyConsts).OrderBy(key => key).ToArray();
+var extraKeys = keyConsts.Except(catalog.Keys).OrderBy(key => key).ToArray();
+Check(missingKeys.Length == 0 && extraKeys.Length == 0,
+    "TextKey matches catalog keys" + (missingKeys.Length == 0 && extraKeys.Length == 0 ? "" :
+        " missing=" + string.Join(",", missingKeys) + " extra=" + string.Join(",", extraKeys)));
 Check(Locale.Parse("zh-CN").Code == "zh-Hans", "zh-CN maps to simplified Chinese");
 Check(Locale.Parse("ja-JP").Code == "ja", "ja-JP maps to Japanese");
 Check(Locale.Parse("fr").Code == "en", "unsupported locale falls back to English");
@@ -85,6 +106,9 @@ try
     Check(older.Items.Single().Content == "Hello, world" && older.Before is null, "next page does not duplicate boundary");
     Check((await cache.ReadPageAsync(scopeB, message.ChannelId, null, 50, default)).Items.Single().Content == "other instance", "instance cache isolation");
     Check((await cache.ReadPageAsync(accountB, message.ChannelId, null, 50, default)).Items.Count == 0, "account cache isolation");
+    await cache.SaveCommunityAsync(scopeA, new([], [], []), default);
+    Check((await cache.ReadPageAsync(scopeA, message.ChannelId, null, 50, default)).Items.Count == 0, "removed channel messages are purged with community snapshot");
+    Check((await cache.ReadPageAsync(scopeB, message.ChannelId, null, 50, default)).Items.Count == 1, "channel removal preserves other instance cache");
     await cache.PurgeAsync(scopeA, default);
     Check((await cache.ReadPageAsync(scopeB, message.ChannelId, null, 50, default)).Items.Count == 1, "logout purge preserves other instance");
     var reopened = new SqliteCache(Path.Combine(directory, "cache.db"));

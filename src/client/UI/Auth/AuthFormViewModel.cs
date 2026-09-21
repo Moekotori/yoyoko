@@ -5,6 +5,14 @@ namespace Chat.UI.Auth;
 // Presentation state only; authentication remains owned by the selected instance.
 public sealed class AuthFormViewModel : ObservableObject
 {
+    private string _username = "";
+    private string _password = "";
+    private string _displayName = "";
+    private string _status = "";
+    public string Username { get => _username; set { _username = value; Changed(); } }
+    public string Password { get => _password; set { _password = value; Changed(); } }
+    public string DisplayName { get => _displayName; set { _displayName = value; Changed(); } }
+    public string Status { get => _status; set { _status = value; Changed(); } }
     private bool _isRegistration;
     private bool _isBusy;
 
