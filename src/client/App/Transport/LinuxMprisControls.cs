@@ -22,6 +22,7 @@ internal sealed class LinuxMprisControls : ISystemTransportControls
 
     public bool Available => true;
     public event Action<TransportCommand>? CommandRequested;
+    public event Action? RaiseRequested;
 
     public void BindWindow(nint hwnd) { }
 
@@ -110,6 +111,17 @@ internal sealed class LinuxMprisControls : ISystemTransportControls
             if (_socket is null) return;
             socket = _socket;
             session = _current;
+        }
+        if (message.Member == "Raise")
+        {
+            Reply(socket, message, "");
+            RaiseRequested?.Invoke();
+            return;
+        }
+        if (message.Member == "Quit")
+        {
+            Reply(socket, message, "");
+            return;
         }
         if (message.Member is "PlayPause" or "Play" or "Pause" or "Stop")
         {
@@ -205,8 +217,9 @@ internal sealed class LinuxMprisControls : ISystemTransportControls
         => (iface, name) switch
         {
             (AppInterface, "Identity") => ("s", writer => writer.String(session.AppName)),
-            (AppInterface, "CanQuit") or (AppInterface, "CanRaise") or (AppInterface, "HasTrackList")
+            (AppInterface, "CanQuit") or (AppInterface, "HasTrackList")
                 => ("b", writer => writer.Boolean(false)),
+            (AppInterface, "CanRaise") => ("b", writer => writer.Boolean(true)),
             (PlayerInterface, "PlaybackStatus") => ("s", writer => writer.String(session.Muted ? "Paused" : "Playing")),
             (PlayerInterface, "Metadata") => ("a{sv}", writer => WriteMetadata(writer, session)),
             (PlayerInterface, "CanPlay") or (PlayerInterface, "CanPause") or (PlayerInterface, "CanControl")
@@ -226,7 +239,7 @@ internal sealed class LinuxMprisControls : ISystemTransportControls
         {
             WriteEntry(writer, "Identity", "s", w => w.String(session.AppName));
             WriteEntry(writer, "CanQuit", "b", w => w.Boolean(false));
-            WriteEntry(writer, "CanRaise", "b", w => w.Boolean(false));
+            WriteEntry(writer, "CanRaise", "b", w => w.Boolean(true));
             WriteEntry(writer, "HasTrackList", "b", w => w.Boolean(false));
         }
         else
@@ -459,7 +472,27 @@ internal sealed class LinuxMprisControls : ISystemTransportControls
 
     private const string IntrospectXml =
         """
-        <node><interface name="org.freedesktop.DBus.Introspectable"><method name="Introspect"><arg type="s" direction="out"/></method></interface></node>
+        <node>
+          <interface name="org.freedesktop.DBus.Introspectable"><method name="Introspect"><arg type="s" direction="out"/></method></interface>
+          <interface name="org.freedesktop.DBus.Properties">
+            <method name="Get"><arg type="s" direction="in"/><arg type="s" direction="in"/><arg type="v" direction="out"/></method>
+            <method name="GetAll"><arg type="s" direction="in"/><arg type="a{sv}" direction="out"/></method>
+            <signal name="PropertiesChanged"><arg type="s"/><arg type="a{sv}"/><arg type="as"/></signal>
+          </interface>
+          <interface name="org.mpris.MediaPlayer2">
+            <method name="Raise"/><method name="Quit"/>
+            <property name="CanRaise" type="b" access="read"/><property name="CanQuit" type="b" access="read"/>
+            <property name="Identity" type="s" access="read"/><property name="HasTrackList" type="b" access="read"/>
+          </interface>
+          <interface name="org.mpris.MediaPlayer2.Player">
+            <method name="Play"/><method name="Pause"/><method name="PlayPause"/><method name="Stop"/>
+            <property name="PlaybackStatus" type="s" access="read"/>
+            <property name="Metadata" type="a{sv}" access="read"/>
+            <property name="CanPlay" type="b" access="read"/><property name="CanPause" type="b" access="read"/>
+            <property name="CanControl" type="b" access="read"/><property name="CanSeek" type="b" access="read"/>
+            <property name="CanGoNext" type="b" access="read"/><property name="CanGoPrevious" type="b" access="read"/>
+          </interface>
+        </node>
         """;
 
     private readonly struct DbusMessage(byte type, uint serial, string? path, string? interfaceName, string? member,

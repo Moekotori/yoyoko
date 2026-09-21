@@ -20,7 +20,8 @@ public sealed class ChannelEditorViewModel : ObservableObject
         ChannelId = mode == ChannelEditMode.Create ? null : channel?.Id;
         IsVoice = voice;
         _name = mode == ChannelEditMode.Create ? "" : channel?.Name ?? "";
-        Title = text.Get(mode switch {
+        Title = text.Get(mode switch
+        {
             ChannelEditMode.Rename => TextKey.RenameChannel,
             ChannelEditMode.Delete => TextKey.DeleteChannel,
             _ => voice ? TextKey.CreateVoiceChannel : TextKey.CreateTextChannel
@@ -29,12 +30,14 @@ public sealed class ChannelEditorViewModel : ObservableObject
         Confirmation = IsDelete ? text.Get(TextKey.DeleteChannelConfirm, _name) : "";
         SubmitLabel = text.Get(IsDelete ? TextKey.DeleteChannel : mode == ChannelEditMode.Create ? TextKey.CreateChannel : TextKey.ChannelSave);
         Cancel = new(_ => { if (!IsBusy) cancel(); });
-        Submit = new(async () => {
+        Submit = new(async () =>
+        {
             Error = "";
             if (!IsDelete && (string.IsNullOrWhiteSpace(Name) || Encoding.UTF8.GetByteCount(Name.Trim()) > 100))
             { Error = text.Get(TextKey.ChannelNameInvalid); return; }
             IsBusy = true;
-            try {
+            try
+            {
                 Guid? created = null;
                 if (mode == ChannelEditMode.Create)
                     created = (await session.CreateChannelAsync(serverId, Name, voice ? "voice" : "text", lifetime)).Id;

@@ -78,7 +78,7 @@ Default chords:
 | Mute / deafen (in voice) | ⌘ ⇧ M / ⌘ ⇧ D | Ctrl Shift M / Ctrl Shift D |
 | Close overlay | Escape | Escape |
 
-⌘ K opens a filterable channel list over the workspace; typing filters by name, ↑/↓ moves the highlight, Enter opens a text channel or joins a voice channel, Escape or a click on the dimmed backdrop closes it. Selecting a text channel focuses the composer. Typing while focus is not in a field inserts into the composer. Middle-click closes a channel tab. Community-menu fields submit with Enter. An empty composer ↑ edits your last sent message (Escape cancels). Unread text channels are bold; mentions show a red mark. Right-click a text channel to mark read/unread or set All / Mentions / Mute. A new-messages divider and jump-to-present bar appear when you are not at the latest. Drafts persist per channel in the local cache.
+⌘ K opens a filterable list. With no query it shows recently visited channels first. Typing filters channels by name and also matches people in the current conversation or voice roster; Enter on a person inserts an @mention. ↑/↓ moves the highlight, Enter opens a text channel or joins a voice channel, Escape or a click on the dimmed backdrop closes it. Selecting a text channel focuses the composer. Typing while focus is not in a field inserts into the composer. Middle-click closes a channel tab. Community-menu fields submit with Enter. An empty composer ↑ edits your last sent message (Escape cancels). Unread text channels are bold; mentions show a red mark. Right-click a text channel to mark read/unread or set All / Mentions / Mute. A new-messages divider and jump-to-present bar appear when you are not at the latest. Drafts persist per channel in the local cache.
 
 ## Message markup (2026-09-21)
 

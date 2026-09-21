@@ -271,4 +271,5 @@ public static class TextKey
     public const string LanguagePackTooLarge = "LanguagePackTooLarge";
     public const string RemoveLanguagePack = "RemoveLanguagePack";
     public const string CustomLanguagePack = "CustomLanguagePack";
+    public const string Recent = "Recent";
 }

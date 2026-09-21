@@ -346,7 +346,8 @@ public sealed class TextCatalog : ITextCatalog
         ("LanguagePackInvalid", "This file is not a valid language pack.", "这不是有效的语言包。", "有効な言語パックではありません。"),
         ("LanguagePackTooLarge", "Language pack exceeds 256 KiB.", "语言包超过 256 KiB。", "言語パックが 256 KiB を超えています。"),
         ("RemoveLanguagePack", "Remove pack", "移除语言包", "パックを削除"),
-        ("CustomLanguagePack", "Custom pack applied", "已应用自定义语言包", "カスタムパックを適用中")
+        ("CustomLanguagePack", "Custom pack applied", "已应用自定义语言包", "カスタムパックを適用中"),
+        ("Recent", "Recent", "最近", "最近")
     ];
 
     private static readonly FrozenDictionary<string, string> English = Map(Rows, row => row.En);

@@ -13,7 +13,12 @@ impl VoiceRoster {
         let mut inner = self.inner.lock().await;
         let mut removed = Vec::new();
         inner.retain(|_, state| {
-            if state.channel_id == channel_id { removed.push(state.clone()); false } else { true }
+            if state.channel_id == channel_id {
+                removed.push(state.clone());
+                false
+            } else {
+                true
+            }
         });
         removed
     }
@@ -105,14 +110,14 @@ mod tests {
             .await;
         assert!(roster.list_channel(first).await.is_empty());
         assert!(roster.list_channel(second).await[0].self_mute);
-        let changed = roster
-            .clamp_channel(second, AudioQuality::High)
-            .await;
+        let changed = roster.clamp_channel(second, AudioQuality::High).await;
         assert_eq!(changed.len(), 1);
         assert_eq!(changed[0].audio_quality, AudioQuality::High);
-        assert!(roster
-            .clamp_channel(second, AudioQuality::Studio)
-            .await
-            .is_empty());
+        assert!(
+            roster
+                .clamp_channel(second, AudioQuality::Studio)
+                .await
+                .is_empty()
+        );
     }
 }

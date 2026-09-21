@@ -27,7 +27,7 @@
 
 ## SQLite：可丢弃缓存
 
-目前实现 `instances / accounts / messages / settings / servers / channels / users / sync_state / channel_inbox` 表。消息主键 `(instance_id, account_id, id)`，查询索引额外包含 channel_id。`channel_inbox` 按实例+账号+频道保存 last_read、last_message、mention、通知档（all/mentions/mute）和草稿；未读不进服务端协议。消息 wire payload 有版本协议约束，不是凭据容器。
+目前实现 `instances / accounts / messages / settings / servers / channels / users / sync_state / channel_inbox` 表。消息主键 `(instance_id, account_id, id)`，查询索引额外包含 channel_id。`channel_inbox` 按实例+账号+频道保存 last_read、last_message、mention、通知档（all/mentions/mute）、草稿和 `visited_at`；未读与最近跳转不进服务端协议。消息 wire payload 有版本协议约束，不是凭据容器。
 
 - InstanceStore 持久化和恢复实例，不依赖网络。
 - MessageCache 以 account + instance 分区，参数化 SQL，单页 ≤100，取 limit+1 判断下一页。

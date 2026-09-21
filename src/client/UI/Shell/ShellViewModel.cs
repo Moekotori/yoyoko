@@ -35,6 +35,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private readonly I18n _text;
     private readonly IChatChrome _chrome;
     private readonly IShortcutPreference _shortcuts;
+    private readonly ISystemTransportControls _osTransport;
     private readonly SystemTransportBinder _transport;
     private readonly CancellationToken _lifetime;
     private DateTimeOffset _cooldownUntil;
@@ -75,6 +76,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _shortcuts = shortcuts;
         ProductName = productName;
         _lifetime = lifetime;
+        _osTransport = osTransport;
+        _osTransport.RaiseRequested += OnOsRaise;
         _transport = new SystemTransportBinder(osTransport, transport, productName);
         _previews = new(lifetime);
         Devices = new(media, devices, text, () => SelectedInstance?.Context.Session, lifetime);
@@ -463,7 +466,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         RefreshCommunity();
     }
 
+    public event Action? ActivateRequested;
     public void BindOsTransport(nint hwnd) => _transport.BindWindow(hwnd);
+    private void OnOsRaise() => ActivateRequested?.Invoke();
 
     private void BindSession(InstanceSession session)
     {
@@ -636,10 +641,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                     .Select(state =>
                     {
                         var user = session?.User(state.UserId);
-                        _playbacks.TryGetValue(state.UserId, out var cached);
+                        var playback = _playbacks.TryGetValue(state.UserId, out var cached) ? cached.Playback : null;
+                        _ = LoadUserAvatarAsync(state.UserId);
                         return new VoiceMemberRow(state.UserId, state.DisplayName, user?.Username ?? "",
                             state.SelfMute, state.SelfDeaf, session?.Me.Id == state.UserId,
-                            ProfileOf(state.UserId, state.DisplayName), cached?.Playback);
+                            ProfileOf(state.UserId, state.DisplayName), playback);
                     })
                     .ToList());
         }
@@ -1060,6 +1066,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _text.PropertyChanged -= OnTextChanged;
         _chrome.Changed -= OnChromeChanged;
         _shortcuts.Changed -= OnShortcutsChanged;
+        _osTransport.RaiseRequested -= OnOsRaise;
         ClearPlaybacks();
         Settings.Dispose();
         Wallpaper.Dispose();

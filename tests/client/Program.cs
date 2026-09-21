@@ -59,6 +59,11 @@ Check(!offlineVoice.SelfMute && !offlineVoice.SelfDeaf, "unmute also clears deaf
     Check(controls.Current is { AppName: "yoyoko", Community: "Home", Muted: false }, "opt-in publishes community while in voice");
     controls.Raise(TransportCommand.Mute);
     Check(session.Voice.SelfMute && controls.Current?.Muted == true, "headset pause mutes the joined session");
+    await session.Voice.SetDeafAsync(true, default);
+    Check(controls.Current?.Muted == true, "deafen keeps the OS session paused");
+    var published = controls.Publishes;
+    preference.SetHeadsetMediaKeys(true);
+    Check(controls.Publishes == published, "identical now-playing state is not republished");
     await session.Voice.LeaveAsync(default);
     Check(controls.Current is null, "leaving voice clears the OS session");
     await session.DisposeAsync();
@@ -159,6 +164,18 @@ Check(MessageMarkup.MentionsUser("hey @Ada now", "ada"), "mention scan is case-i
 Check(!MessageMarkup.MentionsUser("mail ada@example.com", "ada"), "email is not a mention");
 Check(MessageMarkup.Parse("**bold** and `x`").Any(span => span.Kind == MarkupKind.Bold && span.Text == "bold"), "parses bold markup");
 Check(MessageMarkup.IdAfter(Guid.Parse("01950000-0000-7000-8000-000000000011"), Guid.Parse("01950000-0000-7000-8000-000000000010")), "UUIDv7 string order is chronological");
+{
+    var general = Guid.Parse("01950000-0000-7000-8000-0000000000a1");
+    var voiceJump = Guid.Parse("01950000-0000-7000-8000-0000000000a2");
+    var extra = Guid.Parse("01950000-0000-7000-8000-0000000000a3");
+    var channels = new[] { (general, "general"), (voiceJump, "voice"), (extra, "offtopic") };
+    var visited = new Dictionary<Guid, long> { [extra] = 20, [general] = 10 };
+    var recents = JumpRank.Channels(channels, item => item.Item1, item => item.Item2, visited, "");
+    Check(recents[0].Item1 == extra && recents[1].Item1 == general && recents.Count == 2, "empty jump lists recents first");
+    var filtered = JumpRank.Channels(channels, item => item.Item1, item => item.Item2, visited, "off");
+    Check(filtered.Count == 1 && filtered[0].Item1 == extra, "query still prefers a recent hit");
+    Check(JumpRank.Channels(channels, item => item.Item1, item => item.Item2, new Dictionary<Guid, long>(), "").Count == 3, "no recents lists every channel");
+}
 Check(ProtocolVersion.HealthLivePath == "/health/live", "live health path");
 {
     var tcp = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
@@ -223,6 +240,9 @@ try
     await cache.SaveReadAsync(scopeA, message.ChannelId, newer.Id, default);
     inbox = (await cache.LoadInboxAsync(scopeA, default)).Single(item => item.ChannelId == message.ChannelId);
     Check(!inbox.HasUnread(Guid.CreateVersion7()) && !inbox.HasMention, "ack clears unread and mention");
+    await cache.SaveVisitAsync(scopeA, message.ChannelId, 42, default);
+    inbox = (await cache.LoadInboxAsync(scopeA, default)).Single(item => item.ChannelId == message.ChannelId);
+    Check(inbox.VisitedAt == 42, "visit timestamp persists");
     Check((await cache.LoadInboxAsync(scopeB, default)).All(item => item.ChannelId != message.ChannelId || item.Draft is null), "inbox is instance-scoped");
     await cache.SaveCommunityAsync(scopeA, new([], [], []), default);
     Check((await cache.ReadPageAsync(scopeA, message.ChannelId, null, 50, default)).Items.Count == 0, "removed channel messages are purged with community snapshot");
@@ -321,10 +341,16 @@ public class VoiceJoinIo : System.Reflection.DispatchProxy
 sealed class RecordingTransport : ISystemTransportControls
 {
     public TransportNowPlaying? Current { get; private set; }
+    public int Publishes { get; private set; }
     public bool Available => true;
     public event Action<TransportCommand>? CommandRequested;
+    public event Action? RaiseRequested { add { } remove { } }
     public void BindWindow(nint hwnd) { }
-    public void Publish(TransportNowPlaying? session) => Current = session;
+    public void Publish(TransportNowPlaying? session)
+    {
+        Publishes++;
+        Current = session;
+    }
     public void Dispose() { }
     public void Raise(TransportCommand command) => CommandRequested?.Invoke(command);
 }

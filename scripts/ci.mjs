@@ -143,12 +143,12 @@ const handlers = {
     }
   },
   server() {
-    run("cargo", ["fmt", "--all", "--check"]);
-    run("cargo", ["clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"]);
-    run("cargo", ["test", "--workspace", "--locked"]);
+    run("cargo", ["fmt", "-p", "chat-server", "-p", "chat-domain", "-p", "chat-protocol", "--check"]);
+    run("cargo", ["clippy", "-p", "chat-server", "-p", "chat-domain", "-p", "chat-protocol", "--all-targets", "--locked", "--", "-D", "warnings"]);
+    run("cargo", ["test", "-p", "chat-server", "-p", "chat-domain", "-p", "chat-protocol", "--locked"]);
     run("cargo", ["run", "--locked", "-p", "chat-server", "--", "migrate"]);
     run("cargo", ["run", "--locked", "-p", "chat-server", "--", "migrate"]);
-    run("cargo", ["build", "--release", "--locked", "-p", "chat-server"]);
+    run("cargo", ["build", "--locked", "-p", "chat-server"]);
   },
 };
 

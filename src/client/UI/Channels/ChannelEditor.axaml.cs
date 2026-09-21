@@ -11,7 +11,8 @@ public partial class ChannelEditor : UserControl
         Loaded += (_, _) => FocusInput();
         DataContextChanged += (_, _) => FocusInput();
     }
-    private void FocusInput() => Dispatcher.UIThread.Post(() => {
+    private void FocusInput() => Dispatcher.UIThread.Post(() =>
+    {
         if (!IsLoaded || DataContext is not ChannelEditorViewModel editor) return;
         if (editor.IsDelete) CancelButton.Focus();
         else { NameInput.Focus(); NameInput.SelectAll(); }

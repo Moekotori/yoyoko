@@ -9,6 +9,7 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
     private static readonly Guid InteropIid = new("ddb0472d-c911-4a1f-86d9-dc3d71a95f5a");
     private static readonly Guid ControlsIid = new("99fa3ff4-1742-42a6-902e-087d41f965ec");
     private static readonly Guid Music2Iid = new("00368462-97d3-44b9-b00f-008afcefaf18");
+    private static readonly Guid Controls2Iid = new("ea98d2f6-7f3c-4af2-a586-72889808efb1");
     private static readonly Guid HandlerIid = new("0557e996-7b23-5bae-aa81-ea0d671143a4");
     private static readonly Guid ButtonArgsIid = new("b7f47116-a56f-4dc8-9e11-92031f4a87c2");
     private static readonly Guid IUnknownIid = new("00000000-0000-0000-c000-000000000046");
@@ -25,6 +26,7 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
 
     public bool Available => true;
     public event Action<TransportCommand>? CommandRequested;
+    public event Action? RaiseRequested { add { } remove { } }
 
     public void BindWindow(nint hwnd)
     {
@@ -146,6 +148,11 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
         {
             if (session is null)
             {
+                if (CallGet(controls, 8, out var clear) == 0 && clear != 0)
+                {
+                    try { Call(clear, 16); Call(clear, 17); }
+                    finally { Release(clear); }
+                }
                 CallPutInt(controls, 11, 0);
                 CallPutInt(controls, 7, 0);
                 return;
@@ -162,6 +169,15 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
             CallPutInt(controls, 29, 0);
             CallPutInt(controls, 31, 0);
             CallPutInt(controls, 7, session.Muted ? 4 : 3);
+            if (Query(controls, Controls2Iid, out var controls2) == 0 && controls2 != 0)
+            {
+                try
+                {
+                    CallPutInt(controls2, 7, 0);
+                    CallPutInt(controls2, 9, 0);
+                }
+                finally { Release(controls2); }
+            }
             if (CallGet(controls, 8, out var updater) != 0 || updater == 0) return;
             try
             {

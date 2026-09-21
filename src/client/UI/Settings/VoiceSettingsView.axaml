@@ -25,12 +25,14 @@
         Content="{Binding LoopbackLabel}" AutomationProperties.Name="{Binding LoopbackLabel}" />
     </Grid>
     <Border Classes="settingsRowDivider" />
-    <Grid Classes="settingsRow" ColumnDefinitions="2*,Auto" ColumnSpacing="24">
-      <TextBlock Text="{i18n:T HeadsetMediaKeys}" Classes="settingsLabel" />
-      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" HorizontalAlignment="Right"
-        IsChecked="{Binding HeadsetMediaKeys}" ToolTip.Tip="{i18n:T HeadsetMediaKeysHelp}"
-        AutomationProperties.Name="{i18n:T HeadsetMediaKeys}" />
-    </Grid>
+    <Border Classes="settingsHit" vm:SettingsHit.Command="{Binding ToggleHeadsetMediaKeys}"
+      ToolTip.Tip="{i18n:T HeadsetMediaKeysHelp}" AutomationProperties.Name="{i18n:T HeadsetMediaKeys}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+        <TextBlock Text="{i18n:T HeadsetMediaKeys}" Classes="settingsLabel" />
+        <ToggleSwitch Grid.Column="1" Classes="settingsToggle" Focusable="False" HorizontalAlignment="Right"
+          IsChecked="{Binding HeadsetMediaKeys}" />
+      </Grid>
+    </Border>
     <TextBlock Text="{Binding Devices.Error}" Classes="muted" Margin="20,8,20,12" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" />
   </StackPanel>
   </Border>

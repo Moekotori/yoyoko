@@ -86,6 +86,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         ToggleCompact = new(_ => _chrome.SetCompact(!_chrome.Compact));
         ToggleReduceMotion = new(_ => _chrome.SetReduceMotion(!_chrome.ReduceMotion));
         ToggleUltraLight = new(_ => _chrome.SetUltraLightEnabled(!_chrome.UltraLightEnabled));
+        ToggleHeadsetMediaKeys = new(_ => _transport.SetHeadsetMediaKeys(!_transport.HeadsetMediaKeys));
         ToggleLoopback = new(devices.ToggleLoopbackAsync, onError);
         ImportLanguagePack = new(ImportLanguagePackAsync, onError);
         ExportLanguageTemplate = new(ExportLanguageTemplateAsync, onError);
@@ -154,6 +155,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public ActionCommand ToggleCompact { get; }
     public ActionCommand ToggleReduceMotion { get; }
     public ActionCommand ToggleUltraLight { get; }
+    public ActionCommand ToggleHeadsetMediaKeys { get; }
     public AsyncCommand ToggleLoopback { get; }
     public AsyncCommand ImportLanguagePack { get; }
     public AsyncCommand ExportLanguageTemplate { get; }

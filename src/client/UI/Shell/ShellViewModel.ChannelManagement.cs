@@ -47,7 +47,8 @@ public sealed partial class ShellViewModel
         var serverId = channel?.ServerId ?? ActiveServer?.Id;
         if (session is null || serverId is null || (channel is null ? !CanModerate : !CanManageChannel(channel))) return;
         ChannelEditorViewModel? editor = null;
-        editor = new(session, serverId.Value, channel, voice, mode, _text, created => {
+        editor = new(session, serverId.Value, channel, voice, mode, _text, created =>
+        {
             if (!ReferenceEquals(ChannelEditor, editor)) return;
             ChannelEditor = null;
             if (SelectedInstance?.Context.Session != session) return;

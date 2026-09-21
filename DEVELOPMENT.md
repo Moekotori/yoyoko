@@ -118,13 +118,20 @@ npm run ci -- --full     # 再加 .NET、CMake、边界检查和 Rust
 npm run ci -- protocol   # 只跑指定 job：protocol|live|desktop|native|structure|server
 ```
 
-GitHub Actions（`.github/workflows/ci.yml`）：
+GitHub Actions（`.github/workflows/ci.yml`）以节省额度为默认：
 
-- protocol：Node fixtures。
-- Windows/macOS/Linux：.NET Release 构建、client contract suite、CMake 构建和 C ABI check。
-- Linux：Rust fmt/clippy/test/release，PostgreSQL migration 连续运行两次验证幂等，再跑 Node live 检查。
-- 架构：csproj 依赖白名单、C# 空白格式、Compose 配置校验。
-- 容器：构建并启动 Compose、Node live 检查、清理容器（保留命名卷的默认语义）。
+- `main` push / PR：只运行一个 Linux `quick` job，检查 Node fixtures、模块边界和 Compose 配置；纯 Markdown、UI/ADR/i18n 文档改动不触发。协议 fixtures 仍触发。
+- 手动 `Run workflow` 选择 `scope=linux`（默认）：quick 通过后，运行 Linux .NET Release / client contracts / CMake、C# 格式检查和 Rust 服务端检查。
+- `scope=full`：额外运行 Windows/macOS 桌面构建；上述检查通过后才构建并启动 Compose、运行 Node live 检查并清理容器。
+- `scope=quick`：手动只跑轻量检查。同一分支的新运行会取消旧运行。
+- 服务端 Rust fmt/clippy/test 仅选择 `chat-server`、`chat-domain`、`chat-protocol`，不再误编译桌面媒体 worker；PostgreSQL migration 连续运行两次验证幂等，live 复用 debug 构建，避免日常重复编译 release。
+- 容器构建保留完整锁文件，仅携带媒体 worker 的 workspace manifest 与空 target 路径以供 Cargo 解析；不会编译或打包媒体 worker。服务端独立仓库导出仍需收敛 workspace 元数据。
+- 自动 quick 不代表编译或跨平台通过；媒体 worker 编译/设备验收需单独按媒体开发说明执行。
+
+```sh
+gh workflow run ci.yml -f scope=linux
+gh workflow run ci.yml -f scope=full
+```
 
 远程平台结果须以实际 workflow 执行为准。三平台编译不等于三平台 GUI、分发签名或音频硬件验收。
 

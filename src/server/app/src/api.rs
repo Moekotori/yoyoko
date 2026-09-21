@@ -106,7 +106,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         )
         .route("/api/v1/servers/join", post(join_server))
         .route("/api/v1/servers/{id}/moderation", patch(patch_moderation))
-        .route("/api/v1/channels/{id}", patch(crate::channel::handler::patch).delete(crate::channel::handler::delete))
+        .route(
+            "/api/v1/channels/{id}",
+            patch(crate::channel::handler::patch).delete(crate::channel::handler::delete),
+        )
         .route(
             "/api/v1/channels/{id}/messages",
             get(list_messages).post(send_message),
@@ -874,10 +877,7 @@ mod tests {
 
         let edited = patch_json(
             &app,
-            &format!(
-                "/api/v1/channels/{}/messages/{}",
-                channel.id, mentioned.id
-            ),
+            &format!("/api/v1/channels/{}/messages/{}", channel.id, mentioned.id),
             &alice.access_token,
             r#"{"content":"hey @bob again"}"#,
         )
@@ -890,10 +890,7 @@ mod tests {
 
         let denied_edit = patch_json(
             &app,
-            &format!(
-                "/api/v1/channels/{}/messages/{}",
-                channel.id, mentioned.id
-            ),
+            &format!("/api/v1/channels/{}/messages/{}", channel.id, mentioned.id),
             &bob.access_token,
             r#"{"content":"nope"}"#,
         )

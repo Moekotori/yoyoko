@@ -174,7 +174,10 @@ fn message_from(
     })
 }
 
-async fn load_mentions(pool: &PgPool, ids: &[Uuid]) -> Result<HashMap<Uuid, Vec<Uuid>>, StoreError> {
+async fn load_mentions(
+    pool: &PgPool,
+    ids: &[Uuid],
+) -> Result<HashMap<Uuid, Vec<Uuid>>, StoreError> {
     let mut grouped: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
     if ids.is_empty() {
         return Ok(grouped);
@@ -189,7 +192,9 @@ async fn load_mentions(pool: &PgPool, ids: &[Uuid]) -> Result<HashMap<Uuid, Vec<
         let message_id: Uuid = row
             .try_get("message_id")
             .map_err(|_| StoreError::Unavailable)?;
-        let user_id: Uuid = row.try_get("user_id").map_err(|_| StoreError::Unavailable)?;
+        let user_id: Uuid = row
+            .try_get("user_id")
+            .map_err(|_| StoreError::Unavailable)?;
         grouped.entry(message_id).or_default().push(user_id);
     }
     Ok(grouped)
@@ -632,9 +637,7 @@ impl Store for PgStore {
             .execute(&self.0)
             .await,
         )?;
-        self.find_server(id)
-            .await?
-            .ok_or(StoreError::NotFound)
+        self.find_server(id).await?.ok_or(StoreError::NotFound)
     }
 
     async fn last_user_message_at(

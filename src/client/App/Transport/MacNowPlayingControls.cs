@@ -16,15 +16,19 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
     private nint _next;
     private nint _previous;
     private nint _center;
+    private nint _commands;
     private nint _titleKey;
     private nint _artistKey;
     private nint _albumKey;
     private nint _rateKey;
+    private nint _mediaTypeKey;
+    private nint _defaultRateKey;
     private bool _ready;
     private bool _disposed;
 
     public bool Available => true;
     public event Action<TransportCommand>? CommandRequested;
+    public event Action? RaiseRequested { add { } remove { } }
 
     public void BindWindow(nint hwnd) { }
 
@@ -38,20 +42,27 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
             if (!_ready && !Prepare()) return;
             if (session is null)
             {
-                objc_msgSend(_center, sel_registerName("setPlaybackState:"), 3);
+                objc_msgSend(_center, sel_registerName("setPlaybackState:"), (nint)3);
                 objc_msgSend(_center, sel_registerName("setNowPlayingInfo:"), 0);
                 SetEnabled(false);
                 return;
             }
             SetEnabled(true);
-            objc_msgSend(_center, sel_registerName("setPlaybackState:"), session.Muted ? 2 : 1);
+            objc_msgSend(_center, sel_registerName("setPlaybackState:"), session.Muted ? (nint)2 : (nint)1);
             var info = objc_msgSend(objc_getClass("NSMutableDictionary"), sel_registerName("dictionary"));
+            objc_msgSend(info, sel_registerName("retain"));
             var title = string.IsNullOrEmpty(session.Channel) ? session.AppName : session.Channel;
             Set(info, _titleKey, title);
             Set(info, _artistKey, session.Community);
             Set(info, _albumKey, session.AppName);
-            objc_msgSend(info, sel_registerName("setObject:forKey:"), Number(session.Muted ? 0 : 1), _rateKey);
+            if (_mediaTypeKey != 0)
+                objc_msgSend(info, sel_registerName("setObject:forKey:"), IntNumber(1), _mediaTypeKey);
+            var rate = Number(session.Muted ? 0 : 1);
+            objc_msgSend(info, sel_registerName("setObject:forKey:"), rate, _rateKey);
+            if (_defaultRateKey != 0)
+                objc_msgSend(info, sel_registerName("setObject:forKey:"), Number(1), _defaultRateKey);
             objc_msgSend(_center, sel_registerName("setNowPlayingInfo:"), info);
+            objc_msgSend(info, sel_registerName("release"));
         }
     }
 
@@ -63,7 +74,7 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
             _disposed = true;
             if (_ready)
             {
-                objc_msgSend(_center, sel_registerName("setPlaybackState:"), 3);
+                objc_msgSend(_center, sel_registerName("setPlaybackState:"), (nint)3);
                 objc_msgSend(_center, sel_registerName("setNowPlayingInfo:"), 0);
                 SetEnabled(false);
             }
@@ -80,23 +91,28 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
         _artistKey = ReadSymbol(media, "MPMediaItemPropertyArtist");
         _albumKey = ReadSymbol(media, "MPMediaItemPropertyAlbumTitle");
         _rateKey = ReadSymbol(media, "MPNowPlayingInfoPropertyPlaybackRate");
+        _mediaTypeKey = ReadSymbol(media, "MPNowPlayingInfoPropertyMediaType");
+        _defaultRateKey = ReadSymbol(media, "MPNowPlayingInfoPropertyDefaultPlaybackRate");
         if (_titleKey == 0 || _artistKey == 0 || _albumKey == 0 || _rateKey == 0) return false;
         _center = objc_msgSend(objc_getClass("MPNowPlayingInfoCenter"), sel_registerName("defaultCenter"));
-        var commands = objc_msgSend(objc_getClass("MPRemoteCommandCenter"), sel_registerName("sharedCommandCenter"));
-        _play = objc_msgSend(commands, sel_registerName("playCommand"));
-        _pause = objc_msgSend(commands, sel_registerName("pauseCommand"));
-        _toggle = objc_msgSend(commands, sel_registerName("togglePlayPauseCommand"));
-        _stop = objc_msgSend(commands, sel_registerName("stopCommand"));
-        _next = objc_msgSend(commands, sel_registerName("nextTrackCommand"));
-        _previous = objc_msgSend(commands, sel_registerName("previousTrackCommand"));
+        _commands = objc_msgSend(objc_getClass("MPRemoteCommandCenter"), sel_registerName("sharedCommandCenter"));
+        _play = objc_msgSend(_commands, sel_registerName("playCommand"));
+        _pause = objc_msgSend(_commands, sel_registerName("pauseCommand"));
+        _toggle = objc_msgSend(_commands, sel_registerName("togglePlayPauseCommand"));
+        _stop = objc_msgSend(_commands, sel_registerName("stopCommand"));
+        _next = objc_msgSend(_commands, sel_registerName("nextTrackCommand"));
+        _previous = objc_msgSend(_commands, sel_registerName("previousTrackCommand"));
         _target = TargetNative.Create(this);
         var action = sel_registerName("handleCommand:");
         Add(_play, action);
         Add(_pause, action);
         Add(_toggle, action);
         Add(_stop, action);
-        // MPRemoteCommandCenter owns macOS command delivery. The similarly named
-        // UIKit beginReceivingRemoteControlEvents selector does not exist on NSApplication.
+        foreach (var name in ExtraCommands)
+        {
+            var command = objc_msgSend(_commands, sel_registerName(name));
+            if (command != 0) objc_msgSend_setEnabled(command, sel_registerName("setEnabled:"), 0);
+        }
         _ready = true;
         return true;
     }
@@ -114,12 +130,41 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
         objc_msgSend_setEnabled(_stop, sel, flag);
         objc_msgSend_setEnabled(_next, sel, 0);
         objc_msgSend_setEnabled(_previous, sel, 0);
+        if (_commands == 0) return;
+        foreach (var name in ExtraCommands)
+        {
+            var command = objc_msgSend(_commands, sel_registerName(name));
+            if (command != 0) objc_msgSend_setEnabled(command, sel, 0);
+        }
+    }
+
+    internal TransportCommand CommandOf(nint evt)
+    {
+        var command = objc_msgSend(evt, sel_registerName("command"));
+        if (command == 0 || command == _toggle) return TransportCommand.ToggleMute;
+        if (command == _play) return TransportCommand.Unmute;
+        if (command == _pause || command == _stop) return TransportCommand.Mute;
+        return TransportCommand.ToggleMute;
     }
 
     private static void Set(nint dictionary, nint key, string value)
         => objc_msgSend(dictionary, sel_registerName("setObject:forKey:"), NsString(value), key);
 
-    private static nint Number(int value)
+    private static readonly string[] ExtraCommands =
+    [
+        "nextTrackCommand", "previousTrackCommand",
+        "skipForwardCommand", "skipBackwardCommand",
+        "seekForwardCommand", "seekBackwardCommand",
+        "changePlaybackPositionCommand",
+        "ratingCommand", "likeCommand", "dislikeCommand", "bookmarkCommand",
+        "changeRepeatModeCommand", "changeShuffleModeCommand", "changePlaybackRateCommand",
+        "enableLanguageOptionCommand", "disableLanguageOptionCommand"
+    ];
+
+    private static nint Number(double value)
+        => objc_msgSend_double(objc_getClass("NSNumber"), sel_registerName("numberWithDouble:"), value);
+
+    private static nint IntNumber(int value)
         => objc_msgSend(objc_getClass("NSNumber"), sel_registerName("numberWithInt:"), value);
 
     private static nint NsString(string value)
@@ -155,6 +200,9 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint objc_msgSend(nint receiver, nint selector, int arg);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern nint objc_msgSend_double(nint receiver, nint selector, double arg);
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern void objc_msgSend_setEnabled(nint receiver, nint selector, byte enabled);
@@ -215,24 +263,8 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
             if (pointer == 0) return 0;
             var handle = GCHandle.FromIntPtr(pointer);
             if (handle.Target is not MacNowPlayingControls owner) return 0;
-            var command = CommandOf(evt);
-            owner.Handle(command);
+            owner.Handle(owner.CommandOf(evt));
             return 0;
-        }
-
-        private static TransportCommand CommandOf(nint evt)
-        {
-            var command = objc_msgSend(evt, sel_registerName("command"));
-            if (command == 0) return TransportCommand.ToggleMute;
-            var pause = objc_msgSend(objc_msgSend(objc_getClass("MPRemoteCommandCenter"), sel_registerName("sharedCommandCenter")),
-                sel_registerName("pauseCommand"));
-            var stop = objc_msgSend(objc_msgSend(objc_getClass("MPRemoteCommandCenter"), sel_registerName("sharedCommandCenter")),
-                sel_registerName("stopCommand"));
-            var play = objc_msgSend(objc_msgSend(objc_getClass("MPRemoteCommandCenter"), sel_registerName("sharedCommandCenter")),
-                sel_registerName("playCommand"));
-            if (command == play) return TransportCommand.Unmute;
-            if (command == pause || command == stop) return TransportCommand.Mute;
-            return TransportCommand.ToggleMute;
         }
     }
 }

@@ -24,12 +24,13 @@
 | Rust 健康检查、发现、认证 Gateway READY | 已实现 |
 | Domain、Service、Repository | 已实现 VIEW_CHANNEL / SEND_MESSAGE 服务端检查 |
 | C++ Native Media C ABI | 骨架可编译，能力位为 0，媒体操作明确返回未实现 |
-| PostgreSQL migration、Docker Compose、CI | 本地 Node 管线已接通；容器/迁移及远程 GitHub Actions 运行尚未验收 |
+| PostgreSQL migration、Docker Compose、CI | 自动 CI 仅轻量检查，Linux/全平台构建按需手动触发；容器及远程修复后运行尚未验收 |
 | 注册、登录、社区/频道、文字消息 | 已接通控制面；完整验收见路线图 |
 | 社区屏蔽词与发言冷却 | 已实现；owner / MANAGE_MESSAGES 可 PATCH，发送时服务端强制 |
 | 聊天附件（拖拽/选择图片与文件、可配置上限、对端下载） | 已实现；默认 24 MiB，服务端 `storage.max_bytes` 可改 |
 | 消息 Markdown / 轻量 LaTeX | 客户端渲染；协议仍为纯文本。粗体/斜体/删除线/代码/标题/列表/引用/简单表格/链接/`$...$` 与 `$$...$$`（含 pmatrix）。明文快路径与有界缓存；简单公式压成 Unicode。不渲染 HTML、远程图片或完整 TeX |
 | 未读 / @ / 静音、新消息分割线、按频道草稿、编辑上一条 | 客户端 SQLite 保存已读/通知档/草稿；作者可 PATCH 正文；`@username` 写入 mentions。删除/回复/系统通知尚未实现 |
+| 用户浮卡、最近跳转、语音名册 | 点头像/名字打开浮卡可 @；⌘K 最近频道置顶并可搜人；语音频道下列出成员及静音/耳聋。说话光圈需真实媒体，未做假在线 |
 | 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 控制面已接通；`chat-media-worker` 用 LiveKit Rust SDK 发布/订阅麦克风。要对端听到，需本机 LiveKit（`docker compose up -d redis livekit`）并重建 worker。设置中可选耳机媒体键：仅在已加入语音时注册系统会话（Windows SMTC / macOS Now Playing / Linux MPRIS），播放/暂停映射 mute，默认关闭 |
 | 屏幕共享 | **Not implemented yet** |
 

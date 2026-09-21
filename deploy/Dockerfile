@@ -2,6 +2,10 @@ FROM rust:1.98-bookworm AS builder
 WORKDIR /workspace
 COPY Cargo.toml Cargo.lock ./
 COPY src/server ./src/server
+# Cargo resolves every workspace member even with -p chat-server. Only its
+# manifest and empty target paths are needed; no desktop/media code is built.
+COPY src/media-worker/Cargo.toml ./src/media-worker/Cargo.toml
+RUN mkdir -p src/media-worker/src && touch src/media-worker/src/main.rs src/media-worker/src/lib.rs
 COPY database ./database
 COPY docs/protocol ./docs/protocol
 RUN cargo build --locked --release -p chat-server

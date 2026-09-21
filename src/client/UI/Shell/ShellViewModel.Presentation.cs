@@ -170,7 +170,7 @@ public sealed partial class ShellViewModel
             {
                 _channelsChanged = false;
                 RefreshChannelEditor();
-            Changed(nameof(TextChannels)); Changed(nameof(VoiceChannels));
+                Changed(nameof(TextChannels)); Changed(nameof(VoiceChannels));
                 for (var index = OpenChannels.Count - 1; index >= 0; index--)
                 {
                     var current = Channels.FirstOrDefault(item => item.Id == OpenChannels[index].Id);

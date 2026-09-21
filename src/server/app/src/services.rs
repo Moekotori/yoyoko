@@ -79,10 +79,7 @@ const MAX_COOLDOWN_SECONDS: u32 = 600;
 
 fn normalize_blocked_words(words: Vec<String>) -> ApiResult<Vec<String>> {
     if words.len() > MAX_BLOCKED_WORDS {
-        return Err(ApiErr::bad(
-            "too_many_words",
-            "At most 200 blocked words.",
-        ));
+        return Err(ApiErr::bad("too_many_words", "At most 200 blocked words."));
     }
     let mut seen = std::collections::BTreeSet::new();
     let mut out = Vec::new();
@@ -701,10 +698,7 @@ pub async fn send_message(
         return Err(ApiErr::blocked_word());
     }
     if server.cooldown_seconds > 0
-        && let Some(last) = state
-            .store
-            .last_user_message_at(channel_id, user)
-            .await?
+        && let Some(last) = state.store.last_user_message_at(channel_id, user).await?
     {
         let elapsed = Utc::now().timestamp().saturating_sub(last);
         if elapsed < server.cooldown_seconds as i64 {
@@ -808,7 +802,8 @@ pub async fn edit_message(
     }
     message.content = content;
     message.edited_at = Some(Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
-    message.mentions = resolve_mentions(&*state.store, channel.server_id, message.content.as_deref()).await?;
+    message.mentions =
+        resolve_mentions(&*state.store, channel.server_id, message.content.as_deref()).await?;
     let api = state.settings.api_origin();
     let dto = message_dto(&state.tokens, &api, &message);
     let payload = serde_json::to_value(&dto).unwrap_or_default();
@@ -1108,7 +1103,9 @@ async fn resolve_mentions(
     server_id: Uuid,
     content: Option<&str>,
 ) -> ApiResult<Vec<Uuid>> {
-    let Some(text) = content else { return Ok(vec![]) };
+    let Some(text) = content else {
+        return Ok(vec![]);
+    };
     let members = store.list_members(server_id).await?;
     let mut names = Vec::with_capacity(members.len());
     for id in members {

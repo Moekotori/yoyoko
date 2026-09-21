@@ -77,3 +77,5 @@
 Live 检查同时发现并修复了 macOS 会话建立时的原生崩溃：系统媒体控制误向 NSApplication 发送 UIKit 的 beginReceivingRemoteControlEvents。移除错误调用，沿用 MPRemoteCommandCenter；无媒体会话时不初始化该模块。[Apple 对该 API 与共享命令中心的说明](https://developer.apple.com/documentation/uikit/uiapplication/beginreceivingremotecontrolevents%28%29)。修复后上述真实网络链路检查通过。
 
 仍未据此承诺硬件/RTP 双端语音无中断、三平台恢复性能或任意原生崩溃可恢复；本轮证明的是管理层恢复保护、真实本地聊天/上传链路，以及语音控制面未发生重连/离开。
+
+最终核对：当前 App Release 构建 0 warning / 0 error；当前恢复组件的独立故障注入检查通过（直接编译生产 UltraLightWindowContent 和 RecoveryChecks），本地 HTTP/Gateway/SQLite live 检查通过。测试服务已停止，现有服务器及用户账号未改动。

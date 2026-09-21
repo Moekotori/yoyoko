@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Chat.Localization;
 using Chat.UI.Shortcuts;
@@ -39,9 +40,33 @@ public partial class MainWindow : Window
             shell.Wallpaper.PickFile = PickWallpaperAsync;
             shell.Settings.PickLanguagePackPaths = PickLanguagePacksAsync;
             shell.Settings.SaveLanguageTemplate = SaveLanguageTemplateAsync;
-            shell.BindOsTransport(TryGetPlatformHandle()?.Handle ?? 0);
+            shell.ActivateRequested -= OnActivateRequested;
+            shell.ActivateRequested += OnActivateRequested;
+            BindOsTransport(shell);
         }
     }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        if (DataContext is ShellViewModel shell) BindOsTransport(shell);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (DataContext is ShellViewModel shell) shell.ActivateRequested -= OnActivateRequested;
+        base.OnClosed(e);
+    }
+
+    private void BindOsTransport(ShellViewModel shell)
+        => shell.BindOsTransport(TryGetPlatformHandle()?.Handle ?? 0);
+
+    private void OnActivateRequested() => Dispatcher.UIThread.Post(() =>
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Show();
+        Activate();
+    });
 
     private async Task<IReadOnlyList<PickedFile>> PickFilesAsync()
     {
