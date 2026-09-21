@@ -54,6 +54,7 @@ public sealed partial class ShellViewModel
             {
                 _channelContentVersion++;
                 Changed(nameof(ChannelContentVersion));
+                if (!CanObserveTimeline) return;
                 if (ChannelHasUnread)
                 {
                     _awayFromBottom = true;
@@ -105,6 +106,7 @@ public sealed partial class ShellViewModel
         session.Voice.ApplyRoute(Devices.Route);
         await Devices.StopLoopbackAsync();
         await session.Voice.JoinAsync(channel.Id, SelectedAudioQuality?.Id, _lifetime);
+        NoteVisit(channel.Id);
         NotifyVoice();
         _ = Devices.RefreshAsync();
     }

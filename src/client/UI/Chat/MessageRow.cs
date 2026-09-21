@@ -26,6 +26,7 @@ public sealed class MessageRow : ObservableObject
     private readonly Func<AttachmentDto, Task> _save = _ => Task.CompletedTask;
     private string _author = "";
     private AvatarPlayback? _playback;
+    private MemberProfile? _profile;
     private bool _continuation;
     private bool _own;
     public MessageRow(TimelineItem item, string author, Func<AttachmentDto, Task> save,
@@ -62,6 +63,11 @@ public sealed class MessageRow : ObservableObject
     {
         get => _playback;
         set { _playback = value; Changed(); }
+    }
+    public MemberProfile? Profile
+    {
+        get => _profile;
+        set { if (ReferenceEquals(_profile, value)) return; _profile = value; Changed(); }
     }
     public string Content => IsUnreadDivider ? "" : Item.Message.Content ?? "";
     public bool HasText => !IsUnreadDivider && !string.IsNullOrEmpty(Content);

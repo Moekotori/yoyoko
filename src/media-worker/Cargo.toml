@@ -4,6 +4,16 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[lib]
+name = "chat_media_worker"
+path = "src/lib.rs"
+
+[[bin]]
+name = "chat-media-worker"
+path = "src/main.rs"
+test = false
+doctest = false
+
 [dependencies]
 cpal.workspace = true
 env_logger = "0.11"

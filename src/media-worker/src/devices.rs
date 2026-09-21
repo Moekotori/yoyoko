@@ -138,9 +138,38 @@ fn collect(
     Ok(out)
 }
 
+pub fn parse_device_id(id: &str, prefix: &str) -> Option<(String, u32)> {
+    let rest = id
+        .strip_prefix(&format!("{prefix}:"))
+        .unwrap_or(id)
+        .trim();
+    if rest.is_empty() {
+        return None;
+    }
+    if let Some((name, n)) = rest.rsplit_once(':')
+        && let Ok(index) = n.parse::<u32>()
+        && index >= 2
+        && !name.is_empty()
+    {
+        return Some((name.to_string(), index));
+    }
+    Some((rest.to_string(), 1))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_named_and_duplicate_device_ids() {
+        assert_eq!(
+            parse_device_id("in:MacBook Pro Microphone", "in"),
+            Some(("MacBook Pro Microphone".into(), 1))
+        );
+        assert_eq!(parse_device_id("out:Speakers:2", "out"), Some(("Speakers".into(), 2)));
+        assert_eq!(parse_device_id("", "in"), None);
+        assert_eq!(parse_device_id("in:", "in"), None);
+    }
 
     #[test]
     fn list_returns_object_or_error() {

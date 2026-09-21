@@ -9,7 +9,8 @@ public sealed record ChannelInbox(
     Guid? LastAuthorId,
     Guid? LastMentionId,
     ChannelNotify Notify,
-    string? Draft)
+    string? Draft,
+    long? VisitedAt = null)
 {
     public static ChannelNotify ParseNotify(string? value) => value switch
     {

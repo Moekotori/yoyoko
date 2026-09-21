@@ -6,6 +6,8 @@
     <ProjectReference Include="../../src/client/Core/Chat.Core.csproj" />
     <ProjectReference Include="../../src/client/Domain/Chat.Domain.csproj" />
     <ProjectReference Include="../../src/client/Protocol/Chat.Protocol.csproj" />
+    <ProjectReference Include="../../src/client/Networking/Chat.Networking.csproj" />
+    <ProjectReference Include="../../src/client/Storage/Chat.Storage.csproj" />
     <PackageReference Include="Avalonia.Headless" />
   </ItemGroup>
 </Project>

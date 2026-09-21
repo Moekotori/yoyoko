@@ -21,7 +21,11 @@ public sealed class MessageText : SelectableTextBlock
     private static readonly SolidColorBrush SpoilerClosed = new(Color.FromRgb(42, 42, 42));
     private static readonly SolidColorBrush MentionInk = new(Color.FromRgb(210, 168, 140));
     private static readonly SolidColorBrush LinkInk = new(Color.FromRgb(140, 176, 214));
+    private static readonly SolidColorBrush QuoteInk = new(Color.FromRgb(158, 158, 158));
+    private static readonly FontFamily MathFont = new("Georgia, Times New Roman, Songti SC, STIX Two Math, serif");
     private bool _spoilersOpen;
+    private string? _built;
+    private bool _builtSpoilers;
 
     static MessageText()
     {
@@ -60,18 +64,23 @@ public sealed class MessageText : SelectableTextBlock
 
     private void Rebuild()
     {
-        var content = Markdown;
-        if (string.IsNullOrEmpty(content))
+        var content = Markdown ?? "";
+        if (content == _built && _spoilersOpen == _builtSpoilers) return;
+        if (content.Length == 0)
         {
             Inlines?.Clear();
             Text = "";
+            _built = content;
+            _builtSpoilers = _spoilersOpen;
             return;
         }
-        var spans = global::Chat.Core.Messaging.MessageMarkup.Parse(content);
+        var spans = MessageMarkup.Parse(content);
         if (spans.Count == 1 && spans[0].Kind == MarkupKind.Text)
         {
             Inlines?.Clear();
             Text = spans[0].Text;
+            _built = content;
+            _builtSpoilers = _spoilersOpen;
             return;
         }
         Inlines ??= [];
@@ -82,21 +91,52 @@ public sealed class MessageText : SelectableTextBlock
         {
             if (span.Kind is MarkupKind.Math or MarkupKind.DisplayMath)
             {
-                if (span.Kind == MarkupKind.DisplayMath && Inlines.Count > 0)
-                    Inlines.Add(new LineBreak());
-                Inlines.Add(new InlineUIContainer(MathView.Create(global::Chat.Core.Messaging.MathMarkup.Parse(span.Text),
-                    span.Kind == MarkupKind.DisplayMath ? em : em * 0.95)));
-                if (span.Kind == MarkupKind.DisplayMath)
-                    Inlines.Add(new LineBreak());
+                AddMath(span, em);
                 continue;
             }
-            Inlines.Add(RunFor(span));
+            if (span.Kind is MarkupKind.Heading or MarkupKind.ListItem or MarkupKind.Table or MarkupKind.Rule)
+            {
+                if (Inlines.Count > 0) Inlines.Add(new LineBreak());
+                Inlines.Add(RunFor(span, em));
+                Inlines.Add(new LineBreak());
+                continue;
+            }
+            Inlines.Add(RunFor(span, em));
         }
+        _built = content;
+        _builtSpoilers = _spoilersOpen;
     }
 
-    private Inline RunFor(MarkupSpan span)
+    private void AddMath(MarkupSpan span, double em)
     {
-        var run = new Run(span.Text);
+        var display = span.Kind == MarkupKind.DisplayMath;
+        if (display && Inlines!.Count > 0) Inlines.Add(new LineBreak());
+        var tree = MathMarkup.Parse(span.Text);
+        if (MathMarkup.TryFlatten(tree, out var flat))
+        {
+            Inlines!.Add(new Run(flat)
+            {
+                FontFamily = MathFont,
+                FontStyle = FontStyle.Italic,
+                FontSize = display ? em + 1 : em
+            });
+        }
+        else
+            Inlines!.Add(new InlineUIContainer(MathView.Create(tree, display ? em : em * 0.95)));
+        if (display) Inlines.Add(new LineBreak());
+    }
+
+    private Inline RunFor(MarkupSpan span, double em)
+    {
+        var run = new Run(span.Kind switch
+        {
+            MarkupKind.Mention => "@" + span.Text,
+            MarkupKind.ListItem => (string.IsNullOrEmpty(span.Extra) ? "• " : span.Extra + ". ") + span.Text,
+            MarkupKind.Table => span.Text.Replace('\t', ' '),
+            MarkupKind.Rule => "────────",
+            MarkupKind.Quote => span.Text,
+            _ => span.Text
+        });
         switch (span.Kind)
         {
             case MarkupKind.Bold:
@@ -106,12 +146,13 @@ public sealed class MessageText : SelectableTextBlock
                 run.FontStyle = FontStyle.Italic;
                 break;
             case MarkupKind.Strike:
-                run.TextDecorations = [new TextDecoration { Location = TextDecorationLocation.Strikethrough }];
+                run.TextDecorations = Avalonia.Media.TextDecorations.Strikethrough;
                 break;
             case MarkupKind.Code:
             case MarkupKind.Fence:
+            case MarkupKind.Table:
                 run.FontFamily = Mono;
-                run.Background = CodeFill;
+                if (span.Kind != MarkupKind.Table) run.Background = CodeFill;
                 break;
             case MarkupKind.Spoiler:
                 run.SetValue(SpoilerProperty, true);
@@ -123,13 +164,22 @@ public sealed class MessageText : SelectableTextBlock
                 }
                 break;
             case MarkupKind.Mention:
-                run.Text = "@" + span.Text;
                 run.FontWeight = FontWeight.Medium;
                 run.Foreground = MentionInk;
                 break;
             case MarkupKind.Link:
                 run.Foreground = LinkInk;
-                run.TextDecorations = [new TextDecoration { Location = TextDecorationLocation.Underline }];
+                run.TextDecorations = Avalonia.Media.TextDecorations.Underline;
+                break;
+            case MarkupKind.Heading:
+                run.FontWeight = FontWeight.SemiBold;
+                run.FontSize = em + (span.Extra == "1" ? 6 : span.Extra == "2" ? 3 : 1);
+                break;
+            case MarkupKind.Quote:
+                run.Foreground = QuoteInk;
+                break;
+            case MarkupKind.Rule:
+                run.Foreground = QuoteInk;
                 break;
         }
         return run;

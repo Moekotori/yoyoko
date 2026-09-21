@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using Chat.Core.Messaging;
 using Chat.Localization;
 using Chat.UI.Channels;
+using Chat.UI.Chat;
 using Chat.UI.Components;
 using Chat.UI.Shortcuts;
 
@@ -75,13 +77,15 @@ public sealed partial class ShellViewModel
 
     public void ConfirmJump(object? value)
     {
-        var channel = value switch
-        {
-            JumpItem item => item.Channel,
-            ChannelItem direct => direct,
-            _ => _switcherSelected?.Channel
-        };
+        var picked = value as JumpItem ?? _switcherSelected;
         CloseJump();
+        if (picked?.Person is { } person)
+        {
+            MentionMember(person);
+            FocusComposer?.Invoke();
+            return;
+        }
+        var channel = picked?.Channel ?? value as ChannelItem;
         if (channel is null) return;
         if (channel.Kind == "voice")
         {
@@ -151,25 +155,58 @@ public sealed partial class ShellViewModel
     private void RefreshJump()
     {
         var query = SwitcherQuery.Trim();
-        var matches = TextChannels.Concat(VoiceChannels)
-            .Where(channel => query.Length == 0 || channel.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var all = TextChannels.Concat(VoiceChannels).ToList();
+        var visited = new Dictionary<Guid, long>();
+        foreach (var row in _inbox.Values)
+            if (row.VisitedAt is long at) visited[row.ChannelId] = at;
+        var recentIds = all.Where(channel => visited.ContainsKey(channel.Id))
+            .OrderByDescending(channel => visited[channel.Id])
+            .Take(JumpRank.RecentCap)
+            .Select(channel => channel.Id)
+            .ToHashSet();
+        var ranked = JumpRank.Channels(all, channel => channel.Id, channel => channel.Name, visited, query);
+        var next = ranked.Select(channel => new JumpItem(channel, recentIds.Contains(channel.Id))).ToList();
+        if (query.Length > 0)
+            foreach (var person in PeopleMatches(query))
+                next.Add(new JumpItem(person));
         for (var i = SwitcherMatches.Count - 1; i >= 0; i--)
-            if (!matches.Contains(SwitcherMatches[i].Channel)) SwitcherMatches.RemoveAt(i);
-        for (var i = 0; i < matches.Count; i++)
+            if (next.All(item => !SameJump(item, SwitcherMatches[i]))) SwitcherMatches.RemoveAt(i);
+        for (var i = 0; i < next.Count; i++)
         {
-            if (i < SwitcherMatches.Count && SwitcherMatches[i].Channel == matches[i]) continue;
+            if (i < SwitcherMatches.Count && SameJump(SwitcherMatches[i], next[i])) continue;
             var previous = -1;
             for (var j = 0; j < SwitcherMatches.Count; j++)
-                if (SwitcherMatches[j].Channel == matches[i]) { previous = j; break; }
+                if (SameJump(SwitcherMatches[j], next[i])) { previous = j; break; }
             if (previous >= 0) SwitcherMatches.Move(previous, i);
-            else SwitcherMatches.Insert(i, new JumpItem(matches[i]));
+            else SwitcherMatches.Insert(i, next[i]);
         }
         var keep = _switcherSelected is not null
-            ? SwitcherMatches.FirstOrDefault(item => item.Channel.Id == _switcherSelected.Channel.Id)
+            ? SwitcherMatches.FirstOrDefault(item => SameJump(item, _switcherSelected))
             : null;
         SetJumpActive(keep ?? SwitcherMatches.FirstOrDefault());
     }
+
+    private IEnumerable<MemberProfile> PeopleMatches(string query)
+    {
+        var seen = new HashSet<Guid>();
+        foreach (var person in Participants.Concat(VoicePeople()))
+        {
+            if (!seen.Add(person.Id)) continue;
+            if (person.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || person.Username.Contains(query, StringComparison.OrdinalIgnoreCase))
+                yield return person;
+        }
+    }
+
+    private IEnumerable<MemberProfile> VoicePeople()
+    {
+        foreach (var channel in Channels)
+            foreach (var member in channel.VoiceMembers)
+                if (member.Profile is not null) yield return member.Profile;
+    }
+
+    private static bool SameJump(JumpItem left, JumpItem right) =>
+        left.Person?.Id == right.Person?.Id && left.Channel?.Id == right.Channel?.Id;
 
     private void SetJumpActive(JumpItem? item)
     {

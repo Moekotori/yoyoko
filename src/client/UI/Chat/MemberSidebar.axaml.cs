@@ -13,8 +13,7 @@ public partial class MemberSidebar : UserControl
 
     private void OnCardOpened(object? sender, EventArgs e)
     {
-        if (sender is Flyout { Target: Control target, Content: Control content })
-            content.DataContext = target.DataContext;
+        if (sender is Flyout flyout) MemberGestures.BindCard(flyout);
     }
 
     private void OnMemberMenuOpening(object? sender, CancelEventArgs args)

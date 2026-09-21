@@ -7,6 +7,7 @@ public sealed partial class ShellViewModel
     private VisualResourceBudget _visualBudget = VisualResourceBudget.Active;
     public bool UltraLightEnabled => _chrome.UltraLightEnabled;
     public bool IsUltraLightParked { get; private set; }
+    private bool CanObserveTimeline => !_visualBudget.Suspended && !IsUltraLightParked && ShowChat;
     public (Guid Channel, double Offset, bool AtBottom)? TimelineViewport { get; set; }
 
     public void SetUltraLightParked(bool parked)

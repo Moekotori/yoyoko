@@ -2,6 +2,8 @@ namespace Chat.Localization;
 
 public static class TextKey
 {
+    public const string UltraLightRestoreFailed = "UltraLightRestoreFailed";
+    public const string UltraLightRestoreRetry = "UltraLightRestoreRetry";
     public const string UltraLightMode = "UltraLightMode";
     public const string UltraLightHelp = "UltraLightHelp";
     public const string RenameChannel = "RenameChannel";
@@ -104,6 +106,8 @@ public static class TextKey
     public const string DevicesUnavailable = "DevicesUnavailable";
     public const string CheckDevices = "CheckDevices";
     public const string StopDeviceCheck = "StopDeviceCheck";
+    public const string HeadsetMediaKeys = "HeadsetMediaKeys";
+    public const string HeadsetMediaKeysHelp = "HeadsetMediaKeysHelp";
     public const string MutedSuffix = "MutedSuffix";
     public const string DeafenedSuffix = "DeafenedSuffix";
     public const string CacheLoadFailed = "CacheLoadFailed";

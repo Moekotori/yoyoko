@@ -13,14 +13,14 @@
 | Avalonia 桌面外壳、轻量 MVVM、独立客户端项目 | 已实现 |
 | 轻量动画系统 `Chat.Motion` | 已实现入场/切换预设、可中断动画、隐藏/最小化清理与减少动效；文字频道仅消息区轻微淡入，过期加载取消；[调用与验证](docs/ui/MOTION.md) |
 | 自动连接 / 账号设置 | 首次自动创建实例账号，之后恢复会话；点击底部账号打开资料抽屉，修改用户名、昵称和头像；设置中更换服务器并记住选择，登录/注册仅保留在设置内用于账号恢复 |
-| 设置页面 | 左下角入口，打开时动画收起频道栏；分类含通用、外观、快捷键、语音、资料和服务器；语言 / 发送快捷键 / 可改绑定的键盘快捷键 / 设备、深色/浅色占位、自定义背景、紧凑布局与动效开关；[界面验证记录](docs/ui/README.md#settings) |
+| 设置页面 | 左下角入口，打开时动画收起频道栏；分类含通用、外观、快捷键、语音、资料和服务器；语言 / 发送快捷键 / 可改绑定的键盘快捷键 / 设备、深色/浅色、自定义背景、紧凑布局与动效开关；[界面验证记录](docs/ui/README.md#settings) |
 | 界面细节 | 统一圆角选择框与输入框、简化设置分隔、登录分段切换、社区操作按需展开；[本轮视觉与验证](docs/ui/README.md#product-surface-polish-2026-09-21) |
 | 工作区快捷键 | 跳转频道、搜索、频道/标签切换、设置、成员栏、附件与语音 mute/deafen；设置中可改绑定；[快捷键](docs/ui/README.md#keyboard) |
 | 客户端界面语言（中文 / English / 日本語），设置中切换 | 已实现；跟随系统，可覆盖并写入本地偏好 |
 | 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
 | 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
 | SQLite 消息分页缓存与账号隔离 | 已实现并接入远程同步 |
-| 界面内存调度 | 已接入前台 / 空闲 / 压力 / 隐藏四档；设置 → 常规可开启深度 UltraLight，最小化/隐藏时卸载页面，保留消息和语音会话；[策略与验证](docs/MEMORY_SCHEDULING.md) |
+| 界面内存调度 | 已接入前台 / 空闲 / 压力 / 隐藏四档；设置 → 常规可开启深度 UltraLight，最小化/隐藏时卸载页面，保留消息和语音会话，恢复失败可重试；[策略与验证](docs/MEMORY_SCHEDULING.md) |
 | Rust 健康检查、发现、认证 Gateway READY | 已实现 |
 | Domain、Service、Repository | 已实现 VIEW_CHANNEL / SEND_MESSAGE 服务端检查 |
 | C++ Native Media C ABI | 骨架可编译，能力位为 0，媒体操作明确返回未实现 |
@@ -28,9 +28,9 @@
 | 注册、登录、社区/频道、文字消息 | 已接通控制面；完整验收见路线图 |
 | 社区屏蔽词与发言冷却 | 已实现；owner / MANAGE_MESSAGES 可 PATCH，发送时服务端强制 |
 | 聊天附件（拖拽/选择图片与文件、可配置上限、对端下载） | 已实现；默认 24 MiB，服务端 `storage.max_bytes` 可改 |
-| 消息 Markdown / 轻量 LaTeX | 客户端渲染；协议仍为纯文本。支持粗体/斜体/删除线/代码/链接/`$...$` 与 `$$...$$` 的常见公式子集；不渲染 HTML、远程图片或完整 TeX |
+| 消息 Markdown / 轻量 LaTeX | 客户端渲染；协议仍为纯文本。粗体/斜体/删除线/代码/标题/列表/引用/简单表格/链接/`$...$` 与 `$$...$$`（含 pmatrix）。明文快路径与有界缓存；简单公式压成 Unicode。不渲染 HTML、远程图片或完整 TeX |
 | 未读 / @ / 静音、新消息分割线、按频道草稿、编辑上一条 | 客户端 SQLite 保存已读/通知档/草稿；作者可 PATCH 正文；`@username` 写入 mentions。删除/回复/系统通知尚未实现 |
-| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 双击语音频道加入，右键「设置」打开设备/音质页；未进语音也可预设麦克风/耳机开关，悬浮显示设备，麦克风与耳机各自的箭头打开对应设备列表；控制面不因 mute/改音质重连；本机 20 ms/3 帧设备检查已实现；对端听筒需 LiveKit |
+| 语音频道加入/离开、mute/deafen、LiveKit token、音质档位、输入输出设备 | 控制面已接通；`chat-media-worker` 用 LiveKit Rust SDK 发布/订阅麦克风。要对端听到，需本机 LiveKit（`docker compose up -d redis livekit`）并重建 worker。设置中可选耳机媒体键：仅在已加入语音时注册系统会话（Windows SMTC / macOS Now Playing / Linux MPRIS），播放/暂停映射 mute，默认关闭 |
 | 屏幕共享 | **Not implemented yet** |
 
 本机已通过 .NET Release 构建、Rust 聚焦测试与 Clippy、Native C ABI 检查，并验证了实例添加和离线恢复。Windows/Linux 的实际构建、GUI、安装包及媒体硬件尚未验证。

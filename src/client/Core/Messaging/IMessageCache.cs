@@ -24,6 +24,7 @@ public interface IMessageCache
     Task SaveReadAsync(CacheScope scope, Guid channelId, Guid? lastReadId, CancellationToken cancellationToken);
     Task SaveNotifyAsync(CacheScope scope, Guid channelId, ChannelNotify notify, CancellationToken cancellationToken);
     Task SaveDraftAsync(CacheScope scope, Guid channelId, string? draft, CancellationToken cancellationToken);
+    Task SaveVisitAsync(CacheScope scope, Guid channelId, long visitedAt, CancellationToken cancellationToken);
 }
 public static class MemoryBudget
 {

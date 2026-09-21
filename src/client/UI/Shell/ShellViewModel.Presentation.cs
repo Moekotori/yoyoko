@@ -132,6 +132,7 @@ public sealed partial class ShellViewModel
             Changed(nameof(InSelectedVoice));
             if (SearchOpen) FocusSearch?.Invoke();
             else if (!SwitcherOpen && SelectedChannel is { Kind: "text" }) FocusComposer?.Invoke();
+            if (SelectedChannel is { } opened) NoteVisit(opened.Id);
         }
         if (args.PropertyName == nameof(Draft) && _draftKey is not null && !IsEditing)
         {
@@ -199,6 +200,11 @@ public sealed partial class ShellViewModel
                 if (previousIndex >= 0) VisibleMessages.Move(previousIndex, i); else VisibleMessages.Insert(i, matches[i]);
             }
         RefreshParticipants();
+        foreach (var row in Messages)
+        {
+            if (row.IsUnreadDivider) continue;
+            row.Profile = ProfileOf(row.Item.Message.AuthorId, row.Author);
+        }
         InsertUnreadDivider(matches);
         MessageRow? previous = null;
         for (var i = 0; i < VisibleMessages.Count; i++)

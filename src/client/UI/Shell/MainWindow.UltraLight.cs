@@ -12,7 +12,7 @@ public partial class MainWindow
     {
         if (_ultraLight is not null || DataContext is not ShellViewModel shell) return;
         _ultraLightModel = shell;
-        _ultraLight = new(this, () => new ShellSurface(), shell.SetUltraLightParked);
+        _ultraLight = new(this, () => new ShellSurface(), shell.SetUltraLightParked, UltraLightRecovery.Create);
         shell.PropertyChanged += OnUltraLightPreference;
         Closed += OnUltraLightClosed;
         _ultraLight.SetEnabled(shell.UltraLightEnabled);

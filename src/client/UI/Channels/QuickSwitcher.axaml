@@ -11,11 +11,18 @@
             <DataTemplate x:DataType="ch:JumpItem">
               <Button Classes="channel" Classes.selected="{Binding IsActive}" Margin="0,0,0,2"
                 Command="{Binding #Jump.((vm:ShellViewModel)DataContext).JumpTo}" CommandParameter="{Binding}">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <PathIcon Data="{StaticResource IconHash}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding !IsVoice}" />
-                  <PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsVoice}" />
-                  <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                  <Panel Width="17" Height="17">
+                    <PathIcon Data="{StaticResource IconPeople}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsPerson}" />
+                    <PathIcon Data="{StaticResource IconHash}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsText}" />
+                    <PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" IsVisible="{Binding IsVoice}" />
+                  </Panel>
+                  <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="11" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Text="{i18n:T Recent}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsRecent}" />
+                </Grid>
               </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

@@ -18,8 +18,12 @@ using Chat.UI.Instances;
 using Chat.UI.Shell;
 
 var cacheDirectory = Path.Combine(Path.GetTempPath(), "yoyoko-ultralight-" + Guid.NewGuid().ToString("N"));
+if (args is ["--live", var target] && (!Uri.TryCreate(target, UriKind.Absolute, out var targetUri)
+    || !targetUri.IsLoopback || targetUri.Scheme != "http" || targetUri.AbsolutePath != "/"
+    || targetUri.Query.Length > 0 || targetUri.Fragment.Length > 0 || targetUri.UserInfo.Length > 0))
+    throw new ArgumentException("Live checks require an isolated loopback HTTP origin.");
 Environment.SetEnvironmentVariable("CHAT_CACHE_DIRECTORY", cacheDirectory);
-Environment.SetEnvironmentVariable("CHAT_DEFAULT_INSTANCE_URL", "http://127.0.0.1:1");
+Environment.SetEnvironmentVariable("CHAT_DEFAULT_INSTANCE_URL", args is ["--live", var liveUrl] ? liveUrl : "http://127.0.0.1:1");
 var builder = AppBuilder.Configure<DesktopApplication>()
     .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).UseSkia()
     .SetupWithClassicDesktopLifetime([], lifetime => lifetime.ShutdownMode = ShutdownMode.OnExplicitShutdown);
@@ -28,6 +32,12 @@ var window = (MainWindow)lifetime.MainWindow!;
 window.Show();
 Pump(250);
 var shell = (ShellViewModel)window.DataContext!;
+if (args is ["--live", var origin])
+{
+    LiveChatChecks.Run(window, shell, cacheDirectory, origin, Pump);
+    window.Close();
+    return;
+}
 Check(!shell.UltraLightEnabled, "default off");
 CheckOff(window, shell);
 
@@ -104,7 +114,8 @@ if (args is ["--screenshot", var screenshot])
     frame.Save(screenshot, new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
 }
 window.Close();
-Console.WriteLine("UltraLight: real view unload/collection/restore, preference persistence, draft/file and voice control continuity passed. Headless; no hardware/RTP claim.");
+RecoveryChecks.Run();
+Console.WriteLine("UltraLight: view collection/restore, recovery failures/retry, interrupted restore, preference persistence, draft/file and voice control continuity passed. Headless; no hardware/RTP claim.");
 
 static T Proxy<T>(Func<MethodInfo, object?[]?, object?> handler) where T : class
 {

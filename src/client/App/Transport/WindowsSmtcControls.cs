@@ -8,8 +8,6 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
 {
     private static readonly Guid InteropIid = new("ddb0472d-c911-4a1f-86d9-dc3d71a95f5a");
     private static readonly Guid ControlsIid = new("99fa3ff4-1742-42a6-902e-087d41f965ec");
-    private static readonly Guid DisplayIid = new("8abbc53e-fa55-4ecf-ad8e-c984e5dd1550");
-    private static readonly Guid MusicIid = new("6bbf0c59-d0a0-4d26-92a0-f978e1d18e7b");
     private static readonly Guid Music2Iid = new("00368462-97d3-44b9-b00f-008afcefaf18");
     private static readonly Guid HandlerIid = new("0557e996-7b23-5bae-aa81-ea0d671143a4");
     private static readonly Guid ButtonArgsIid = new("b7f47116-a56f-4dc8-9e11-92031f4a87c2");
@@ -77,10 +75,16 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
         if (hwnd == 0) return;
         try
         {
-            RoInitialize(1);
-            if (RoGetActivationFactory(HString("Windows.Media.SystemMediaTransportControls"), InteropIid, out var factory) != 0
-                || factory == 0)
-                return;
+            var init = RoInitialize(0);
+            if (init < 0 && init != unchecked((int)0x80010106)) return;
+            var className = HString("Windows.Media.SystemMediaTransportControls");
+            nint factory;
+            try
+            {
+                if (RoGetActivationFactory(className, InteropIid, out factory) != 0 || factory == 0)
+                    return;
+            }
+            finally { WindowsDeleteString(className); }
             try
             {
                 if (Call3(factory, 6, hwnd, ControlsIid, out var controls) != 0 || controls == 0) return;
@@ -223,6 +227,14 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
         return hr;
     }
 
+    private static unsafe int CallGetInt(nint obj, int slot, out int value)
+    {
+        int local;
+        var hr = ((delegate* unmanaged[Stdcall]<nint, int*, int>)Slot(obj, slot))(obj, &local);
+        value = local;
+        return hr;
+    }
+
     private static unsafe int CallPutInt(nint obj, int slot, int value)
         => ((delegate* unmanaged[Stdcall]<nint, int, int>)Slot(obj, slot))(obj, value);
 
@@ -282,7 +294,7 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
 
         private static readonly nint* Vtbl = CreateVtbl();
 
-        public static nint Alloc(WindowsSmtcControls owner)
+        public static unsafe nint Alloc(WindowsSmtcControls owner)
         {
             var memory = (HandlerNative*)NativeMemory.Alloc((nuint)sizeof(HandlerNative));
             memory->Vtable = (nint)Vtbl;
@@ -291,9 +303,16 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
             return (nint)memory;
         }
 
-        public static void Release(nint pointer) => Release((HandlerNative*)pointer);
+        public static unsafe void Release(nint pointer)
+        {
+            var self = (HandlerNative*)pointer;
+            var left = Interlocked.Decrement(ref self->RefCount);
+            if (left != 0) return;
+            if (self->Owner.IsAllocated) self->Owner.Free();
+            NativeMemory.Free(self);
+        }
 
-        private static nint* CreateVtbl()
+        private static unsafe nint* CreateVtbl()
         {
             var table = (nint*)NativeMemory.Alloc((nuint)(4 * sizeof(nint)));
             table[0] = (nint)(delegate* unmanaged[Stdcall]<HandlerNative*, Guid*, nint*, int>)&QueryInterface;
@@ -310,7 +329,7 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
             if (id == IUnknownIid || id == IAgileObjectIid || id == HandlerIid)
             {
                 *ppv = (nint)self;
-                AddRef(self);
+                Interlocked.Increment(ref self->RefCount);
                 return 0;
             }
             *ppv = 0;
@@ -343,8 +362,8 @@ internal sealed class WindowsSmtcControls : ISystemTransportControls
                 return 0;
             try
             {
-                if (CallGet(typed, 6, out var button) == 0)
-                    owner.OnButton((int)button);
+                if (CallGetInt(typed, 6, out var button) == 0)
+                    owner.OnButton(button);
             }
             finally { Release(typed); }
             return 0;

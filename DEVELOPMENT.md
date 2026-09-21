@@ -20,7 +20,14 @@ cargo run --locked -p chat-server
 cargo build --locked -p chat-media-worker
 ```
 
-`chat-media-worker` 按需启动，用于列出输入/输出设备。未构建该二进制时，设置里只有“系统默认”，不会假装已经枚举到麦克风。
+`chat-media-worker` 按需启动：枚举设备，并作为 LiveKit 客户端发布/订阅麦克风。未构建该二进制时，设置里只有“系统默认”，进语音会明确失败。要对端听到，先起 LiveKit：
+
+```sh
+docker compose up -d redis livekit
+cargo build --locked -p chat-media-worker
+```
+
+`config.toml` 的 `[rtc]` 必须与 `deploy/livekit.yaml` 的 `keys` 一致（默认 `devkey` / `local-development-only-change-me-32`）。本机无 LiveKit 时 join 会报连接失败，频道成员列表仍可用。
 
 客户端默认连接配置的服务器，并恢复或首次注册账号；可在「设置 → 服务器」输入 `http://localhost:8080` 并连接。账号资料在设置修改，首屏不再要求账号密码；不会自动加入语音。开发工程设置 `UseAppHost=false`，由已安装的 dotnet runtime 直接运行；独立安装包的 host/signing 属于后续发布工作。
 
@@ -69,7 +76,7 @@ macOS 双击根目录 `dev.command`，或运行：
 
 服务端唯一应用配置为 `config.toml`；`CHAT_CONFIG=/path/config.toml` 指定路径。所有字段支持 `CHAT__SECTION__KEY` 覆盖，例如 `CHAT__SERVER__NAME`、`CHAT__DATABASE__MAX_CONNECTIONS`、`CHAT__STORAGE__MAX_BYTES`；数组用逗号分隔，例如 `CHAT__SERVER__ALLOWED_ORIGINS=https://a.example,https://b.example`。附件上限默认 24 MiB，允许 64 KiB..=256 MiB。不要把真实密钥写入版本库。`check-config` 仅显示校验结果，不打印秘密。
 
-客户端配置为 App/appsettings.json，支持 `CHAT_PRODUCT_NAME` / `CHAT_CACHE_DIRECTORY` / `CHAT_DEFAULT_INSTANCE_URL`。默认缓存为 .NET LocalApplicationData 下 `chat-desktop/cache.db`。界面语言、紧凑布局、自定义背景和键盘快捷键等写入同目录 `preferences.json`；背景文件复制到同目录 `wallpaper/`，解码时缩放到窗口像素尺寸。视频背景优先使用系统解码器，否则查找 `ffmpeg`（`CHAT_FFMPEG` 或 PATH）。首次启动跟随系统（`zh*` → 简体中文，`ja*` → 日语，其余为英文），设置中可改为中文、英文或日语。`CHAT_LOCALE`（`zh-Hans` / `en` / `ja`）仅在尚未保存过语言时生效。凭据库尚未接入，SQLite 不存令牌。
+客户端配置为 App/appsettings.json，支持 `CHAT_PRODUCT_NAME` / `CHAT_CACHE_DIRECTORY` / `CHAT_DEFAULT_INSTANCE_URL`。默认缓存为 .NET LocalApplicationData 下 `chat-desktop/cache.db`。界面语言、紧凑布局、自定义背景和键盘快捷键等写入同目录 `preferences.json`；背景文件复制到同目录 `wallpaper/`。静图按最多 1920×1080 解码，视频按最多 1280×720、20fps 解码（磁盘上限 2 GiB），不把片源装进内存。视频优先 `ffmpeg`（`CHAT_FFMPEG` 或 PATH），否则尝试系统解码器。深色/浅色写入 `color_scheme` 并立即切换主题。首次启动跟随系统（`zh*` → 简体中文，`ja*` → 日语，其余为英文），设置中可改为中文、英文或日语。`CHAT_LOCALE`（`zh-Hans` / `en` / `ja`）仅在尚未保存过语言时生效。凭据库尚未接入，SQLite 不存令牌。
 
 新增界面文案：在 `src/client/Localization/TextCatalog.cs` 的 `Rows` 加一行 `(Key, English, 中文, 日本語)`，并在 `TextKey.cs` 加同名常量。XAML 用 `{i18n:T Key}`，C# 用 `_text.Get(TextKey.Key)` 或 `I18n.T(TextKey.Key)`。foundation check 会核对三语和 TextKey 是否对齐。用户语言包格式见 [docs/i18n/README.md](docs/i18n/README.md)；设置里可导出完整模板并拖入 `.json` 导入。
 

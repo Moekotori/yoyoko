@@ -17,6 +17,7 @@ public interface ISystemTransportControls : IDisposable
     void BindWindow(nint hwnd);
     void Publish(TransportNowPlaying? session);
     event Action<TransportCommand>? CommandRequested;
+    event Action? RaiseRequested;
 }
 
 public sealed class NullSystemTransportControls : ISystemTransportControls
@@ -26,5 +27,6 @@ public sealed class NullSystemTransportControls : ISystemTransportControls
     public void BindWindow(nint hwnd) { }
     public void Publish(TransportNowPlaying? session) { }
     public event Action<TransportCommand>? CommandRequested { add { } remove { } }
+    public event Action? RaiseRequested { add { } remove { } }
     public void Dispose() { }
 }

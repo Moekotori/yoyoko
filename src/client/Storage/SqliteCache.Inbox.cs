@@ -16,7 +16,7 @@ public sealed partial class SqliteCache
             {
                 command.CommandText =
                     """
-                    SELECT channel_id, last_read_id, last_message_id, last_author_id, last_mention_id, notify, draft
+                    SELECT channel_id, last_read_id, last_message_id, last_author_id, last_mention_id, notify, draft, visited_at
                     FROM channel_inbox WHERE instance_id=$instance AND account_id=$account
                     """;
                 Scope(command, scope);
@@ -31,7 +31,8 @@ public sealed partial class SqliteCache
                         ReadId(reader, 3),
                         ReadId(reader, 4),
                         ChannelInbox.ParseNotify(reader.IsDBNull(5) ? null : reader.GetString(5)),
-                        reader.IsDBNull(6) ? null : reader.GetString(6));
+                        reader.IsDBNull(6) ? null : reader.GetString(6),
+                        reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetInt64(7) : null);
                 }
             }
 
@@ -124,6 +125,18 @@ public sealed partial class SqliteCache
                 ON CONFLICT(instance_id,account_id,channel_id) DO UPDATE SET draft=$draft
                 """;
             command.Parameters.AddWithValue("$draft", string.IsNullOrEmpty(draft) ? DBNull.Value : draft);
+        });
+
+    public Task SaveVisitAsync(CacheScope scope, Guid channelId, long visitedAt, CancellationToken cancellationToken) =>
+        UpsertInbox(scope, channelId, cancellationToken, command =>
+        {
+            command.CommandText =
+                """
+                INSERT INTO channel_inbox (instance_id, account_id, channel_id, visited_at, notify)
+                VALUES ($instance,$account,$channel,$visited,'all')
+                ON CONFLICT(instance_id,account_id,channel_id) DO UPDATE SET visited_at=$visited
+                """;
+            command.Parameters.AddWithValue("$visited", visitedAt);
         });
 
     private Task UpsertInbox(CacheScope scope, Guid channelId, CancellationToken cancellationToken, Action<SqliteCommand> bind) =>

@@ -27,6 +27,7 @@ internal static class MathView
         MathSqrt sqrt => Root(sqrt, em),
         MathScripts scripts => Scripts(scripts, em),
         MathAccent accent => Accent(accent, em),
+        MathMatrix matrix => Matrix(matrix, em),
         MathText text => Glyph(text, em),
         _ => Glyph(new MathText(""), em)
     };
@@ -126,6 +127,58 @@ internal static class MathView
         });
         column.Children.Add(Build(accent.Body, em));
         return column;
+    }
+
+    private static Control Matrix(MathMatrix matrix, double em)
+    {
+        var inner = em * 0.88;
+        var grid = new Grid { VerticalAlignment = VerticalAlignment.Center };
+        var rowCount = Math.Min(matrix.Rows.Length, 6);
+        for (var r = 0; r < rowCount; r++)
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        var cols = 1;
+        for (var r = 0; r < rowCount; r++)
+            cols = Math.Max(cols, Math.Min(matrix.Rows[r].Length, 6));
+        for (var c = 0; c < cols; c++)
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        for (var r = 0; r < rowCount; r++)
+        {
+            var cells = matrix.Rows[r];
+            for (var c = 0; c < Math.Min(cells.Length, cols); c++)
+            {
+                var child = Build(cells[c], inner);
+                child.Margin = new Thickness(em * 0.25, 1);
+                Grid.SetRow(child, r);
+                Grid.SetColumn(child, c);
+                grid.Children.Add(child);
+            }
+        }
+        if (matrix.Left.Length == 0 && matrix.Right.Length == 0) return grid;
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        if (matrix.Left.Length > 0)
+            row.Children.Add(new TextBlock
+            {
+                Text = matrix.Left,
+                FontSize = em * 1.2,
+                FontFamily = MathFont,
+                Foreground = Ink,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+        row.Children.Add(grid);
+        if (matrix.Right.Length > 0)
+            row.Children.Add(new TextBlock
+            {
+                Text = matrix.Right,
+                FontSize = em * 1.2,
+                FontFamily = MathFont,
+                Foreground = Ink,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+        return row;
     }
 
     private static Control Glyph(MathText text, double em)

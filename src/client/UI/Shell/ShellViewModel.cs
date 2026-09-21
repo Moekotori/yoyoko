@@ -35,6 +35,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private readonly I18n _text;
     private readonly IChatChrome _chrome;
     private readonly IShortcutPreference _shortcuts;
+    private readonly SystemTransportBinder _transport;
     private readonly CancellationToken _lifetime;
     private DateTimeOffset _cooldownUntil;
     private Guid? _cooldownChannel;
@@ -58,7 +59,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public ShellViewModel(InstanceManager instances, IMessageCache cache, ICredentialVault vault,
         IInstanceDiscovery discovery, IChatApiFactory apis, Func<IGatewayConnection> gateways,
         IVoiceMedia media, ILocalePreference locale, IChatChrome chrome, IVoiceDevicePreference devices,
-        IAppearancePreference appearance, IShortcutPreference shortcuts, I18n text, ILanguagePacks packs, string productName, CancellationToken lifetime, WorkspaceConnection connection)
+        IAppearancePreference appearance, IShortcutPreference shortcuts, ISystemTransportPreference transport,
+        ISystemTransportControls osTransport, I18n text, ILanguagePacks packs, string productName, CancellationToken lifetime, WorkspaceConnection connection)
     {
         _connection = connection;
         _instances = instances;
@@ -73,12 +75,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _shortcuts = shortcuts;
         ProductName = productName;
         _lifetime = lifetime;
+        _transport = new SystemTransportBinder(osTransport, transport, productName);
         _previews = new(lifetime);
         Devices = new(media, devices, text, () => SelectedInstance?.Context.Session, lifetime);
         AuthForm = new(AuthenticateAsync, error => { AuthForm!.Status = _text.Error(error); OnError(error); });
         Connection = new(ConnectWorkspaceAsync, DisconnectWorkspaceAsync, ProbeLatencyAsync, OnError, text);
         Wallpaper = new(appearance, chrome, text);
-        Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm, packs);
+        Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm, packs, transport);
         chrome.Changed += OnChromeChanged;
         shortcuts.Changed += OnShortcutsChanged;
         OpenAddInstance = new(_ =>
@@ -445,7 +448,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         item.Context.AttachDiscovery(info);
         if (item.Context.Session is { } previous)
         {
-            _boundSessions.Remove(previous);
+            UnbindSession(previous);
             await previous.DisposeAsync();
         }
         item.Context.AttachSessionClear();
@@ -460,9 +463,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         RefreshCommunity();
     }
 
+    public void BindOsTransport(nint hwnd) => _transport.BindWindow(hwnd);
+
     private void BindSession(InstanceSession session)
     {
         if (!_boundSessions.Add(session)) return;
+        _transport.Attach(session);
         session.Voice.ApplyRoute(Devices.Route);
         session.CommunityChanged += () => Dispatcher.UIThread.Post(RefreshCommunity);
         session.Voice.Changed += () => Dispatcher.UIThread.Post(NotifyVoice);
@@ -472,7 +478,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             if (SelectedChannel?.Id == message.ChannelId)
             {
                 _timeline?.ApplyRemote(message);
-                if (_awayFromBottom || !(IsNearBottom?.Invoke() ?? true))
+                if (!CanObserveTimeline || _awayFromBottom || IsNearBottom?.Invoke() != true)
                 {
                     _newWhileAway++;
                     _awayFromBottom = true;
@@ -623,10 +629,18 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 continue;
             }
             channel.IsConnected = joined == channel.Id;
+            var session = SelectedInstance?.Context.Session;
             channel.SyncMembers(voice is null
                 ? []
                 : voice.InChannel(channel.Id)
-                    .Select(state => (state.UserId, state.DisplayName, state.SelfMute, state.SelfDeaf))
+                    .Select(state =>
+                    {
+                        var user = session?.User(state.UserId);
+                        _playbacks.TryGetValue(state.UserId, out var cached);
+                        return new VoiceMemberRow(state.UserId, state.DisplayName, user?.Username ?? "",
+                            state.SelfMute, state.SelfDeaf, session?.Me.Id == state.UserId,
+                            ProfileOf(state.UserId, state.DisplayName), cached?.Playback);
+                    })
                     .ToList());
         }
     }
@@ -889,7 +903,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         var item = SelectedInstance ?? throw new InvalidOperationException(_text.Get(TextKey.NoInstanceSelected));
         if (item.Context.Session is { } session)
         {
-            _boundSessions.Remove(session);
+            UnbindSession(session);
             await session.SignOutAsync();
         }
         ClearAccountDrafts();
@@ -1050,6 +1064,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Settings.Dispose();
         Wallpaper.Dispose();
         Workspace.Dispose();
+        _transport.Dispose();
     }
 }
 

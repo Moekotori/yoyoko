@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Windows.Input;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
+using Chat.UI.Channels;
 using Chat.Localization;
 using Chat.UI.Components;
 using Chat.UI.Localization;
@@ -109,6 +111,18 @@ internal static class MemberGestures
         ICommand command = moderate is null ? Disabled : new ActionCommand(_ => moderate());
         kick.Command = command;
         ban.Command = command;
+    }
+
+    public static void BindCard(Flyout flyout)
+    {
+        if (flyout is not { Target: Control target, Content: Control content }) return;
+        content.DataContext = target.DataContext switch
+        {
+            MessageRow row => row.Profile,
+            VoiceMemberRow voice => voice.Profile,
+            MemberProfile member => member,
+            _ => target.DataContext
+        };
     }
 
     public static MemberProfile? Target(ContextMenu menu) =>

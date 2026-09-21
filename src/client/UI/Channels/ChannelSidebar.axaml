@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:chat="using:Chat.UI.Chat" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
  x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel" x:Name="Sidebar">
   <UserControl.Styles>
     <Style Selector="Button.groupHeader"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Height" Value="30" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
@@ -15,6 +15,8 @@
     <Style Selector="Button.channel.mention TextBlock"><Setter Property="Foreground" Value="#E8E8E8" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
     <Style Selector="Border.unreadMark"><Setter Property="Width" Value="3" /><Setter Property="Height" Value="8" /><Setter Property="CornerRadius" Value="0,2,2,0" /><Setter Property="Background" Value="#E8E8E8" /><Setter Property="HorizontalAlignment" Value="Left" /></Style>
     <Style Selector="Border.mentionMark"><Setter Property="Width" Value="8" /><Setter Property="Height" Value="8" /><Setter Property="CornerRadius" Value="4" /><Setter Property="Background" Value="#C45C56" /><Setter Property="VerticalAlignment" Value="Center" /></Style>
+    <Style Selector="Button.memberRow"><Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="CornerRadius" Value="2" /></Style>
+    <Style Selector="Button.memberRow.self TextBlock"><Setter Property="Foreground" Value="#E8E8E8" /><Setter Property="FontWeight" Value="Medium" /></Style>
   </UserControl.Styles>
   <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -96,23 +98,35 @@
                 <Separator />
                 <MenuItem Header="{i18n:T DeleteChannel}" Foreground="#E3A09A" />
               </ContextMenu></Button.ContextMenu>
-              <Grid ColumnDefinitions="16,*" ColumnSpacing="9">
+              <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="9">
                 <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" Foreground="{DynamicResource QuietTextBrush}" />
                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding VoiceCount}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding HasVoiceMembers}" />
               </Grid>
             </Button>
             <ItemsControl ItemsSource="{Binding VoiceMembers}" IsVisible="{Binding HasVoiceMembers}" Margin="26,0,0,4">
               <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:VoiceMemberRow">
-                <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="8" Height="22">
-                  <Border Width="16" Height="16" CornerRadius="8" Background="#3A3A3A" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Initial}" FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                  </Border>
-                  <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                  <Panel Grid.Column="2" Width="12" Height="12" VerticalAlignment="Center" IsVisible="{Binding Muted}">
-                    <PathIcon Data="{StaticResource IconMic}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" />
-                    <Path Data="M1,1 L11,11" Stroke="#ED9292" StrokeThickness="1.4" />
-                  </Panel>
-                </Grid>
+                <Button Classes="memberRow" Classes.self="{Binding IsSelf}" Height="22" Padding="0" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
+                  <Button.Flyout>
+                    <Flyout Placement="RightEdgeAlignedTop" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
+                      <chat:UserCard />
+                    </Flyout>
+                  </Button.Flyout>
+                  <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="8">
+                    <c:Avatar Width="16" Height="16" Playback="{Binding Playback}" Initial="{Binding Initial}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Panel Grid.Column="2" Width="12" Height="12" VerticalAlignment="Center">
+                      <Panel IsVisible="{Binding ShowMute}">
+                        <PathIcon Data="{StaticResource IconMic}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" />
+                        <Path Data="M1,1 L11,11" Stroke="#ED9292" StrokeThickness="1.4" />
+                      </Panel>
+                      <Panel IsVisible="{Binding Deafened}">
+                        <PathIcon Data="{StaticResource IconHeadphones}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" />
+                        <Path Data="M1,1 L11,11" Stroke="#ED9292" StrokeThickness="1.4" />
+                      </Panel>
+                    </Panel>
+                  </Grid>
+                </Button>
               </DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>
             <ContentControl Content="{Binding Editor}" IsVisible="{Binding IsEditing}">

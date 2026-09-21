@@ -61,3 +61,19 @@
 最后一次完整 `dotnet run --project tests/ultralight -c Release --no-restore`（含 App/UI 构建）通过，模块边界检查通过。此前并行消息改动的 Run 元数据、类型限定、局部变量和三语键编译错误已作最小修正后重新验证。
 
 以上不等于真实设备/RTP 音频连续性、三平台恢复延迟或新一轮 RSS A/B 验收。
+
+## 恢复保护与聊天连续性（2026-09-21）
+
+恢复构造、UI 投影回调和恢复中再次隐藏均由 UltraLightWindowContent 处理；只有页面成功附加且窗口仍可见才提交恢复状态。恢复失败保留后台会话并显示「重试恢复界面」，错误页构造也失败时仍提供基础 Retry 按钮。故障不会自动无限重试，本次运行暂停再次深度卸载；用户明确关闭再打开开关可重新启用。视图释放通知失败也不会卡住转换锁。
+
+页面隐藏、卸载或停留在设置页时，不因缺失滚动视图回调而默认“已看到最新消息”；接收仍写 SQLite，但保持未读。恢复不重新登录、不重建 Gateway，也不取消 Core 持有的发送/上传任务。
+
+新增必要验证：
+
+- `dotnet run --project tests/ultralight -c Release`：真实 App/Shell 离屏回收/恢复；构造异常、恢复回调异常、错误页异常、手动重试、故障后的卸载保护、恢复中再次隐藏；草稿和文件流保留；真实 VoiceRuntime 配合记录端口确认 Connect=1、Leave=0、频道与 mute/deafen 不变。
+- `dotnet run --project tests/ultralight -c Release -- --live http://127.0.0.1:<port>`：只允许独立回环 HTTP 测试实例，会创建本地测试账号、社区与附件。一次实测使用独立临时 local 存储的 Rust 服务（本机已有 debug chat-server），一个真实 App/Shell 离屏客户端和另一 HTTP 客户端，覆盖真实 HTTP + Gateway + SQLite；不称作双 GUI 客户端验收。
+- 本轮 live 通过：前台消息接收；隐藏期间接收提交 SQLite 并保留未读；Gateway 会话 ID 不变、已提交 sequence 前进；隐藏前开始的上传在隐藏期间完成发送；另一账号下载到完整文件；恢复后接收/发送消息各出现一次，仍是同一账号会话。
+
+Live 检查同时发现并修复了 macOS 会话建立时的原生崩溃：系统媒体控制误向 NSApplication 发送 UIKit 的 beginReceivingRemoteControlEvents。移除错误调用，沿用 MPRemoteCommandCenter；无媒体会话时不初始化该模块。[Apple 对该 API 与共享命令中心的说明](https://developer.apple.com/documentation/uikit/uiapplication/beginreceivingremotecontrolevents%28%29)。修复后上述真实网络链路检查通过。
+
+仍未据此承诺硬件/RTP 双端语音无中断、三平台恢复性能或任意原生崩溃可恢复；本轮证明的是管理层恢复保护、真实本地聊天/上传链路，以及语音控制面未发生重连/离开。

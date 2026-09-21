@@ -165,7 +165,7 @@ internal sealed class WallpaperMotion : IWallpaperPlayback
 
     public void Update(PixelSize size, int blur)
     {
-        size = WallpaperBudget.Clamp(size, false);
+        size = WallpaperBudget.Clamp(size, true);
         if (size == _size && blur == _blur) return;
         _size = size;
         _blur = blur;

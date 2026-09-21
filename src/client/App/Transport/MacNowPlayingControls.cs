@@ -34,6 +34,7 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
         lock (_gate)
         {
             if (_disposed) return;
+            if (!_ready && session is null) return;
             if (!_ready && !Prepare()) return;
             if (session is null)
             {
@@ -94,8 +95,8 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
         Add(_pause, action);
         Add(_toggle, action);
         Add(_stop, action);
-        objc_msgSend(objc_msgSend(objc_getClass("NSApplication"), sel_registerName("sharedApplication")),
-            sel_registerName("beginReceivingRemoteControlEvents"));
+        // MPRemoteCommandCenter owns macOS command delivery. The similarly named
+        // UIKit beginReceivingRemoteControlEvents selector does not exist on NSApplication.
         _ready = true;
         return true;
     }
@@ -189,7 +190,7 @@ internal sealed class MacNowPlayingControls : ISystemTransportControls
     {
         private const string ClassName = "ChatOsTransportTarget";
 
-        public static nint Create(MacNowPlayingControls owner)
+        public static unsafe nint Create(MacNowPlayingControls owner)
         {
             var cls = objc_lookUpClass(ClassName);
             if (cls == 0)

@@ -80,6 +80,8 @@ public sealed class TextCatalog : ITextCatalog
     // One row per string: key, English, Chinese, Japanese. Add new copy here only.
     private static readonly (string Key, string En, string Zh, string Ja)[] Rows =
     [
+        (TextKey.UltraLightRestoreFailed, "Interface recovery failed. Background sessions are retained.", "界面恢复失败，后台会话仍保留。", "画面の復元に失敗しました。バックグラウンドのセッションは維持されています。"),
+        (TextKey.UltraLightRestoreRetry, "Retry interface recovery", "重试恢复界面", "画面の復元を再試行"),
         (TextKey.UltraLightMode, "UltraLight", "UltraLight", "UltraLight"),
         (TextKey.UltraLightHelp, "Unload the interface when minimized or hidden; keep chats and voice connected.", "最小化或隐藏时卸载界面，保持消息与语音连接。", "最小化・非表示時に画面を解放し、チャットと音声の接続を維持します。"),
         ("RenameChannel", "Rename channel", "重命名频道", "チャンネル名を変更"),
@@ -180,6 +182,8 @@ public sealed class TextCatalog : ITextCatalog
         ("DevicesUnavailable", "Couldn’t list audio devices: {0}", "无法列出音频设备：{0}", "オーディオデバイスを列挙できません：{0}"),
         ("CheckDevices", "Check devices", "检查设备", "デバイスを確認"),
         ("StopDeviceCheck", "Stop check", "停止检查", "確認を停止"),
+        (TextKey.HeadsetMediaKeys, "Headset media keys", "耳机媒体键", "ヘッドセットのメディアキー"),
+        (TextKey.HeadsetMediaKeysHelp, "While in a voice channel, headset play/pause mutes you. Other apps may lose the system media card until you leave.", "在语音频道内，耳机播放键切换静音。离开前可能会占用系统正在播放卡片。", "ボイスチャンネル中、ヘッドセットの再生キーでミュートします。退出するまで他アプリの再生カードが隠れる場合があります。"),
         ("MutedSuffix", " · muted", " · 静音", " · ミュート"),
         ("DeafenedSuffix", " · deafened", " · 耳聋", " · スピーカーミュート"),
         ("CacheLoadFailed", "Couldn’t load local cache: {0}", "本地缓存加载失败：{0}", "ローカルキャッシュを読み込めませんでした：{0}"),

@@ -29,10 +29,11 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
         command.ExecuteNonQuery();
         command.CommandText = "PRAGMA user_version;";
         var version = Convert.ToInt32(command.ExecuteScalar());
-        if (version > 3) throw new InvalidDataException("Cache schema newer than this client.");
+        if (version > 4) throw new InvalidDataException("Cache schema newer than this client.");
         if (version < 1) Apply(connection, "Chat.Storage.Migrations.001_cache.sql");
         if (version < 2) Apply(connection, "Chat.Storage.Migrations.002_sync.sql");
         if (version < 3) Apply(connection, "Chat.Storage.Migrations.003_inbox.sql");
+        if (version < 4) Apply(connection, "Chat.Storage.Migrations.004_visits.sql");
     }, cancellationToken);
 
     private static void Apply(SqliteConnection connection, string resource)

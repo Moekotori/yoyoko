@@ -39,6 +39,7 @@ public partial class MainWindow : Window
             shell.Wallpaper.PickFile = PickWallpaperAsync;
             shell.Settings.PickLanguagePackPaths = PickLanguagePacksAsync;
             shell.Settings.SaveLanguageTemplate = SaveLanguageTemplateAsync;
+            shell.BindOsTransport(TryGetPlatformHandle()?.Handle ?? 0);
         }
     }
 

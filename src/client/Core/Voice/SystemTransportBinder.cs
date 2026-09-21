@@ -11,6 +11,7 @@ public sealed class SystemTransportBinder : IDisposable
     private readonly object _gate = new();
     private readonly HashSet<InstanceSession> _sessions = [];
     private readonly Dictionary<InstanceSession, Action> _handlers = [];
+    private TransportNowPlaying? _last;
     private bool _disposed;
 
     public SystemTransportBinder(ISystemTransportControls controls, ISystemTransportPreference preference, string productName)
@@ -67,8 +68,8 @@ public sealed class SystemTransportBinder : IDisposable
         }
         _preference.Changed -= RequestPublish;
         _controls.CommandRequested -= OnCommand;
+        _last = null;
         _controls.Publish(null);
-        _controls.Dispose();
     }
 
     private void RequestPublish()
@@ -86,25 +87,32 @@ public sealed class SystemTransportBinder : IDisposable
         {
             if (_disposed || !_preference.HeadsetMediaKeys)
             {
-                _controls.Publish(null);
+                Push(null);
                 return;
             }
             session = _sessions.FirstOrDefault(item => item.Voice.Joined);
         }
         if (session is null)
         {
-            _controls.Publish(null);
+            Push(null);
             return;
         }
         var channel = session.Channels.FirstOrDefault(item => item.Id == session.Voice.ChannelId);
         var serverId = channel?.ServerId
             ?? session.Voice.Participants.FirstOrDefault(item => item.ChannelId == session.Voice.ChannelId)?.ServerId;
         var server = serverId is Guid id ? session.Servers.FirstOrDefault(item => item.Id == id) : null;
-        _controls.Publish(new(
+        Push(new(
             _productName,
             server?.Name ?? session.Descriptor.DisplayName,
             channel?.Name ?? "",
-            session.Voice.SelfMute));
+            session.Voice.SelfMute || session.Voice.SelfDeaf));
+    }
+
+    private void Push(TransportNowPlaying? session)
+    {
+        if (Equals(_last, session)) return;
+        _last = session;
+        _controls.Publish(session);
     }
 
     private void OnCommand(TransportCommand command)
@@ -115,17 +123,18 @@ public sealed class SystemTransportBinder : IDisposable
             _context.Post(_ => _ = Apply(command), null);
     }
 
-    private Task Apply(TransportCommand command)
+    private async Task Apply(TransportCommand command)
     {
         InstanceSession? session;
         lock (_gate) session = _sessions.FirstOrDefault(item => item.Voice.Joined);
-        if (session is null) return Task.CompletedTask;
+        if (session is null) return;
         var mute = command switch
         {
             TransportCommand.Mute => true,
             TransportCommand.Unmute => false,
             _ => !session.Voice.SelfMute
         };
-        return session.Voice.SetMuteAsync(mute, CancellationToken.None);
+        try { await session.Voice.SetMuteAsync(mute, CancellationToken.None); }
+        catch (Exception) { }
     }
 }

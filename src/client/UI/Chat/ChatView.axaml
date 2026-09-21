@@ -19,6 +19,8 @@
     <Style Selector="Grid.messageRow:focus-within Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
     <Style Selector="Border.jumpBar"><Setter Property="Background" Value="#D91C1C1C" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="12,7" /></Style>
     <Style Selector="Border.editBar"><Setter Property="Background" Value="#2E2E2E" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="10,6" /></Style>
+    <Style Selector="Button.authorName"><Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="HorizontalContentAlignment" Value="Left" /></Style>
+    <Style Selector="Button.authorName:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   </UserControl.Styles>
   <Grid ColumnDefinitions="*,Auto">
     <Grid RowDefinitions="Auto,*,Auto">
@@ -45,10 +47,24 @@
                   <MenuItem Header="{i18n:T MarkAsUnread}" Click="MarkUnreadFrom" />
                   <MenuItem Header="{i18n:T EditMessage}" Click="EditMessage" IsVisible="{Binding CanEdit}" />
                 </ContextMenu></Grid.ContextMenu>
-                <c:Avatar Grid.Column="1" Width="36" Height="36" Playback="{Binding Playback}" Initial="{Binding Initial}" VerticalAlignment="Top" Margin="0,12,0,0" IsVisible="{Binding ShowHeader}" />
+                <Button Grid.Column="1" Classes="avatarPick" Width="36" Height="36" Padding="0" VerticalAlignment="Top" Margin="0,12,0,0" IsVisible="{Binding ShowHeader}" AutomationProperties.Name="{Binding Author}">
+                  <Button.Flyout>
+                    <Flyout Placement="RightEdgeAlignedTop" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
+                      <chat:UserCard />
+                    </Flyout>
+                  </Button.Flyout>
+                  <c:Avatar Width="36" Height="36" Playback="{Binding Playback}" Initial="{Binding Initial}" />
+                </Button>
                 <StackPanel Grid.Column="3" Classes="body" Spacing="4" Margin="0,11,0,9">
                   <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowHeader}">
-                    <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
+                    <Button Classes="authorName" Padding="0" Background="Transparent" HorizontalAlignment="Left" AutomationProperties.Name="{Binding Author}">
+                      <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
+                          <chat:UserCard />
+                        </Flyout>
+                      </Button.Flyout>
+                      <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
+                    </Button>
                     <TextBlock Text="{Binding Time}" Classes="quiet" FontSize="11" VerticalAlignment="Center" />
                     <TextBlock Text="{i18n:T Edited}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsEdited}" />
                   </StackPanel>

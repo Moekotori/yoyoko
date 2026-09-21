@@ -14,6 +14,8 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 
 用户输入域名时默认 HTTPS；loopback 与 RFC1918/链路本地地址可 HTTP，便于局域网开发。公网明文 HTTP 仍拒绝。发现不传凭据。API / Gateway 与输入同源；CDN/RTC 可独立域。发现响应在本机/局域网 Host 下按请求地址通告 API 与 Gateway，避免 localhost 与局域网 IP 互相判成不同源。固定发现路径是协议标识，不是品牌配置。major 不匹配须显示明确不兼容提示。minor 增量仅新增可选字段，不静默改变字段语义。
 
+桌面可复制 `{origin}/join/{invite_code}` 作为邀请链接（例如 `http://192.168.1.10:8080/join/ABCD2345`）。这不是服务端路由；客户端去掉路径后仍走发现，再用现有 `POST /servers/join` 提交社区 `invite_code`。短码本身不能在没有实例地址的情况下找到服务器。
+
 ## REST 边界
 
 发现响应含 `max_attachment_bytes` 与 `max_attachments_per_message`（默认 24 MiB、每条最多 4 个）。实例用 `storage.max_bytes`（64 KiB..=256 MiB，`CHAT__STORAGE__MAX_BYTES`）自定义上限。`/health/live` 只证明 API 进程存活，不证明 Postgres/Redis/S3/RTC 可用。

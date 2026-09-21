@@ -12,6 +12,12 @@ public sealed partial class ShellViewModel
     private readonly HashSet<InstanceSession> _boundSessions = [];
     public ConnectionSettingsViewModel Connection { get; }
 
+    private void UnbindSession(InstanceSession session)
+    {
+        if (!_boundSessions.Remove(session)) return;
+        _transport.Detach(session);
+    }
+
     private void OpenConnectionSettings()
     {
         Connection.Bind(SelectedInstance?.Context);
@@ -66,7 +72,7 @@ public sealed partial class ShellViewModel
         Connection.Status = _text.Get(TextKey.DisconnectingServer);
         try
         {
-            if (item.Context.Session is { } session) _boundSessions.Remove(session);
+            if (item.Context.Session is { } session) UnbindSession(session);
             await _connection.DisconnectAsync(item.Context, _lifetime);
             ClearAccountDrafts();
             DetachTimeline();

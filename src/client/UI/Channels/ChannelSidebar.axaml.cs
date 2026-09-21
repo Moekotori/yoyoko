@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Chat.UI.Chat;
 using Chat.Localization;
 using Chat.UI.Components;
 using Chat.UI.Localization;
@@ -16,6 +18,11 @@ public partial class ChannelSidebar : UserControl
     private void OnChannelLoaded(object? sender, RoutedEventArgs args)
     {
         if (sender is Button { ContextMenu: { } menu } button) menu.Tag = button;
+    }
+
+    private void OnCardOpened(object? sender, EventArgs e)
+    {
+        if (sender is Flyout flyout) MemberGestures.BindCard(flyout);
     }
 
     private void OnVoiceDoubleTapped(object? sender, TappedEventArgs args)

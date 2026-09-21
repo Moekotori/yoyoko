@@ -35,8 +35,10 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
     private WriteableBitmap? _frame;
     private byte[] _pixels = [];
     private byte[] _jpeg = new byte[256 * 1024];
+    private byte[] _picture = [];
     private PixelSize _size;
     private int _jpegLength;
+    private int _posted;
     private bool _paused;
     private bool _disposed;
     private int _generation;
@@ -109,7 +111,7 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
         Add(start, "-hide_banner", "-loglevel", "error", "-nostdin");
         Add(start, "-stream_loop", "-1", "-i", _path, "-an",
             "-vf", $"scale={size.Width}:{size.Height}:force_original_aspect_ratio=increase:flags=fast_bilinear,crop={size.Width}:{size.Height},fps={WallpaperBudget.MaxFps}",
-            "-f", "mjpeg", "-q:v", "6", "pipe:1");
+            "-f", "mjpeg", "-q:v", "8", "pipe:1");
         Process process;
         try
         {
@@ -179,9 +181,9 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
             return false;
         }
         length = end + 2 - start;
-        var copy = new byte[length];
-        Buffer.BlockCopy(_jpeg, start, copy, 0, length);
-        buffer = copy;
+        if (_picture.Length < length) _picture = new byte[length];
+        Buffer.BlockCopy(_jpeg, start, _picture, 0, length);
+        buffer = _picture;
         var remain = _jpegLength - (end + 2);
         if (remain > 0) Buffer.BlockCopy(_jpeg, end + 2, _jpeg, 0, remain);
         _jpegLength = remain;
@@ -190,6 +192,7 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
 
     private void Present(byte[] jpeg, int length, PixelSize size, int generation)
     {
+        if (Volatile.Read(ref _posted) == 1) return;
         using var data = SkiaSharp.SKData.CreateCopy(jpeg.AsSpan(0, length));
         using var codec = SkiaSharp.SKCodec.Create(data);
         if (codec is null) return;
@@ -203,8 +206,10 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
                 return;
         }
         finally { handle.Free(); }
+        if (Interlocked.Exchange(ref _posted, 1) == 1) return;
         Dispatcher.UIThread.Post(() =>
         {
+            Interlocked.Exchange(ref _posted, 0);
             if (_disposed || generation != _generation) return;
             _frame ??= WallpaperFrames.Create(size);
             if (_frame.PixelSize != size)

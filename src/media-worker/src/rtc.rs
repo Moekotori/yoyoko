@@ -1,3 +1,4 @@
+use chat_media_worker::devices::parse_device_id;
 use livekit::options::{AudioEncoding, TrackPublishOptions};
 use livekit::prelude::*;
 use livekit::{AudioProcessingOptions, PlatformAudio, PlayoutDeviceId, RecordingDeviceId};
@@ -195,24 +196,6 @@ fn match_playout(audio: &PlatformAudio, id: Option<&str>) -> Option<PlayoutDevic
     None
 }
 
-pub fn parse_device_id(id: &str, prefix: &str) -> Option<(String, u32)> {
-    let rest = id
-        .strip_prefix(&format!("{prefix}:"))
-        .unwrap_or(id)
-        .trim();
-    if rest.is_empty() {
-        return None;
-    }
-    if let Some((name, n)) = rest.rsplit_once(':')
-        && let Ok(index) = n.parse::<u32>()
-        && index >= 2
-        && !name.is_empty()
-    {
-        return Some((name.to_string(), index));
-    }
-    Some((rest.to_string(), 1))
-}
-
 fn set_remote_audio_enabled(room: &Room, enabled: bool) {
     for participant in room.remote_participants().values() {
         for publication in participant.track_publications().values() {
@@ -236,26 +219,9 @@ fn spawn_events(
             {
                 publication.set_enabled(false);
             }
-            let _ = room.name();
+            let _ = &room;
         }
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn parse_named_and_duplicate_device_ids() {
-        assert_eq!(
-            parse_device_id("in:MacBook Pro Microphone", "in"),
-            Some(("MacBook Pro Microphone".into(), 1))
-        );
-        assert_eq!(
-            parse_device_id("out:Speakers:2", "out"),
-            Some(("Speakers".into(), 2))
-        );
-        assert_eq!(parse_device_id("", "in"), None);
-        assert_eq!(parse_device_id("in:", "in"), None);
-    }
-}

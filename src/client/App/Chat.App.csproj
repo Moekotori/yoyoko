@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>WinExe</OutputType>
-    <UseAppHost>false</UseAppHost><AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault></PropertyGroup>
+    <UseAppHost>false</UseAppHost><AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks></PropertyGroup>
   <PropertyGroup>
     <!-- HotAvalonia strips itself and the runtime XAML loader from Release. -->
     <HotAvaloniaIncludeXamlLoader>false</HotAvaloniaIncludeXamlLoader>

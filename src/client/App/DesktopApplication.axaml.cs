@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Chat.App.Transport;
 using Chat.Core.Instances;
 using Chat.Localization;
 using Chat.Media;
@@ -50,13 +51,14 @@ public partial class DesktopApplication : Application
             _i18n = I18n.Presenter;
             var apis = new ChatApiFactory();
             var voice = new MediaVoiceAdapter(media);
+            var osTransport = OsTransportControls.Create();
             var defaultAddress = desktop.Args?.Contains("--local-workspace") == true
                 ? "http://localhost:8080" : settings.DefaultInstanceUrl;
             var connection = new WorkspaceConnection(_instances, cache, vault, apis,
                 () => new WebSocketConnection(), voice, defaultAddress);
             var shell = new ShellViewModel(_instances, cache, vault, new HttpInstanceDiscovery(_http),
                 apis, () => new WebSocketConnection(), voice,
-                locale, locale, locale, locale, locale, _i18n, packs, settings.ProductName, _lifetime.Token, connection);
+                locale, locale, locale, locale, locale, locale, osTransport, _i18n, packs, settings.ProductName, _lifetime.Token, connection);
             var window = new MainWindow { DataContext = shell };
             desktop.MainWindow = window;
             var workspace = new DefaultWorkspace(connection);
@@ -66,6 +68,7 @@ public partial class DesktopApplication : Application
             {
                 _lifetime.Cancel();
                 shell.Dispose();
+                osTransport.Dispose();
                 _i18n.Dispose();
                 _instances.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 media.DisposeAsync().AsTask().GetAwaiter().GetResult();

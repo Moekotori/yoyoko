@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Chat.Core.Sessions;
+using Chat.Core.Voice;
 using Chat.UI.Appearance;
 using Chat.UI.Auth;
 using Chat.Localization;
@@ -43,6 +44,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private readonly ILocalePreference _preference;
     private readonly IChatChrome _chrome;
     private readonly IAppearancePreference _appearance;
+    private readonly ISystemTransportPreference _transport;
     private readonly I18n _text;
     private readonly ILanguagePacks _packs;
     private readonly Action<Exception> _onError;
@@ -51,11 +53,13 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private bool _languagePackDropActive;
     public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, IAppearancePreference appearance,
         IShortcutPreference shortcuts, WallpaperSession wallpaper, Action close, Func<InstanceSession?> session,
-        Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth, ILanguagePacks packs)
+        Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth, ILanguagePacks packs,
+        ISystemTransportPreference transport)
     {
         _preference = preference;
         _chrome = chrome;
         _appearance = appearance;
+        _transport = transport;
         _text = text;
         _packs = packs;
         _onError = onError;
@@ -94,10 +98,12 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _preference.Changed += OnChanged;
         _chrome.Changed += OnChrome;
         _appearance.Changed += OnAppearance;
+        _transport.Changed += OnTransport;
         _packs.Changed += OnPacksChanged;
         Refresh();
         NotifyChrome();
         NotifyAppearance();
+        Changed(nameof(HeadsetMediaKeys));
     }
     public ActionCommand Close { get; }
     public ActionCommand Navigate { get; }
@@ -178,7 +184,6 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         get => ColorSchemes.FirstOrDefault(item => item.Scheme == _appearance.ColorScheme);
         set { if (value is not null && value.Scheme != _appearance.ColorScheme) _appearance.SetColorScheme(value.Scheme); }
     }
-    public bool ShowLightPlaceholder => _appearance.ColorScheme == ColorScheme.Light;
     public ObservableCollection<LanguageOption> Languages { get; } = [];
     public LanguageOption? SelectedLanguage
     {
@@ -196,6 +201,11 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         set { if (value is 0 or 1 && value != SendMode) _chrome.SetEnterToSend(value == 0); }
     }
     public bool UltraLightEnabled { get => _chrome.UltraLightEnabled; set { if (value != UltraLightEnabled) _chrome.SetUltraLightEnabled(value); } }
+    public bool HeadsetMediaKeys
+    {
+        get => _transport.HeadsetMediaKeys;
+        set { if (value != HeadsetMediaKeys) _transport.SetHeadsetMediaKeys(value); }
+    }
     public bool EnterToSend => _chrome.EnterToSend;
     public bool Compact { get => _chrome.Compact; set { if (value != Compact) _chrome.SetCompact(value); } }
     public bool ReduceMotion { get => _chrome.ReduceMotion; set { if (value != ReduceMotion) _chrome.SetReduceMotion(value); } }
@@ -204,6 +214,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _preference.Changed -= OnChanged;
         _chrome.Changed -= OnChrome;
         _appearance.Changed -= OnAppearance;
+        _transport.Changed -= OnTransport;
         _packs.Changed -= OnPacksChanged;
         Connection.Dispose();
         Shortcuts.Dispose();
@@ -211,6 +222,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private void OnChanged(Locale _) => Refresh();
     private void OnChrome() => NotifyChrome();
     private void OnAppearance() => NotifyAppearance();
+    private void OnTransport() => Changed(nameof(HeadsetMediaKeys));
     private void NotifyChrome()
     {
         Changed(nameof(EnterToSend));
@@ -293,11 +305,9 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         foreach (var option in ColorSchemes)
             option.Name = _text.Get(option.Scheme == ColorScheme.Light ? TextKey.ColorSchemeLight : TextKey.ColorSchemeDark);
         Changed(nameof(SelectedColorScheme));
-        Changed(nameof(ShowLightPlaceholder));
     }
     private void NotifyAppearance()
     {
         Changed(nameof(SelectedColorScheme));
-        Changed(nameof(ShowLightPlaceholder));
     }
 }

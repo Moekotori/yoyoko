@@ -35,6 +35,7 @@ public sealed partial class ShellViewModel
 
     public void OnTimelineScroll(bool nearBottom)
     {
+        if (!CanObserveTimeline) return;
         _awayFromBottom = !nearBottom;
         if (nearBottom)
         {
@@ -243,6 +244,29 @@ public sealed partial class ShellViewModel
 
     private Guid? LatestId(Guid channelId) =>
         _inbox.TryGetValue(channelId, out var row) ? row.LastMessageId : LatestVisibleId();
+
+    private void NoteVisit(Guid channelId)
+    {
+        var session = SelectedInstance?.Context.Session;
+        if (session is null) return;
+        var at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var current = _inbox.GetValueOrDefault(channelId)
+            ?? new ChannelInbox(channelId, null, null, null, null, ChannelNotify.All, null);
+        _inbox[channelId] = current with { VisitedAt = at };
+        _ = _cache.SaveVisitAsync(session.Scope, channelId, at, _lifetime);
+    }
+
+    public MemberProfile ProfileOf(Guid id, string? name = null)
+    {
+        var existing = Participants.FirstOrDefault(item => item.Id == id);
+        if (existing is not null) return existing;
+        var session = SelectedInstance?.Context.Session;
+        var user = session?.User(id);
+        var profile = new MemberProfile(id, user?.DisplayName ?? name ?? id.ToString("N")[..8], user?.Username ?? "",
+            session?.Me.Id == id);
+        if (_playbacks.TryGetValue(id, out var cached)) profile.Playback = cached.Playback;
+        return profile;
+    }
 
     private static string? DraftKey(InstanceSession session, Guid channelId) =>
         $"{session.Descriptor.Id.Value}:{session.Account.Key.Id}:{channelId}";

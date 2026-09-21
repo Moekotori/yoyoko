@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -319,6 +320,11 @@ public partial class ChatView : UserControl
         if (sender is not Control { DataContext: MessageRow row }) return;
         _subscribed?.BeginEdit(row);
         args.Handled = true;
+    }
+
+    private void OnCardOpened(object? sender, EventArgs e)
+    {
+        if (sender is Flyout flyout) MemberGestures.BindCard(flyout);
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)

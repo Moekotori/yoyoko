@@ -43,33 +43,130 @@ public sealed class MathAccent(MathNode body, string mark) : MathNode
     public string Mark { get; } = mark;
 }
 
+public sealed class MathMatrix(MathNode[][] rows, string left, string right) : MathNode
+{
+    public MathNode[][] Rows { get; } = rows;
+    public string Left { get; } = left;
+    public string Right { get; } = right;
+}
+
 public static class MathMarkup
 {
     public const int MaxChars = 2048;
     public const int MaxNodes = 64;
     public const int MaxDepth = 8;
 
+    private const int CacheSlots = 48;
+    private static readonly object Gate = new();
+    private static readonly string?[] CacheKeys = new string?[CacheSlots];
+    private static readonly MathNode[] CacheValues = new MathNode[CacheSlots];
+    private static uint _cacheClock;
+
     public static MathNode Parse(string source)
     {
         if (string.IsNullOrWhiteSpace(source)) return MathNode.Empty;
         if (source.Length > MaxChars) source = source[..MaxChars];
+        lock (Gate)
+        {
+            for (var n = 0; n < CacheSlots; n++)
+                if (ReferenceEquals(CacheKeys[n], source) || source.Equals(CacheKeys[n]))
+                    return CacheValues[n];
+        }
+        MathNode node;
         try
         {
             var parser = new Parser(source);
-            var node = parser.Expr(stop: null);
-            return node ?? new MathText(source.Trim());
+            node = parser.Expr(stop: null) ?? new MathText(source.Trim());
         }
         catch (Exception)
         {
-            return new MathText(source.Trim());
+            node = new MathText(source.Trim());
+        }
+        lock (Gate)
+        {
+            var slot = (int)(_cacheClock++ % CacheSlots);
+            CacheKeys[slot] = source;
+            CacheValues[slot] = node;
+        }
+        return node;
+    }
+
+    public static bool TryFlatten(MathNode node, out string text)
+    {
+        var buffer = new System.Text.StringBuilder(24);
+        if (!Flatten(node, buffer) || buffer.Length == 0)
+        {
+            text = "";
+            return false;
+        }
+        text = buffer.ToString();
+        return true;
+    }
+
+    private static bool Flatten(MathNode node, System.Text.StringBuilder buffer)
+    {
+        switch (node)
+        {
+            case MathText text:
+                buffer.Append(text.Text.AsSpan().Trim());
+                return true;
+            case MathList list:
+                foreach (var item in list.Items)
+                    if (!Flatten(item, buffer)) return false;
+                return true;
+            case MathScripts scripts:
+                if (!Flatten(scripts.Core, buffer)) return false;
+                if (scripts.Super is not null)
+                {
+                    if (scripts.Super is not MathText up || !TryScript(up.Text, super: true, out var sup))
+                        return false;
+                    buffer.Append(sup);
+                }
+                if (scripts.Sub is not null)
+                {
+                    if (scripts.Sub is not MathText down || !TryScript(down.Text, super: false, out var sub))
+                        return false;
+                    buffer.Append(sub);
+                }
+                return true;
+            default:
+                return false;
         }
     }
+
+    private static bool TryScript(string text, bool super, out string mapped)
+    {
+        mapped = "";
+        if (string.IsNullOrEmpty(text) || text.Length > 4) return false;
+        Span<char> chars = stackalloc char[4];
+        for (var i = 0; i < text.Length; i++)
+        {
+            var next = MapScript(text[i], super);
+            if (next is null) return false;
+            chars[i] = next.Value;
+        }
+        mapped = new string(chars[..text.Length]);
+        return true;
+    }
+
+    private static char? MapScript(char c, bool super) => (c, super) switch
+    {
+        ('0', true) => '⁰', ('1', true) => '¹', ('2', true) => '²', ('3', true) => '³',
+        ('4', true) => '⁴', ('5', true) => '⁵', ('6', true) => '⁶', ('7', true) => '⁷',
+        ('8', true) => '⁸', ('9', true) => '⁹', ('+', true) => '⁺', ('-', true) => '⁻',
+        ('n', true) => 'ⁿ', ('i', true) => 'ⁱ',
+        ('0', false) => '₀', ('1', false) => '₁', ('2', false) => '₂', ('3', false) => '₃',
+        ('4', false) => '₄', ('5', false) => '₅', ('6', false) => '₆', ('7', false) => '₇',
+        ('8', false) => '₈', ('9', false) => '₉', ('+', false) => '₊', ('-', false) => '₋',
+        _ => null
+    };
 
     private sealed class Parser(string s)
     {
         private int _i;
         private int _nodes;
         private int _depth;
+        private bool _cell;
 
         public MathNode? Expr(char? stop)
         {
@@ -84,6 +181,7 @@ public static class MathMarkup
                 if (stop is { } end && c == end) break;
                 if (c is '}' or '&') break;
                 if (c == '\\' && CommandEquals("end")) break;
+                if (_cell && c == '\\' && _i + 1 < s.Length && s[_i + 1] == '\\') break;
                 var atom = Atom();
                 if (atom is null) break;
                 items.Add(atom);
@@ -215,6 +313,7 @@ public static class MathMarkup
                 return Upright(Group() ?? Script());
             if (name == "mathbb")
                 return Blackboard(Group() ?? Script());
+            if (name == "begin") return Environment();
             if (name is "quad") return new MathText("  ");
             if (name is "qquad") return new MathText("    ");
             if (Symbols.TryGetValue(name, out var symbol))
@@ -222,6 +321,75 @@ public static class MathMarkup
             if (Functions.Contains(name))
                 return new MathText(name, italic: false);
             return new MathText("\\" + name, italic: false);
+        }
+
+        private MathNode Environment()
+        {
+            SkipSpace();
+            if (_i >= s.Length || s[_i] != '{') return new MathText("\\begin");
+            _i++;
+            var start = _i;
+            while (_i < s.Length && char.IsLetter(s[_i])) _i++;
+            var env = s[start.._i];
+            if (_i < s.Length && s[_i] == '}') _i++;
+            var (left, right) = env switch
+            {
+                "pmatrix" => ("(", ")"),
+                "bmatrix" => ("[", "]"),
+                "vmatrix" => ("|", "|"),
+                "matrix" => ("", ""),
+                _ => ("(", ")")
+            };
+            var rows = new List<MathNode[]>(4);
+            var row = new List<MathNode>(4);
+            _cell = true;
+            try
+            {
+                while (_i < s.Length && _nodes < MaxNodes && rows.Count < 6)
+                {
+                    SkipSpace();
+                    if (_i >= s.Length) break;
+                    if (CommandEquals("end"))
+                    {
+                        ConsumeEnd();
+                        break;
+                    }
+                    if (s[_i] == '&')
+                    {
+                        _i++;
+                        continue;
+                    }
+                    if (s[_i] == '\\' && _i + 1 < s.Length && s[_i + 1] == '\\')
+                    {
+                        _i += 2;
+                        rows.Add([.. row]);
+                        row.Clear();
+                        continue;
+                    }
+                    var cell = Expr(stop: null);
+                    row.Add(cell ?? MathNode.Empty);
+                    if (row.Count >= 6)
+                    {
+                        rows.Add([.. row]);
+                        row.Clear();
+                    }
+                }
+                if (row.Count > 0) rows.Add([.. row]);
+            }
+            finally { _cell = false; }
+            if (rows.Count == 0) return new MathText("");
+            return new MathMatrix([.. rows], left, right);
+        }
+
+        private void ConsumeEnd()
+        {
+            if (_i < s.Length && s[_i] == '\\') _i++;
+            while (_i < s.Length && char.IsLetter(s[_i])) _i++;
+            if (_i < s.Length && s[_i] == '{')
+            {
+                while (_i < s.Length && s[_i] != '}') _i++;
+                if (_i < s.Length && s[_i] == '}') _i++;
+            }
         }
 
         private static MathNode Upright(MathNode node) => node switch

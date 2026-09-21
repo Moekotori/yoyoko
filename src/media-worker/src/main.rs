@@ -1,6 +1,7 @@
-mod devices;
-mod engine;
 mod rtc;
+
+use chat_media_worker::devices;
+use chat_media_worker::engine;
 
 use serde_json::{Value, json};
 use std::io::{self, BufRead, Write};
@@ -24,14 +25,7 @@ async fn main() {
             }
         }
     });
-    let mut input_device: Option<String> = None;
-    let mut output_device: Option<String> = None;
-    let mut muted = false;
-    let mut deafened = false;
-    let mut channels: u16 = 2;
-    let mut bitrate_bps: u32 = 510_000;
-    let mut dtx = false;
-    let mut fec = true;
+    let mut prefs = Prefs::default();
     let mut loopback: Option<engine::Loopback> = None;
     let mut session: Option<rtc::Session> = None;
     while let Some(line) = rx.recv().await {
@@ -47,17 +41,7 @@ async fn main() {
                 if let Some(current) = session.take() {
                     current.close().await;
                 }
-                match apply_session(
-                    &request,
-                    &mut input_device,
-                    &mut output_device,
-                    &mut muted,
-                    &mut deafened,
-                    &mut channels,
-                    &mut bitrate_bps,
-                    &mut dtx,
-                    &mut fec,
-                ) {
+                match prefs.apply(&request) {
                     Ok(()) => {
                         let url = request
                             .get("url")
@@ -72,13 +56,13 @@ async fn main() {
                         match rtc::Session::connect(rtc::JoinConfig {
                             url,
                             token,
-                            input_device: input_device.clone(),
-                            output_device: output_device.clone(),
-                            muted,
-                            deafened,
-                            bitrate_bps,
-                            dtx,
-                            fec,
+                            input_device: prefs.input_device.clone(),
+                            output_device: prefs.output_device.clone(),
+                            muted: prefs.muted,
+                            deafened: prefs.deafened,
+                            bitrate_bps: prefs.bitrate_bps,
+                            dtx: prefs.dtx,
+                            fec: prefs.fec,
                         })
                         .await
                         {
@@ -106,38 +90,19 @@ async fn main() {
                 }),
                 Err(error) => json!({ "id": id, "ok": false, "error": error }),
             },
-            "device" => match apply_session(
-                &request,
-                &mut input_device,
-                &mut output_device,
-                &mut muted,
-                &mut deafened,
-                &mut channels,
-                &mut bitrate_bps,
-                &mut dtx,
-                &mut fec,
-            ) {
+            "device" => match prefs.apply(&request) {
                 Ok(()) => {
                     let rtc_result = if let Some(current) = session.as_ref() {
-                        current.set_devices(input_device.as_deref(), output_device.as_deref())
+                        current.set_devices(prefs.input_device.as_deref(), prefs.output_device.as_deref())
                     } else {
                         Ok(())
                     };
-                    match rtc_result.and_then(|()| {
-                        restart_loopback(
-                            &mut loopback,
-                            input_device.as_deref(),
-                            output_device.as_deref(),
-                            channels,
-                            muted,
-                            deafened,
-                        )
-                    }) {
+                    match rtc_result.and_then(|()| prefs.restart_loopback(&mut loopback)) {
                         Ok(()) => json!({
                             "id": id,
                             "ok": true,
-                            "input_device": input_device,
-                            "output_device": output_device
+                            "input_device": prefs.input_device,
+                            "output_device": prefs.output_device
                         }),
                         Err(error) => json!({ "id": id, "ok": false, "error": error }),
                     }
@@ -145,58 +110,41 @@ async fn main() {
                 Err(error) => json!({ "id": id, "ok": false, "error": error }),
             },
             "mute" => {
-                muted = request
+                prefs.muted = request
                     .get("muted")
                     .and_then(Value::as_bool)
-                    .unwrap_or(muted);
+                    .unwrap_or(prefs.muted);
                 if let Some(engine) = &loopback {
-                    engine.set_mute(muted);
+                    engine.set_mute(prefs.muted);
                 }
                 if let Some(current) = session.as_ref() {
-                    current.set_mute(muted);
+                    current.set_mute(prefs.muted);
                 }
                 json!({"id": id, "ok": true})
             }
             "deafen" => {
-                deafened = request
+                prefs.deafened = request
                     .get("deafened")
                     .and_then(Value::as_bool)
-                    .unwrap_or(deafened);
+                    .unwrap_or(prefs.deafened);
                 if let Some(engine) = &loopback {
-                    engine.set_deaf(deafened);
+                    engine.set_deaf(prefs.deafened);
                 }
                 if let Some(current) = session.as_ref() {
-                    current.set_deaf(deafened);
+                    current.set_deaf(prefs.deafened);
                 }
                 json!({"id": id, "ok": true})
             }
-            "quality" => match apply_session(
-                &request,
-                &mut input_device,
-                &mut output_device,
-                &mut muted,
-                &mut deafened,
-                &mut channels,
-                &mut bitrate_bps,
-                &mut dtx,
-                &mut fec,
-            ) {
+            "quality" => match prefs.apply(&request) {
                 Ok(()) => {
                     let rtc_result = if let Some(current) = session.as_mut() {
-                        current.set_quality(bitrate_bps, dtx, fec).await
+                        current
+                            .set_quality(prefs.bitrate_bps, prefs.dtx, prefs.fec)
+                            .await
                     } else {
                         Ok(())
                     };
-                    match rtc_result.and_then(|()| {
-                        restart_loopback(
-                            &mut loopback,
-                            input_device.as_deref(),
-                            output_device.as_deref(),
-                            channels,
-                            muted,
-                            deafened,
-                        )
-                    }) {
+                    match rtc_result.and_then(|()| prefs.restart_loopback(&mut loopback)) {
                         Ok(()) => json!({
                             "id": id,
                             "ok": true,
@@ -213,23 +161,13 @@ async fn main() {
                     current.close().await;
                 }
                 loopback = None;
-                match apply_session(
-                    &request,
-                    &mut input_device,
-                    &mut output_device,
-                    &mut muted,
-                    &mut deafened,
-                    &mut channels,
-                    &mut bitrate_bps,
-                    &mut dtx,
-                    &mut fec,
-                ) {
+                match prefs.apply(&request) {
                     Ok(()) => match engine::start(
-                        input_device.as_deref(),
-                        output_device.as_deref(),
-                        channels,
-                        muted,
-                        deafened,
+                        prefs.input_device.as_deref(),
+                        prefs.output_device.as_deref(),
+                        prefs.channels,
+                        prefs.muted,
+                        prefs.deafened,
                     ) {
                         Ok(engine) => {
                             loopback = Some(engine);
@@ -250,6 +188,7 @@ async fn main() {
                 if let Some(current) = session.take() {
                     current.close().await;
                 }
+                devices::invalidate();
                 json!({"id": id, "ok": true})
             }
             "shutdown" => {
@@ -269,72 +208,83 @@ async fn main() {
     }
 }
 
-fn apply_session(
-    request: &Value,
-    input_device: &mut Option<String>,
-    output_device: &mut Option<String>,
-    muted: &mut bool,
-    deafened: &mut bool,
-    channels: &mut u16,
-    bitrate_bps: &mut u32,
-    dtx: &mut bool,
-    fec: &mut bool,
-) -> Result<(), String> {
-    if let Some(value) = request.get("muted").and_then(Value::as_bool) {
-        *muted = value;
-    }
-    if let Some(value) = request.get("deafened").and_then(Value::as_bool) {
-        *deafened = value;
-    }
-    if let Some(value) = request.get("channels").and_then(Value::as_u64) {
-        *channels = value.clamp(1, 2) as u16;
-    }
-    if let Some(value) = request.get("bitrate_bps").and_then(Value::as_u64) {
-        *bitrate_bps = value.clamp(16_000, 510_000) as u32;
-    }
-    if let Some(value) = request.get("dtx").and_then(Value::as_bool) {
-        *dtx = value;
-    }
-    if let Some(value) = request.get("fec").and_then(Value::as_bool) {
-        *fec = value;
-    }
-    let input = request.get("input_device").and_then(Value::as_str);
-    let output = request.get("output_device").and_then(Value::as_str);
-    devices::validate("in", input)?;
-    devices::validate("out", output)?;
-    if request.get("input_device").is_some() {
-        *input_device = input
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(str::to_string);
-    }
-    if request.get("output_device").is_some() {
-        *output_device = output
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(str::to_string);
-    }
-    Ok(())
-}
-
-fn restart_loopback(
-    loopback: &mut Option<engine::Loopback>,
-    input_device: Option<&str>,
-    output_device: Option<&str>,
-    channels: u16,
+struct Prefs {
+    input_device: Option<String>,
+    output_device: Option<String>,
     muted: bool,
     deafened: bool,
-) -> Result<(), String> {
-    if loopback.is_none() {
-        return Ok(());
+    channels: u16,
+    bitrate_bps: u32,
+    dtx: bool,
+    fec: bool,
+}
+
+impl Default for Prefs {
+    fn default() -> Self {
+        Self {
+            input_device: None,
+            output_device: None,
+            muted: false,
+            deafened: false,
+            channels: 2,
+            bitrate_bps: 510_000,
+            dtx: false,
+            fec: true,
+        }
     }
-    *loopback = None;
-    *loopback = Some(engine::start(
-        input_device,
-        output_device,
-        channels,
-        muted,
-        deafened,
-    )?);
-    Ok(())
+}
+
+impl Prefs {
+    fn apply(&mut self, request: &Value) -> Result<(), String> {
+        if let Some(value) = request.get("muted").and_then(Value::as_bool) {
+            self.muted = value;
+        }
+        if let Some(value) = request.get("deafened").and_then(Value::as_bool) {
+            self.deafened = value;
+        }
+        if let Some(value) = request.get("channels").and_then(Value::as_u64) {
+            self.channels = value.clamp(1, 2) as u16;
+        }
+        if let Some(value) = request.get("bitrate_bps").and_then(Value::as_u64) {
+            self.bitrate_bps = value.clamp(16_000, 510_000) as u32;
+        }
+        if let Some(value) = request.get("dtx").and_then(Value::as_bool) {
+            self.dtx = value;
+        }
+        if let Some(value) = request.get("fec").and_then(Value::as_bool) {
+            self.fec = value;
+        }
+        let input = request.get("input_device").and_then(Value::as_str);
+        let output = request.get("output_device").and_then(Value::as_str);
+        devices::validate("in", input)?;
+        devices::validate("out", output)?;
+        if request.get("input_device").is_some() {
+            self.input_device = input
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string);
+        }
+        if request.get("output_device").is_some() {
+            self.output_device = output
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string);
+        }
+        Ok(())
+    }
+
+    fn restart_loopback(&self, loopback: &mut Option<engine::Loopback>) -> Result<(), String> {
+        if loopback.is_none() {
+            return Ok(());
+        }
+        *loopback = None;
+        *loopback = Some(engine::start(
+            self.input_device.as_deref(),
+            self.output_device.as_deref(),
+            self.channels,
+            self.muted,
+            self.deafened,
+        )?);
+        Ok(())
+    }
 }

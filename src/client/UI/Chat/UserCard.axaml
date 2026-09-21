@@ -30,6 +30,10 @@
               </Button>
             </Grid>
           </StackPanel>
+          <Button HorizontalAlignment="Stretch" Padding="10,7" Click="Mention" IsVisible="{Binding !IsSelf}"
+            Content="{i18n:T MentionMember}" AutomationProperties.Name="{i18n:T MentionMember}" />
+          <Button HorizontalAlignment="Stretch" Padding="10,7" Click="EditProfile" IsVisible="{Binding IsSelf}"
+            Content="{i18n:T Profile}" AutomationProperties.Name="{i18n:T Profile}" />
         </StackPanel>
       </Border>
     </StackPanel>

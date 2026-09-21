@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Chat.Core.Messaging;
 using Chat.Localization;
+using Chat.UI.Chat;
 using Chat.UI.Components;
 
 namespace Chat.UI.Channels;
@@ -44,44 +45,55 @@ public sealed class ChannelItem(Guid id, Guid serverId, string name, string kind
         IsMuted = false;
     }
 
-    public void SyncMembers(IReadOnlyList<(Guid Id, string Name, bool Muted, bool Deafened)> next)
+    public int VoiceCount => VoiceMembers.Count;
+    public void SyncMembers(IReadOnlyList<VoiceMemberRow> next)
     {
         for (var i = VoiceMembers.Count - 1; i >= 0; i--)
-            if (next.All(item => item.Id != VoiceMembers[i].UserId))
+            if (next.All(item => item.UserId != VoiceMembers[i].UserId))
                 VoiceMembers.RemoveAt(i);
         for (var i = 0; i < next.Count; i++)
         {
             var item = next[i];
-            if (i < VoiceMembers.Count && VoiceMembers[i].UserId == item.Id)
+            if (i < VoiceMembers.Count && VoiceMembers[i].UserId == item.UserId)
             {
-                VoiceMembers[i].Update(item.Name, item.Muted, item.Deafened);
+                VoiceMembers[i].Update(item);
                 continue;
             }
             var previous = -1;
             for (var j = 0; j < VoiceMembers.Count; j++)
-                if (VoiceMembers[j].UserId == item.Id) { previous = j; break; }
+                if (VoiceMembers[j].UserId == item.UserId) { previous = j; break; }
             if (previous >= 0)
             {
-                VoiceMembers[previous].Update(item.Name, item.Muted, item.Deafened);
+                VoiceMembers[previous].Update(item);
                 VoiceMembers.Move(previous, i);
             }
-            else VoiceMembers.Insert(i, new VoiceMemberRow(item.Id, item.Name, item.Muted, item.Deafened));
+            else VoiceMembers.Insert(i, item);
         }
         Changed(nameof(HasVoiceMembers));
+        Changed(nameof(VoiceCount));
     }
 }
 
 public sealed class VoiceMemberRow : ObservableObject
 {
     private string _name;
+    private string _username;
     private bool _muted;
     private bool _deafened;
-    public VoiceMemberRow(Guid userId, string name, bool muted, bool deafened)
+    private bool _isSelf;
+    private AvatarPlayback? _playback;
+    private MemberProfile? _profile;
+    public VoiceMemberRow(Guid userId, string name, string username, bool muted, bool deafened, bool isSelf,
+        MemberProfile? profile = null, AvatarPlayback? playback = null)
     {
         UserId = userId;
         _name = name;
+        _username = username;
         _muted = muted;
         _deafened = deafened;
+        _isSelf = isSelf;
+        _profile = profile;
+        _playback = playback;
     }
     public Guid UserId { get; }
     public string Name
@@ -89,13 +101,35 @@ public sealed class VoiceMemberRow : ObservableObject
         get => _name;
         private set { if (_name == value) return; _name = value; Changed(); Changed(nameof(Initial)); }
     }
+    public string Username
+    {
+        get => _username;
+        private set { if (_username == value) return; _username = value; Changed(); }
+    }
     public bool Muted { get => _muted; private set { if (_muted == value) return; _muted = value; Changed(); } }
     public bool Deafened { get => _deafened; private set { if (_deafened == value) return; _deafened = value; Changed(); } }
-    public string Initial => Avatar.FromName(Name);
-    public void Update(string name, bool muted, bool deafened)
+    public bool IsSelf { get => _isSelf; private set { if (_isSelf == value) return; _isSelf = value; Changed(); } }
+    public bool ShowMute => Muted && !Deafened;
+    public AvatarPlayback? Playback
     {
-        Name = name;
-        Muted = muted;
-        Deafened = deafened;
+        get => _playback;
+        set { if (ReferenceEquals(_playback, value)) return; _playback = value; Changed(); }
+    }
+    public MemberProfile? Profile
+    {
+        get => _profile;
+        set { if (ReferenceEquals(_profile, value)) return; _profile = value; Changed(); }
+    }
+    public string Initial => Avatar.FromName(Name);
+    public void Update(VoiceMemberRow source)
+    {
+        Name = source.Name;
+        Username = source.Username;
+        Muted = source.Muted;
+        Deafened = source.Deafened;
+        IsSelf = source.IsSelf;
+        if (source.Playback is not null) Playback = source.Playback;
+        if (source.Profile is not null) Profile = source.Profile;
+        Changed(nameof(ShowMute));
     }
 }

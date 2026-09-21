@@ -36,6 +36,33 @@ Check(offlineVoice.SelfMute && !offlineVoice.SelfDeaf, "undeafen preserves manua
 await offlineVoice.SetDeafAsync(true, default);
 await offlineVoice.SetMuteAsync(false, default);
 Check(!offlineVoice.SelfMute && !offlineVoice.SelfDeaf, "unmute also clears deafen before joining");
+{
+    NullSystemTransportControls.Instance.Publish(null);
+    var user = new UserDto(Guid.NewGuid(), "ada", "Ada");
+    var voiceChannel = Guid.NewGuid();
+    var voiceServer = Guid.NewGuid();
+    var api = System.Reflection.DispatchProxy.Create<Chat.Core.Sessions.IChatApi, VoiceJoinIo>();
+    var voiceMedia = System.Reflection.DispatchProxy.Create<IVoiceMedia, VoiceJoinIo>();
+    ((VoiceJoinIo)(object)api).Bind(user.Id, voiceServer, voiceChannel);
+    var descriptor = new InstanceDescriptor(new(Guid.NewGuid()), new("http://localhost:8080"), "Home");
+    var session = new Chat.Core.Sessions.InstanceSession(descriptor, user, api,
+        System.Reflection.DispatchProxy.Create<IMessageCache, VoiceJoinIo>(),
+        System.Reflection.DispatchProxy.Create<ICredentialVault, VoiceJoinIo>(),
+        () => throw new InvalidOperationException("gateway"), voiceMedia, "access", "refresh");
+    var controls = new RecordingTransport();
+    var preference = new TogglePreference();
+    using var binder = new SystemTransportBinder(controls, preference, "yoyoko");
+    await session.Voice.JoinAsync(voiceChannel, default);
+    binder.Attach(session);
+    Check(controls.Current is null, "OS session stays clear while headset keys are off");
+    preference.SetHeadsetMediaKeys(true);
+    Check(controls.Current is { AppName: "yoyoko", Community: "Home", Muted: false }, "opt-in publishes community while in voice");
+    controls.Raise(TransportCommand.Mute);
+    Check(session.Voice.SelfMute && controls.Current?.Muted == true, "headset pause mutes the joined session");
+    await session.Voice.LeaveAsync(default);
+    Check(controls.Current is null, "leaving voice clears the OS session");
+    await session.DisposeAsync();
+}
 var discovery = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/discovery.json")), ProtocolJson.Default.InstanceDiscovery)!;
 var envelope = JsonSerializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures/message-create.json")), ProtocolJson.Default.GatewayEnvelope)!;
 var message = envelope.Data.Deserialize(ProtocolJson.Default.MessageDto)!;
@@ -70,6 +97,14 @@ Check(WorkspaceAddress.Resolve("localhost:8081", "http://10.19.144.83:8080") == 
 Check(WorkspaceAddress.Resolve("localhost.example.com", "http://10.19.144.83:8080") == "https://localhost.example.com/", "localhost-like domain is not redirected");
 try { WorkspaceAddress.Resolve("localhost", "localhost"); throw new Exception("Recursive alias accepted"); }
 catch (ClientFault) { Check(true, "recursive default shortcut is rejected"); }
+var join = WorkspaceInvite.Parse("http://10.19.144.83:8080/join/ABCD2345", "http://127.0.0.1:8080");
+Check(join.Address == "http://10.19.144.83:8080/" && join.CommunityCode == "ABCD2345", "join URL carries origin and community code");
+Check(WorkspaceInvite.Link(new Uri("http://10.19.144.83:8080/"), "abcd2345") == "http://10.19.144.83:8080/join/ABCD2345", "copied invite is origin plus join code");
+Check(WorkspaceInvite.Parse("localhost/join/ABCD2345", "http://10.19.144.83:8080").Address == "http://10.19.144.83:8080/", "localhost join shortcut uses configured server");
+Check(WorkspaceInvite.Parse("ABCD2345", "http://10.19.144.83:8080").CommunityCode == "ABCD2345", "bare invite code uses configured server");
+Check(WorkspaceInvite.CodeFrom("http://10.19.144.83:8080/join/abcd2345") == "ABCD2345", "join extracts community code from a share URL");
+var local = WorkspaceInvite.Parse("localhost", "http://10.19.144.83:8080");
+Check(local.Address == "http://10.19.144.83:8080/" && local.CommunityCode is null, "localhost remains an address shortcut");
 Check(InstanceManager.NormalizeAddress("192.168.1.10:8080").Host == "192.168.1.10", "LAN IP defaults to HTTP");
 try { InstanceManager.NormalizeAddress("http://example.com"); throw new Exception("Insecure URL accepted"); }
 catch (ClientFault fault) { Check(fault.Key == TextKey.InvalidInstanceAddress, "remote cleartext URL rejected"); }
@@ -222,10 +257,85 @@ Check(MathMarkup.Parse("\\frac{1}{2}") is MathFrac, "latex fraction tree");
 Check(MathMarkup.Parse("\\alpha") is MathText { Text: "α" }, "latex greek");
 Check(MathMarkup.Parse("x^2") is MathScripts, "latex superscript");
 Check(MathMarkup.Parse("\\mathbb{R}") is MathText { Text: "ℝ" }, "latex blackboard");
+Check(MessageMarkup.IsPlain("hello there"), "plain chat skips markup");
+Check(!MessageMarkup.IsPlain("**x**"), "emphasis is not plain");
+Check(ReferenceEquals(MessageMarkup.Parse("**bold**"), MessageMarkup.Parse("**bold**")), "markup parse is cached");
+Check(MessageMarkup.Parse("# Title")[0] is { Kind: MarkupKind.Heading, Text: "Title", Extra: "1" }, "heading");
+Check(MessageMarkup.Parse("- one\n- two").Count(span => span.Kind == MarkupKind.ListItem) == 2, "list items");
+Check(MessageMarkup.Parse("> quoted")[0] is { Kind: MarkupKind.Quote, Text: "quoted" }, "blockquote");
+Check(MessageMarkup.Parse("| a | b |\n| --- | --- |\n| 1 | 2 |").Any(span => span.Kind == MarkupKind.Table && span.Text.Contains('1')), "table row");
+Check(MathMarkup.TryFlatten(MathMarkup.Parse("x^2"), out var flat) && flat.Contains('²'), "simple latex flattens");
+Check(!MathMarkup.TryFlatten(MathMarkup.Parse("\\frac{1}{2}"), out _), "fraction stays laid out");
+Check(MathMarkup.Parse("\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}") is MathMatrix matrix && matrix.Rows.Length == 2, "pmatrix");
 Console.WriteLine($"{checks} foundation checks passed.");
 
 public class NoVoiceIo : System.Reflection.DispatchProxy
 {
     protected override object? Invoke(System.Reflection.MethodInfo? method, object?[]? args)
         => throw new InvalidOperationException("Unexpected voice IO before joining: " + method?.Name);
+}
+
+public class VoiceJoinIo : System.Reflection.DispatchProxy
+{
+    public Guid UserId, ServerId, ChannelId;
+    public bool Mute;
+    public void Bind(Guid user, Guid server, Guid channel)
+    {
+        UserId = user;
+        ServerId = server;
+        ChannelId = channel;
+    }
+    protected override object? Invoke(System.Reflection.MethodInfo? method, object?[]? args)
+    {
+        switch (method?.Name)
+        {
+            case "JoinVoiceAsync":
+                return Task.FromResult(new VoiceJoinDto(
+                    new("t", new Uri("wss://localhost/rtc"), "room", DateTimeOffset.UtcNow.AddMinutes(1)),
+                    new(UserId, ServerId, ChannelId, Mute, false, "Ada", AudioQualities.Studio),
+                    new(AudioQualities.Studio, 48000, 2, 510_000, 20, true, true), AudioQualities.Studio));
+            case "PatchVoiceAsync":
+                Mute = (bool)args![0]!;
+                return Task.FromResult(new VoiceStateDto(UserId, ServerId, ChannelId, Mute, (bool)args[1]!, "Ada", AudioQualities.Studio));
+            case "LeaveVoiceAsync":
+            case "ConnectAsync":
+            case "LeaveAsync":
+            case "SetMutedAsync":
+            case "SetDeafenedAsync":
+                return Task.CompletedTask;
+            case "get_Available":
+                return true;
+            case "Dispose":
+            case "add_Faulted":
+            case "remove_Faulted":
+            case "SetAccessToken":
+                return null;
+            default:
+                if (method?.ReturnType == typeof(Task)) return Task.CompletedTask;
+                if (method?.ReturnType == typeof(ValueTask)) return ValueTask.CompletedTask;
+                throw new InvalidOperationException("Unexpected: " + method?.Name);
+        }
+    }
+}
+
+sealed class RecordingTransport : ISystemTransportControls
+{
+    public TransportNowPlaying? Current { get; private set; }
+    public bool Available => true;
+    public event Action<TransportCommand>? CommandRequested;
+    public void BindWindow(nint hwnd) { }
+    public void Publish(TransportNowPlaying? session) => Current = session;
+    public void Dispose() { }
+    public void Raise(TransportCommand command) => CommandRequested?.Invoke(command);
+}
+
+sealed class TogglePreference : ISystemTransportPreference
+{
+    public bool HeadsetMediaKeys { get; private set; }
+    public event Action? Changed;
+    public void SetHeadsetMediaKeys(bool value)
+    {
+        HeadsetMediaKeys = value;
+        Changed?.Invoke();
+    }
 }
