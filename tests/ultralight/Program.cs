@@ -116,7 +116,10 @@ static T Proxy<T>(Func<MethodInfo, object?[]?, object?> handler) where T : class
 static void CheckSettingsLayout(Window window)
 {
     var slot = window.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("channelSlot"));
-    Check(slot.Bounds.Width < 1 && slot.Opacity == 0, "settings collapses channel slot before and after restore");
+    var deadline = Environment.TickCount64 + 1000;
+    while ((slot.Bounds.Width >= 1 || slot.Opacity >= 0.01) && Environment.TickCount64 < deadline)
+        Pump(5);
+    Check(slot.Bounds.Width < 1 && slot.Opacity < 0.01, "settings collapses channel slot before and after restore");
 }
 [MethodImpl(MethodImplOptions.NoInlining)]
 static void CheckOff(Window window, ShellViewModel shell)

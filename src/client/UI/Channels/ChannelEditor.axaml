@@ -3,7 +3,7 @@
  x:Class="Chat.UI.Channels.ChannelEditor" x:DataType="ch:ChannelEditorViewModel">
   <UserControl.KeyBindings><KeyBinding Gesture="Escape" Command="{Binding Cancel}" /></UserControl.KeyBindings>
   <UserControl.Styles>
-    <Style Selector="Button.inlineAction"><Setter Property="Width" Value="22" /><Setter Property="Height" Value="28" /><Setter Property="Padding" Value="5" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+    <Style Selector="Button.inlineAction"><Setter Property="Width" Value="22" /><Setter Property="Height" Value="28" /><Setter Property="Padding" Value="5" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
     <Style Selector="TextBox"><Setter Property="MinHeight" Value="28" /><Setter Property="FontSize" Value="13" /><Setter Property="Padding" Value="3,4" /><Setter Property="BorderThickness" Value="0" /><Setter Property="CornerRadius" Value="0" /><Setter Property="Background" Value="Transparent" /></Style>
     <!-- Keep the native text editor, but remove its Fluent background/border in every state. -->
     <Style Selector="TextBox.inlineName /template/ Border#PART_BorderElement"><Setter Property="IsVisible" Value="False" /></Style>
@@ -11,8 +11,8 @@
   <StackPanel Spacing="4" Margin="0,0,0,2">
     <Border Background="Transparent" BorderThickness="0" Padding="9,0,1,0" IsVisible="{Binding !IsDelete}">
       <Grid ColumnDefinitions="16,*,Auto,Auto" ColumnSpacing="3" MinHeight="32">
-        <PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" IsVisible="{Binding !IsVoice}" Foreground="{StaticResource QuietTextBrush}" />
-        <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" IsVisible="{Binding IsVoice}" Foreground="{StaticResource QuietTextBrush}" />
+        <PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" IsVisible="{Binding !IsVoice}" Foreground="{DynamicResource QuietTextBrush}" />
+        <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" IsVisible="{Binding IsVoice}" Foreground="{DynamicResource QuietTextBrush}" />
         <TextBox Grid.Column="1" Classes="inlineName" x:Name="NameInput" Text="{Binding Name}" MaxLength="100" PlaceholderText="{i18n:T NewChannelName}" IsEnabled="{Binding !IsBusy}" AutomationProperties.Name="{i18n:T NewChannelName}">
           <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding Submit}" /></TextBox.KeyBindings>
         </TextBox>

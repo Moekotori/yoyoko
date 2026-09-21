@@ -3,7 +3,7 @@
   x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel" Classes="settingsRoot" motion:Motion.ReduceMotion="{Binding ReduceMotion}">
   <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" /><StyleInclude Source="avares://Chat.UI/Settings/SettingsMotion.axaml" /></UserControl.Styles>
   <Grid ColumnDefinitions="184,*">
-    <Border Background="{StaticResource SidebarBrush}">
+    <Border Background="{DynamicResource SidebarBrush}">
       <StackPanel Margin="16,36" Spacing="4">
         <TextBlock Text="{i18n:T Settings}" FontSize="20" FontWeight="SemiBold" Margin="14,0,0,32" />
         <Button Classes="settingsNav" Classes.selected="{Binding ShowGeneral}" AutomationProperties.Name="{i18n:T GeneralSettings}"

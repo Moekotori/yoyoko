@@ -18,15 +18,15 @@
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.menuAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+      <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
     </Style>
-    <Style Selector="Button.menuAction PathIcon"><Setter Property="Foreground" Value="{StaticResource QuietTextBrush}" /></Style>
+    <Style Selector="Button.menuAction PathIcon"><Setter Property="Foreground" Value="{DynamicResource QuietTextBrush}" /></Style>
     <Style Selector="Button.menuDanger"><Setter Property="Foreground" Value="#DDA49C" /></Style>
     <Style Selector="Button.menuDanger:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="#E8B8B2" /></Style>
     <Style Selector="Button.link">
       <Setter Property="Padding" Value="0" /><Setter Property="MinHeight" Value="0" />
       <Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" />
-      <Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+      <Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
     </Style>
     <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#E8E8E8" />
@@ -45,7 +45,7 @@
       </Setter>
     </Style>
     <Style Selector="Button.avatarPick:pointerover Border.avatarScrim"><Setter Property="Opacity" Value="1" /></Style>
-    <Style Selector="Border.menuDivider"><Setter Property="Height" Value="1" /><Setter Property="Background" Value="{StaticResource DividerBrush}" /><Setter Property="Margin" Value="8,6" /></Style>
+    <Style Selector="Border.menuDivider"><Setter Property="Height" Value="1" /><Setter Property="Background" Value="{DynamicResource DividerBrush}" /><Setter Property="Margin" Value="8,6" /></Style>
     <Style Selector="StackPanel.menuForm"><Setter Property="Spacing" Value="10" /><Setter Property="Margin" Value="10,4,10,10" /></Style>
   </UserControl.Styles>
   <ScrollViewer MaxHeight="560" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">

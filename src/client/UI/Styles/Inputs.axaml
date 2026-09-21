@@ -2,35 +2,35 @@
   <!-- Shared input surfaces for settings, sign-in and voice controls. -->
   <Style Selector="ComboBox">
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Background" Value="#292929" /><Setter Property="BorderBrush" Value="#404040" />
+    <Setter Property="Background" Value="{DynamicResource RaisedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" /><Setter Property="Padding" Value="14,8,8,8" />
     <Setter Property="MinHeight" Value="40" /><Setter Property="MaxDropDownHeight" Value="240" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
   </Style>
-  <Style Selector="ComboBox:pointerover /template/ Border#Background"><Setter Property="Background" Value="#303030" /><Setter Property="BorderBrush" Value="#565656" /></Style>
-  <Style Selector="ComboBox:pressed /template/ Border#Background"><Setter Property="Background" Value="#353535" /></Style>
-  <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground"><Setter Property="Background" Value="#292929" /><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" /></Style>
-  <Style Selector="ComboBox:focus-visible /template/ ContentControl#ContentPresenter"><Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" /></Style>
-  <Style Selector="ComboBox /template/ PathIcon#DropDownGlyph"><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /><Setter Property="Width" Value="10" /><Setter Property="Height" Value="10" /></Style>
+  <Style Selector="ComboBox:pointerover /template/ Border#Background"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Style>
+  <Style Selector="ComboBox:pressed /template/ Border#Background"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /></Style>
+  <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground"><Setter Property="Background" Value="{DynamicResource RaisedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="ComboBox:focus-visible /template/ ContentControl#ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" /></Style>
+  <Style Selector="ComboBox /template/ PathIcon#DropDownGlyph"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /><Setter Property="Width" Value="10" /><Setter Property="Height" Value="10" /></Style>
   <Style Selector="ComboBox[IsDropDownOpen=true] /template/ Border#PopupBorder">
-    <Setter Property="Background" Value="#292929" /><Setter Property="BorderBrush" Value="#484848" />
+    <Setter Property="Background" Value="{DynamicResource PopupBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="CornerRadius" Value="10" /><Setter Property="Padding" Value="5" />
   </Style>
   <Style Selector="ComboBoxItem"><Setter Property="MinHeight" Value="36" /><Setter Property="Padding" Value="12,8" /><Setter Property="CornerRadius" Value="6" /><Setter Property="HorizontalContentAlignment" Value="Left" /></Style>
-  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#404040" /><Setter Property="Foreground" Value="#F0F0F0" /></Style>
-  <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#353535" /></Style>
-  <Style Selector="ComboBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#484848" /></Style>
-  <Style Selector="TextBox"><Setter Property="BorderThickness" Value="1" /><Setter Property="PlaceholderForeground" Value="{StaticResource QuietTextBrush}" /></Style>
-  <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="#565656" /></Style>
-  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="{StaticResource FocusBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
+  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /><Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" /></Style>
+  <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /></Style>
+  <Style Selector="ComboBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /></Style>
+  <Style Selector="TextBox"><Setter Property="BorderThickness" Value="1" /><Setter Property="PlaceholderForeground" Value="{DynamicResource QuietTextBrush}" /></Style>
+  <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
   <Style Selector="TextBox.composer:focus /template/ Border#PART_BorderElement"><Setter Property="BorderThickness" Value="0" /></Style>
-  <Style Selector="FlyoutPresenter"><Setter Property="CornerRadius" Value="10" /><Setter Property="Background" Value="#252525" /><Setter Property="BorderBrush" Value="#404040" /><Setter Property="Padding" Value="12" /></Style>
+  <Style Selector="FlyoutPresenter"><Setter Property="CornerRadius" Value="10" /><Setter Property="Background" Value="{DynamicResource PopupBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="Padding" Value="12" /></Style>
   <Style Selector="FlyoutPresenter.communityFlyout">
     <Setter Property="Padding" Value="6" />
     <Setter Property="MinWidth" Value="292" />
     <Setter Property="CornerRadius" Value="10" />
-    <Setter Property="Background" Value="#252525" />
-    <Setter Property="BorderBrush" Value="#404040" />
+    <Setter Property="Background" Value="{DynamicResource PopupBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
   </Style>
   <Style Selector="FlyoutPresenter.userCardFlyout">
     <Setter Property="Padding" Value="0" />
@@ -38,5 +38,5 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="12" />
   </Style>
-  <Style Selector="MenuFlyoutPresenter, ContextMenu"><Setter Property="CornerRadius" Value="8" /><Setter Property="Background" Value="#292929" /></Style>
+  <Style Selector="MenuFlyoutPresenter, ContextMenu"><Setter Property="CornerRadius" Value="8" /><Setter Property="Background" Value="{DynamicResource PopupBrush}" /></Style>
 </Styles>

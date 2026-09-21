@@ -17,7 +17,7 @@
               <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{i18n:T You}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsSelf}" />
             </StackPanel>
-            <SelectableTextBlock Text="{Binding Handle}" Foreground="{StaticResource MutedTextBrush}" FontSize="12" IsVisible="{Binding HasHandle}" />
+            <SelectableTextBlock Text="{Binding Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" IsVisible="{Binding HasHandle}" />
           </StackPanel>
           <Border Height="1" Background="#2E2E2E" />
           <StackPanel Spacing="4">

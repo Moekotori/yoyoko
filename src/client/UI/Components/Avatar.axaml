@@ -7,6 +7,6 @@
     </Viewbox>
     <Ellipse IsVisible="{Binding HasImage, ElementName=Root}"><Ellipse.Fill><ImageBrush Source="{Binding Source, ElementName=Root}" Stretch="UniformToFill" /></Ellipse.Fill></Ellipse>
     <Ellipse Classes="avatarOutline" Stroke="#18FFFFFF" StrokeThickness="1" IsHitTestVisible="False" />
-    <Ellipse Width="10" Height="10" Fill="#3FA267" Stroke="{StaticResource SidebarBrush}" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding IsOnline, ElementName=Root}" />
+    <Ellipse Width="10" Height="10" Fill="#3FA267" Stroke="{DynamicResource SidebarBrush}" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding IsOnline, ElementName=Root}" />
   </Grid>
 </UserControl>

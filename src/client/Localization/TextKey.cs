@@ -231,6 +231,7 @@ public static class TextKey
     public const string ShortcutPressKey = "ShortcutPressKey";
     public const string ShortcutUnbound = "ShortcutUnbound";
     public const string ShortcutResetAll = "ShortcutResetAll";
+    public const string ShortcutReset = "ShortcutReset";
     public const string You = "You";
     public const string UserId = "UserId";
     public const string CopyUserId = "CopyUserId";

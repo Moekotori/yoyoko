@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Channels.QuickSwitcher" x:DataType="vm:ShellViewModel" x:Name="Jump">
-  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="8" Width="420">
+  <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="8" Width="420">
     <DockPanel>
       <TextBox x:Name="Query" DockPanel.Dock="Top" Margin="10,10,10,6" Text="{Binding SwitcherQuery}"
         PlaceholderText="{i18n:T JumpToChannel}" AutomationProperties.Name="{i18n:T JumpToChannel}" />

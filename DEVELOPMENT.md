@@ -71,7 +71,7 @@ macOS 双击根目录 `dev.command`，或运行：
 
 客户端配置为 App/appsettings.json，支持 `CHAT_PRODUCT_NAME` / `CHAT_CACHE_DIRECTORY` / `CHAT_DEFAULT_INSTANCE_URL`。默认缓存为 .NET LocalApplicationData 下 `chat-desktop/cache.db`。界面语言、紧凑布局、自定义背景和键盘快捷键等写入同目录 `preferences.json`；背景文件复制到同目录 `wallpaper/`，解码时缩放到窗口像素尺寸。视频背景优先使用系统解码器，否则查找 `ffmpeg`（`CHAT_FFMPEG` 或 PATH）。首次启动跟随系统（`zh*` → 简体中文，`ja*` → 日语，其余为英文），设置中可改为中文、英文或日语。`CHAT_LOCALE`（`zh-Hans` / `en` / `ja`）仅在尚未保存过语言时生效。凭据库尚未接入，SQLite 不存令牌。
 
-新增界面文案：在 `src/client/Localization/TextCatalog.cs` 的 `Rows` 加一行 `(Key, English, 中文, 日本語)`，并在 `TextKey.cs` 加同名常量。XAML 用 `{i18n:T Key}`，C# 用 `_text.Get(TextKey.Key)` 或 `I18n.T(TextKey.Key)`。foundation check 会核对三语和 TextKey 是否对齐。
+新增界面文案：在 `src/client/Localization/TextCatalog.cs` 的 `Rows` 加一行 `(Key, English, 中文, 日本語)`，并在 `TextKey.cs` 加同名常量。XAML 用 `{i18n:T Key}`，C# 用 `_text.Get(TextKey.Key)` 或 `I18n.T(TextKey.Key)`。foundation check 会核对三语和 TextKey 是否对齐。用户语言包格式见 [docs/i18n/README.md](docs/i18n/README.md)；设置里可导出完整模板并拖入 `.json` 导入。
 
 只改产品名不需要改代码包名；`/.well-known/lightchat` 是固定协议路径，产品重命名不更改协议标识。
 

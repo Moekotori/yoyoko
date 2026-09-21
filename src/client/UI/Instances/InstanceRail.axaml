@@ -7,7 +7,7 @@
     <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#303030" /></Style>
     <Style Selector="c|Avatar.railAvatar Ellipse.avatarOutline"><Setter Property="IsVisible" Value="False" /></Style>
   </UserControl.Styles>
-  <Border Background="{StaticResource RailBrush}">
+  <Border Background="{DynamicResource RailBrush}">
     <Grid RowDefinitions="*,66">
       <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="0,14" Spacing="10">
@@ -25,7 +25,7 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
-          <Button Width="40" Height="40" CornerRadius="20" Background="#292929" Foreground="{StaticResource MutedTextBrush}"
+          <Button Width="40" Height="40" CornerRadius="20" Background="#292929" Foreground="{DynamicResource MutedTextBrush}"
             HorizontalAlignment="Center" Command="{Binding OpenAddInstance}"
             AutomationProperties.Name="{i18n:T AddInstance}" ToolTip.Tip="{i18n:T AddInstance}">
             <PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" />

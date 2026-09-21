@@ -23,11 +23,12 @@ public interface IChatChrome
     event Action? Changed;
 }
 
-public sealed class LanguageOption(Locale locale, bool selected) : ObservableObject
+public sealed class LanguageOption(Locale locale, bool selected, bool custom) : ObservableObject
 {
     private bool _isSelected = selected;
     public Locale Locale { get; } = locale;
     public string NativeName => Locale.NativeName;
+    public bool IsCustom { get; } = custom;
     public bool IsSelected
     {
         get => _isSelected;
@@ -43,24 +44,30 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private readonly IChatChrome _chrome;
     private readonly IAppearancePreference _appearance;
     private readonly I18n _text;
+    private readonly ILanguagePacks _packs;
+    private readonly Action<Exception> _onError;
     private SettingsSection _section;
+    private string _languagePackNotice = "";
+    private bool _languagePackDropActive;
     public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, IAppearancePreference appearance,
         IShortcutPreference shortcuts, WallpaperSession wallpaper, Action close, Func<InstanceSession?> session,
-        Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth)
+        Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth, ILanguagePacks packs)
     {
         _preference = preference;
         _chrome = chrome;
         _appearance = appearance;
         _text = text;
+        _packs = packs;
+        _onError = onError;
         Wallpaper = wallpaper;
-        Shortcuts = new(shortcuts, text);
+        Shortcuts = new(shortcuts, chrome, text);
         Profile = new(session, pickAvatar, onError, text);
         Devices = devices;
         Connection = connection;
         Auth = auth;
         ColorSchemes.Add(new(ColorScheme.Dark));
         ColorSchemes.Add(new(ColorScheme.Light));
-        Close = new(_ => close());
+        Close = new(_ => { Shortcuts.CancelCapture(); close(); });
         Navigate = new(value => { if (value is SettingsSection section) Section = section; });
         Select = new(value =>
         {
@@ -74,7 +81,11 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         UseCompactLayout = new(_ => _chrome.SetCompact(true));
         ToggleCompact = new(_ => _chrome.SetCompact(!_chrome.Compact));
         ToggleReduceMotion = new(_ => _chrome.SetReduceMotion(!_chrome.ReduceMotion));
+        ToggleUltraLight = new(_ => _chrome.SetUltraLightEnabled(!_chrome.UltraLightEnabled));
         ToggleLoopback = new(devices.ToggleLoopbackAsync, onError);
+        ImportLanguagePack = new(ImportLanguagePackAsync, onError);
+        ExportLanguageTemplate = new(ExportLanguageTemplateAsync, onError);
+        RemoveLanguagePack = new(_ => RemoveCurrentPack());
         devices.PropertyChanged += (_, _) =>
         {
             Changed(nameof(LoopbackLabel));
@@ -83,6 +94,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _preference.Changed += OnChanged;
         _chrome.Changed += OnChrome;
         _appearance.Changed += OnAppearance;
+        _packs.Changed += OnPacksChanged;
         Refresh();
         NotifyChrome();
         NotifyAppearance();
@@ -95,6 +107,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         internal set
         {
             if (_section == value) return;
+            if (value != SettingsSection.Keyboard) Shortcuts.CancelCapture();
             _section = value;
             Changed();
             Changed(nameof(ShowGeneral));
@@ -134,7 +147,25 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public string ModifierKey => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";
     public ActionCommand ToggleCompact { get; }
     public ActionCommand ToggleReduceMotion { get; }
+    public ActionCommand ToggleUltraLight { get; }
     public AsyncCommand ToggleLoopback { get; }
+    public AsyncCommand ImportLanguagePack { get; }
+    public AsyncCommand ExportLanguageTemplate { get; }
+    public ActionCommand RemoveLanguagePack { get; }
+    public Func<Task<IReadOnlyList<string>>>? PickLanguagePackPaths { get; set; }
+    public Func<string, string, Task>? SaveLanguageTemplate { get; set; }
+    public bool CanRemoveLanguagePack => _packs.HasOverlay(_preference.Current.Code);
+    public bool LanguagePackDropActive
+    {
+        get => _languagePackDropActive;
+        set { if (_languagePackDropActive == value) return; _languagePackDropActive = value; Changed(); }
+    }
+    public string LanguagePackNotice
+    {
+        get => _languagePackNotice;
+        private set { if (_languagePackNotice == value) return; _languagePackNotice = value; Changed(); Changed(nameof(HasLanguagePackNotice)); }
+    }
+    public bool HasLanguagePackNotice => _languagePackNotice.Length > 0;
     public bool LoopbackActive => Devices.LoopbackActive;
     public string LoopbackLabel => Devices.LoopbackLabel;
     public ProfileViewModel Profile { get; }
@@ -173,6 +204,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _preference.Changed -= OnChanged;
         _chrome.Changed -= OnChrome;
         _appearance.Changed -= OnAppearance;
+        _packs.Changed -= OnPacksChanged;
         Connection.Dispose();
         Shortcuts.Dispose();
     }
@@ -187,15 +219,75 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         Changed(nameof(ReduceMotion));
         Changed(nameof(UltraLightEnabled));
     }
-    private void Refresh()
+    private void SyncLanguages()
     {
-        if (Languages.Count == 0)
-            foreach (var locale in Locale.Supported)
-                Languages.Add(new(locale, locale == _preference.Current));
+        var available = _packs.Available;
+        var selected = _preference.Current;
+        var same = Languages.Count == available.Count;
+        if (same)
+            for (var i = 0; i < available.Count; i++)
+                if (!Languages[i].Locale.Code.Equals(available[i].Code, StringComparison.OrdinalIgnoreCase))
+                {
+                    same = false;
+                    break;
+                }
+        if (!same)
+        {
+            Languages.Clear();
+            foreach (var locale in available)
+                Languages.Add(new(locale, locale.Code.Equals(selected.Code, StringComparison.OrdinalIgnoreCase),
+                    _packs.HasOverlay(locale.Code) && !Locale.IsBuiltIn(locale.Code)));
+        }
         else
             foreach (var option in Languages)
-                option.IsSelected = option.Locale == _preference.Current;
+                option.IsSelected = option.Locale.Code.Equals(selected.Code, StringComparison.OrdinalIgnoreCase);
         Changed(nameof(SelectedLanguage));
+        Changed(nameof(CanRemoveLanguagePack));
+    }
+    private void OnPacksChanged() => Refresh();
+    public void ImportDropped(IEnumerable<string> paths)
+    {
+        try
+        {
+            Locale? last = null;
+            foreach (var path in paths)
+                if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    last = ImportPath(path);
+            if (last is { } locale && !Locale.IsBuiltIn(locale.Code))
+                _preference.Set(locale);
+        }
+        catch (Exception exception) { LanguagePackNotice = _text.Error(exception); _onError(exception); }
+    }
+    private async Task ImportLanguagePackAsync()
+    {
+        if (PickLanguagePackPaths is null) return;
+        var paths = await PickLanguagePackPaths();
+        ImportDropped(paths);
+    }
+    private async Task ExportLanguageTemplateAsync()
+    {
+        if (SaveLanguageTemplate is null) return;
+        await SaveLanguageTemplate("language-pack.template.json", _packs.TemplateJson(new TextCatalog()));
+    }
+    private Locale ImportPath(string path)
+    {
+        var locale = _packs.ImportFile(path);
+        var count = _packs.Find(locale.Code)?.Strings.Count ?? 0;
+        LanguagePackNotice = _text.Get(TextKey.LanguagePackImported, locale.NativeName, count);
+        return locale;
+    }
+    private void RemoveCurrentPack()
+    {
+        var code = _preference.Current.Code;
+        if (!_packs.HasOverlay(code)) return;
+        var extra = !Locale.IsBuiltIn(code);
+        _packs.Remove(code);
+        if (extra) _preference.Set(Locale.English);
+        LanguagePackNotice = "";
+    }
+    private void Refresh()
+    {
+        SyncLanguages();
         Changed(nameof(SectionTitle));
         Changed(nameof(SendShortcutChoices));
         foreach (var option in ColorSchemes)

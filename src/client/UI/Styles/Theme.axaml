@@ -4,38 +4,66 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Chat.UI/Styles/Icons.axaml" />
       </ResourceDictionary.MergedDictionaries>
-      <SolidColorBrush x:Key="CanvasBrush">#1C1C1C</SolidColorBrush>
-      <SolidColorBrush x:Key="SidebarBrush">#2A2A2A</SolidColorBrush>
-      <SolidColorBrush x:Key="RailBrush">#242424</SolidColorBrush>
-      <SolidColorBrush x:Key="ChromeBrush">#2A2A2A</SolidColorBrush>
-      <SolidColorBrush x:Key="RaisedBrush">#262626</SolidColorBrush>
-      <SolidColorBrush x:Key="HoverBrush">#303030</SolidColorBrush>
-      <SolidColorBrush x:Key="SelectedBrush">#363636</SolidColorBrush>
-      <SolidColorBrush x:Key="PrimaryTextBrush">#D8D8D8</SolidColorBrush>
-      <SolidColorBrush x:Key="MutedTextBrush">#A5A5A5</SolidColorBrush>
-      <SolidColorBrush x:Key="QuietTextBrush">#858585</SolidColorBrush>
-      <SolidColorBrush x:Key="SuccessBrush">#3FA267</SolidColorBrush>
-      <SolidColorBrush x:Key="AccentBrush">#DCDCDC</SolidColorBrush>
-      <SolidColorBrush x:Key="DividerBrush">#343434</SolidColorBrush>
-      <SolidColorBrush x:Key="FocusBrush">#686868</SolidColorBrush>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="CanvasBrush">#1C1C1C</SolidColorBrush>
+          <SolidColorBrush x:Key="SidebarBrush">#2A2A2A</SolidColorBrush>
+          <SolidColorBrush x:Key="RailBrush">#242424</SolidColorBrush>
+          <SolidColorBrush x:Key="ChromeBrush">#2A2A2A</SolidColorBrush>
+          <SolidColorBrush x:Key="RaisedBrush">#262626</SolidColorBrush>
+          <SolidColorBrush x:Key="HoverBrush">#303030</SolidColorBrush>
+          <SolidColorBrush x:Key="SelectedBrush">#363636</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryTextBrush">#D8D8D8</SolidColorBrush>
+          <SolidColorBrush x:Key="MutedTextBrush">#A5A5A5</SolidColorBrush>
+          <SolidColorBrush x:Key="QuietTextBrush">#858585</SolidColorBrush>
+          <SolidColorBrush x:Key="SuccessBrush">#3FA267</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentBrush">#DCDCDC</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentHoverBrush">#F0F0F0</SolidColorBrush>
+          <SolidColorBrush x:Key="OnAccentBrush">#212121</SolidColorBrush>
+          <SolidColorBrush x:Key="DividerBrush">#343434</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusBrush">#686868</SolidColorBrush>
+          <SolidColorBrush x:Key="PopupBrush">#292929</SolidColorBrush>
+          <SolidColorBrush x:Key="ControlBorderBrush">#404040</SolidColorBrush>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="CanvasBrush">#F3F3F3</SolidColorBrush>
+          <SolidColorBrush x:Key="SidebarBrush">#E8E8E8</SolidColorBrush>
+          <SolidColorBrush x:Key="RailBrush">#E2E2E2</SolidColorBrush>
+          <SolidColorBrush x:Key="ChromeBrush">#E8E8E8</SolidColorBrush>
+          <SolidColorBrush x:Key="RaisedBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="HoverBrush">#DADADA</SolidColorBrush>
+          <SolidColorBrush x:Key="SelectedBrush">#D0D0D0</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryTextBrush">#2A2A2A</SolidColorBrush>
+          <SolidColorBrush x:Key="MutedTextBrush">#6A6A6A</SolidColorBrush>
+          <SolidColorBrush x:Key="QuietTextBrush">#8A8A8A</SolidColorBrush>
+          <SolidColorBrush x:Key="SuccessBrush">#2E8B57</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentBrush">#2A2A2A</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentHoverBrush">#404040</SolidColorBrush>
+          <SolidColorBrush x:Key="OnAccentBrush">#F5F5F5</SolidColorBrush>
+          <SolidColorBrush x:Key="DividerBrush">#D2D2D2</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusBrush">#8A8A8A</SolidColorBrush>
+          <SolidColorBrush x:Key="PopupBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ControlBorderBrush">#C8C8C8</SolidColorBrush>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
     </ResourceDictionary>
   </Styles.Resources>
   <Style Selector="Window">
-    <Setter Property="Background" Value="{StaticResource CanvasBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
     <Setter Property="FontFamily" Value="Inter, .AppleSystemUIFont, PingFang SC, Hiragino Sans, Microsoft YaHei UI, Yu Gothic UI, Noto Sans CJK SC, Noto Sans CJK JP, sans-serif" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="UseLayoutRounding" Value="True" />
   </Style>
-  <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
-  <Style Selector="TextBlock.quiet"><Setter Property="Foreground" Value="{StaticResource QuietTextBrush}" /></Style>
-  <Style Selector="TextBlock.section"><Setter Property="FontSize" Value="11" /><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+  <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="TextBlock.quiet"><Setter Property="Foreground" Value="{DynamicResource QuietTextBrush}" /></Style>
+  <Style Selector="TextBlock.section"><Setter Property="FontSize" Value="11" /><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="PathIcon"><Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" /></Style>
   <Style Selector="Button">
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Padding" Value="8" />
@@ -43,12 +71,12 @@
       <Transitions><BrushTransition Property="Background" Duration="{x:Static motion:MotionTokens.Feedback}" /><BrushTransition Property="Foreground" Duration="{x:Static motion:MotionTokens.Feedback}" /></Transitions>
     </Setter>
   </Style>
-  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{StaticResource HoverBrush}" /></Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /></Style>
   <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#3A3A3A" /></Style>
-  <Style Selector="Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="BorderBrush" Value="{StaticResource FocusBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
+  <Style Selector="Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
   <Style Selector="Button.icon">
     <Setter Property="Width" Value="30" /><Setter Property="Height" Value="30" />
-    <Setter Property="Padding" Value="6" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+    <Setter Property="Padding" Value="6" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
   </Style>
   <Style Selector="Button.avatarPick">
     <Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" />
@@ -57,38 +85,30 @@
   <Style Selector="Button.avatarPick:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Button.avatarPick:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#727272" /></Style>
-  <Style Selector="Button.icon.active"><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="Background" Value="#333333" /></Style>
+  <Style Selector="Button.icon.active"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /><Setter Property="Background" Value="#333333" /></Style>
   <Style Selector="Button.channel">
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" />
-    <Setter Property="Height" Value="34" /><Setter Property="Padding" Value="10,0" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+    <Setter Property="Height" Value="34" /><Setter Property="Padding" Value="10,0" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
   </Style>
-  <Style Selector="Button.channel.selected"><Setter Property="Background" Value="{StaticResource SelectedBrush}" /><Setter Property="Foreground" Value="#EEEEEE" /></Style>
-  <Style Selector="Button.tab"><Setter Property="Height" Value="41" /><Setter Property="Padding" Value="16,0,8,0" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+  <Style Selector="Button.channel.selected"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /><Setter Property="Foreground" Value="#EEEEEE" /></Style>
+  <Style Selector="Button.tab"><Setter Property="Height" Value="41" /><Setter Property="Padding" Value="16,0,8,0" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="Button.tab.selected"><Setter Property="Foreground" Value="#EEEEEE" /></Style>
   <Style Selector="Button.tab.unread TextBlock"><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="#F2F2F2" /></Style>
-  <Style Selector="Grid.channelTab.selected"><Setter Property="Background" Value="{StaticResource CanvasBrush}" /></Style>
+  <Style Selector="Grid.channelTab.selected"><Setter Property="Background" Value="{DynamicResource CanvasBrush}" /></Style>
   <Style Selector="Button.tabClose"><Setter Property="Opacity" Value="0" /><Setter Property="Width" Value="22" /><Setter Property="Height" Value="24" /><Setter Property="Padding" Value="5" /></Style>
   <Style Selector="Grid.channelTab:pointerover Button.tabClose"><Setter Property="Opacity" Value="1" /></Style>
   <Style Selector="Grid.channelTab.selected Button.tabClose"><Setter Property="Opacity" Value="0.6" /></Style>
   <Style Selector="Button.tabClose:focus-visible"><Setter Property="Opacity" Value="1" /></Style>
-  <Style Selector="Button.primary"><Setter Property="Background" Value="{StaticResource AccentBrush}" /><Setter Property="Foreground" Value="#212121" /><Setter Property="Padding" Value="16,10" /></Style>
-  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#F0F0F0" /><Setter Property="Foreground" Value="#212121" /></Style>
-  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#BBBBBB" /><Setter Property="Foreground" Value="#212121" /></Style>
-  <Style Selector="Button.messageLink">
-    <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" />
-    <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="0" /><Setter Property="Foreground" Value="#8CB4FF" />
-    <Setter Property="HorizontalAlignment" Value="Left" />
-  </Style>
-  <Style Selector="Button.messageLink:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#B7D0FF" /></Style>
-  <Style Selector="Button.messageLink:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#8CB4FF" /></Style>
-  <Style Selector="Button.send"><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="Background" Value="#343434" /></Style>
+  <Style Selector="Button.primary"><Setter Property="Background" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" /><Setter Property="Padding" Value="16,10" /></Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" /><Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" /></Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /><Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" /></Style>
+  <Style Selector="Button.send"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /><Setter Property="Background" Value="#343434" /></Style>
   <Style Selector="Button.send:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#717171" /></Style>
   <Style Selector="TextBox">
     <Setter Property="CornerRadius" Value="8" /><Setter Property="FontSize" Value="14" />
-    <Setter Property="Background" Value="{StaticResource RaisedBrush}" /><Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
-    <Setter Property="Padding" Value="10,8" /><Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" /><Setter Property="SelectionBrush" Value="#484848" />
+    <Setter Property="Background" Value="{DynamicResource RaisedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="Padding" Value="10,8" /><Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="SelectionBrush" Value="#484848" />
   </Style>
   <Style Selector="TextBox.composer">
     <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="4,7" />
@@ -97,10 +117,10 @@
   </Style>
   <Style Selector="Border.composerFrame"><Setter Property="CornerRadius" Value="8" /></Style>
   <Style Selector="TextBox.composer:focus /template/ Border#PART_BorderElement"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
-  <Style Selector="Border.composerFrame:focus-within"><Setter Property="BorderBrush" Value="{StaticResource FocusBrush}" /></Style>
+  <Style Selector="Border.composerFrame:focus-within"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Style>
   <Style Selector="ComboBox">
     <Setter Property="CornerRadius" Value="6" /><Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Background" Value="{StaticResource RaisedBrush}" /><Setter Property="Padding" Value="10,8" />
+    <Setter Property="Background" Value="{DynamicResource RaisedBrush}" /><Setter Property="Padding" Value="10,8" />
     <Setter Property="MinHeight" Value="36" />
   </Style>
   <StyleInclude Source="avares://Chat.UI/Styles/Inputs.axaml" />

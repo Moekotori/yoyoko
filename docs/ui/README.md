@@ -15,7 +15,7 @@ The settings button is fixed at the bottom of the instance rail. Clicking it whi
 Settings has a 184px sidebar for General, Appearance, Keyboard, Voice, Profile and Server, with 42px navigation targets and a restrained 2px selection surface. The 28px section title and left-aligned body share a consistent starting edge, 40px from the sidebar. The header and body fill the remaining window width with 40px side insets; the body is inset from the vertical scrollbar so controls are not flush with the bar. The compact 32px close button stays at the page upper right. Form pages use the same 10px charcoal groups as Profile, with 52px inset rows and thin separators; Keyboard bindings stay in a 560px list with a 160px key column. The sidebar and header remain visible while the body scrolls.
 
 - General: language and send shortcut are 40px dropdowns in the same grouped card, with styled dark popup menus and 14px text. Two-way selection updates the existing preferences; changing locale preserves option identity and updates the section title.
-- Appearance: color scheme, compact layout, reduced motion and custom background share one grouped card. Light is a visible placeholder and does not switch the theme. File picker and blur/brightness only appear after custom background is on (and a file is chosen). The wallpaper is decoded to the window pixel size (capped), not kept at source resolution. Video playback pauses when the window is minimized or reduced motion is on. Light theme tokens are **Not implemented yet**.
+- Appearance: color scheme, compact layout, reduced motion and custom background share one grouped card. Toggle and file rows are full-row targets (click, Space/Enter); the color label opens the dropdown. Custom background accepts a dropped image or video. File picker and blur/brightness only appear after custom background is on (and a file is chosen); sliders show the live value. Light is a visible placeholder and does not switch the theme. The wallpaper is decoded to the window pixel size (capped), not kept at source resolution. Video playback pauses when the window is minimized or reduced motion is on. Light theme tokens are **Not implemented yet**.
 - Keyboard: existing workspace shortcuts are listed in groups and can be rebound; capture, Backspace-to-clear and reset-to-defaults write `shortcuts` overrides in `preferences.json`. Send remains in General. Tab 1–9 and Escape stay reserved.
 - Voice: existing input/output device selectors use the same dropdown dimensions; device errors remain visible. This is presentation of existing device controls, not new media functionality.
 - Profile: username, avatar actions and display name share one full-width charcoal group with 10px corners and thin row separators. Labels and editors use consistent 2:3 columns; the 56px avatar and action buttons wrap within the editor column. Inputs and buttons use 6px corners; save/status remain outside the group. Signed-out authentication, existing bindings, Close and Escape are preserved.
@@ -76,7 +76,11 @@ Default chords:
 | Mute / deafen (in voice) | ⌘ ⇧ M / ⌘ ⇧ D | Ctrl Shift M / Ctrl Shift D |
 | Close overlay | Escape | Escape |
 
-⌘ K opens a filterable channel list over the workspace; typing filters by name, ↑/↓ moves the highlight, Enter opens a text channel or joins a voice channel, Escape or a click on the dimmed backdrop closes it. Selecting a text channel focuses the composer. Typing while focus is not in a field inserts into the composer. Middle-click closes a channel tab. Community-menu fields submit with Enter.
+⌘ K opens a filterable channel list over the workspace; typing filters by name, ↑/↓ moves the highlight, Enter opens a text channel or joins a voice channel, Escape or a click on the dimmed backdrop closes it. Selecting a text channel focuses the composer. Typing while focus is not in a field inserts into the composer. Middle-click closes a channel tab. Community-menu fields submit with Enter. An empty composer ↑ edits your last sent message (Escape cancels). Unread text channels are bold; mentions show a red mark. Right-click a text channel to mark read/unread or set All / Mentions / Mute. A new-messages divider and jump-to-present bar appear when you are not at the latest. Drafts persist per channel in the local cache.
+
+## Message markup (2026-09-21)
+
+The composer still sends plain UTF-8. The timeline renders a bounded subset in-process: `**bold**`, `_italic_`, `~~strike~~`, `` `code` ``, fenced blocks, `||spoilers||`, `@username`, autolinks, `[label](https://…)`, and TeX between `$…$` / `$$…$$`. Math is laid out as Avalonia text/panels (fractions, scripts, roots, Greek, common operators), not bitmaps, WebView, or a full TeX engine. Unknown commands stay visible as source. Parse depth/node counts are capped. Copy still copies the original source. HTML, markdown images, tables, syntax highlighting and packages are **Not implemented yet**. Protocol and fixtures are unchanged.
 
 ## Automatic connection and account settings (2026-09-21)
 
@@ -140,6 +144,8 @@ See `../../design-qa.md` for the visual comparison and screenshot evidence.
 
 验证：macOS Release 构建、本地 API / Gateway 聚焦检查；原生窗口见 [live](polish/sidebar-live.png) 与 [design preview](polish/sidebar-preview.png)。远端部署、PostgreSQL 实际删除和三平台窗口尚未验证。
 
+语音交互（2026-09-21）：Release Chat.UI / Chat.App 零警告编译；86 项客户端契约检查通过。对本机 API 用两个账号加入同一语音频道，成员名单为 2，并签发 LiveKit JWT。本机 7880 无 LiveKit 进程，`chat-media-worker` 未链接 LiveKit，对端听筒仍不通。Windows/Linux 窗口未验证。
+
 ## Account controls (2026-09-21)
 
 The account bar opens an editable profile panel above the account area using the existing profile API. The current compact surface uses a 180ms slide/fade that can reverse during dismissal, respects reduced motion and stops when minimized. Escape and the backdrop dismiss it; focus cycles inside and returns to the opener.
@@ -161,3 +167,9 @@ The left rail now binds each visited instance account avatar to the shared circu
 Validation: Release desktop build passed with zero warnings/errors. An isolated local account uploaded two generated test images through the production session/API in a real macOS window; checks confirmed replacement reached the rail binding and removal cleared rail/account images. [Window render](polish/instance-avatar-native-render.png) was captured from the live control tree and visually checked for circular clipping; it is not an OS screenshot or mouse-input test. Existing-window accessibility inspection timed out. No chat messages were sent; Windows/Linux were not tested. No protocol or phase change.
 
 Rail selection refinement: selected items use a quiet `#2C2C2C` fill (`#303030` on hover), 2px corners, no selection border and no avatar outline. The changed Avatar/InstanceRail XAML compiled in isolation against the preceding successful client build; a native host check confirmed zero selection border and hidden outline, and the [updated window render](polish/instance-selection-native-render.png) was visually inspected. The final full workspace build was blocked by concurrent message/inbox code errors (MessageText, ShellViewModel.Inbox and Presentation); that integration is not claimed as passing.
+
+### 设置页空白频道列修复（2026-09-21）
+
+恢复 ShellSurface 的 ShowSettings 折叠绑定；设置打开时频道栏宽度降为 0，关闭后恢复 220 px，保留短促过渡及减少动效偏好。折叠样式由可重建的 ShellSurface 自己持有，UltraLight 恢复后也适用，不改变资料页的登录/注册逻辑。
+
+验证：使用 d0173f8 的独立源码快照加本次布局改动及当前 SettingsViewModel，完成 Release 构建、设置栏宽度归零与 UltraLight 恢复检查；macOS 原生验证窗口已核对资料页，空白列消失。隔离构建用于避开其他任务正在改写的源码/程序集，不代表所有并行改动已验收。

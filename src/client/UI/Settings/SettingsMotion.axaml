@@ -44,4 +44,11 @@
   <Style Selector=".settingsRoot.motion TextBox.settingsField /template/ Border#PART_BorderElement">
     <Setter Property="Transitions"><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
   </Style>
+  <Style Selector=".settingsRoot.motion Border.settingsHit, .settingsRoot.motion Border.settingsPad, .settingsRoot.motion Border.settingsGroup">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Slider.settingsSlider /template/ RepeatButton#PART_DecreaseButton"><Setter Property="Transitions" Value="{x:Null}" /></Style>
+  <Style Selector=".settingsRoot.motion Slider.settingsSlider /template/ RepeatButton#PART_DecreaseButton">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
 </Styles>

@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Workspace.ChannelTabs" x:DataType="vm:WorkspaceViewModel" x:Name="Tabs">
-  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1">
+  <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="0,0,112,0">
       <ItemsControl ItemsSource="{Binding OpenTabs}" HorizontalAlignment="Left">
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -11,8 +11,8 @@
                 <StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" Opacity="0.65" /><TextBlock Text="{Binding Name}" FontSize="13" /></StackPanel>
               </Button>
               <Button Grid.Column="1" Classes="icon tabClose" Command="{Binding #Tabs.((vm:WorkspaceViewModel)DataContext).CloseTab}" CommandParameter="{Binding}" AutomationProperties.Name="{i18n:T CloseChannelTab}" ToolTip.Tip="{i18n:T CloseTab}"><PathIcon Data="{StaticResource IconClose}" Width="12" Height="12" /></Button>
-              <Border Grid.ColumnSpan="2" Background="{StaticResource AccentBrush}" Height="2" VerticalAlignment="Top" IsVisible="{Binding IsSelected}" IsHitTestVisible="False" />
-              <Border Grid.ColumnSpan="2" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0" IsHitTestVisible="False" />
+              <Border Grid.ColumnSpan="2" Background="{DynamicResource AccentBrush}" Height="2" VerticalAlignment="Top" IsVisible="{Binding IsSelected}" IsHitTestVisible="False" />
+              <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0" IsHitTestVisible="False" />
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

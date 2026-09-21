@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Workspace.AccountBar" x:DataType="vm:WorkspaceViewModel">
-  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,1,0" Padding="16,12">
+  <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,1,0" Padding="16,12">
     <Grid ColumnDefinitions="34,*,Auto" ColumnSpacing="10">
       <c:Avatar Width="34" Height="34" Source="{Binding AccountAvatar}" Initial="{Binding AccountInitial}" VerticalAlignment="Center" />
       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">

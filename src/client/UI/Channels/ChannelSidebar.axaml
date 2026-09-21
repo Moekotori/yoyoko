@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
  x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel" x:Name="Sidebar">
   <UserControl.Styles>
-    <Style Selector="Button.groupHeader"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Height" Value="30" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
-    <Style Selector="Button.groupAdd"><Setter Property="Width" Value="26" /><Setter Property="Height" Value="26" /><Setter Property="Padding" Value="7" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{StaticResource QuietTextBrush}" /></Style>
+    <Style Selector="Button.groupHeader"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Height" Value="30" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+    <Style Selector="Button.groupAdd"><Setter Property="Width" Value="26" /><Setter Property="Height" Value="26" /><Setter Property="Padding" Value="7" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{DynamicResource QuietTextBrush}" /></Style>
     <Style Selector="Button.channel"><Setter Property="CornerRadius" Value="2" /><Setter Property="Height" Value="32" /><Setter Property="Padding" Value="10,0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
     <Style Selector="Button.channel.selected"><Setter Property="Background" Value="#343434" /></Style>
     <Style Selector="Button.channel.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#3A3A3A" /></Style>
@@ -16,7 +16,7 @@
     <Style Selector="Border.unreadMark"><Setter Property="Width" Value="3" /><Setter Property="Height" Value="8" /><Setter Property="CornerRadius" Value="0,2,2,0" /><Setter Property="Background" Value="#E8E8E8" /><Setter Property="HorizontalAlignment" Value="Left" /></Style>
     <Style Selector="Border.mentionMark"><Setter Property="Width" Value="8" /><Setter Property="Height" Value="8" /><Setter Property="CornerRadius" Value="4" /><Setter Property="Background" Value="#C45C56" /><Setter Property="VerticalAlignment" Value="Center" /></Style>
   </UserControl.Styles>
-  <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+  <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="8,13,8,16" Spacing="0" IsVisible="{Binding IsSignedIn}">
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
@@ -54,7 +54,7 @@
               <Grid ColumnDefinitions="16,*,10" ColumnSpacing="9">
                 <Panel>
                   <Border Classes="unreadMark" IsVisible="{Binding HasUnread}" Margin="-10,0,0,0" />
-                  <PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" Foreground="{StaticResource QuietTextBrush}" />
+                  <PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" Foreground="{DynamicResource QuietTextBrush}" />
                 </Panel>
                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                 <Border Grid.Column="2" Classes="mentionMark" IsVisible="{Binding HasMention}" />
@@ -97,7 +97,7 @@
                 <MenuItem Header="{i18n:T DeleteChannel}" Foreground="#E3A09A" />
               </ContextMenu></Button.ContextMenu>
               <Grid ColumnDefinitions="16,*" ColumnSpacing="9">
-                <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" Foreground="{StaticResource QuietTextBrush}" />
+                <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" Foreground="{DynamicResource QuietTextBrush}" />
                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
               </Grid>
             </Button>
@@ -109,7 +109,7 @@
                   </Border>
                   <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                   <Panel Grid.Column="2" Width="12" Height="12" VerticalAlignment="Center" IsVisible="{Binding Muted}">
-                    <PathIcon Data="{StaticResource IconMic}" Width="12" Height="12" Foreground="{StaticResource QuietTextBrush}" />
+                    <PathIcon Data="{StaticResource IconMic}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" />
                     <Path Data="M1,1 L11,11" Stroke="#ED9292" StrokeThickness="1.4" />
                   </Panel>
                 </Grid>

@@ -3,11 +3,13 @@
   x:Class="Chat.UI.Settings.GeneralSettingsView" x:DataType="vm:SettingsViewModel">
   <Border Classes="settingsGroup">
   <StackPanel>
-    <Grid Classes="settingsRow" ColumnDefinitions="*,Auto" ColumnSpacing="24">
-      <TextBlock Text="{i18n:T UltraLightMode}" Classes="settingsLabel" />
-      <ToggleSwitch Grid.Column="1" Classes="settingsToggle" IsChecked="{Binding UltraLightEnabled}"
-        ToolTip.Tip="{i18n:T UltraLightHelp}" AutomationProperties.Name="{i18n:T UltraLightMode}" />
-    </Grid>
+    <Border Classes="settingsHit" vm:SettingsHit.Command="{Binding ToggleUltraLight}"
+      ToolTip.Tip="{i18n:T UltraLightHelp}" AutomationProperties.Name="{i18n:T UltraLightMode}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+        <TextBlock Text="{i18n:T UltraLightMode}" Classes="settingsLabel" />
+        <ToggleSwitch Grid.Column="1" Classes="settingsToggle" Focusable="False" IsChecked="{Binding UltraLightEnabled}" />
+      </Grid>
+    </Border>
     <Border Classes="settingsRowDivider" />
     <Grid Classes="settingsRow" ColumnDefinitions="2*,3*" ColumnSpacing="24">
       <TextBlock Text="{i18n:T Language}" Classes="settingsLabel" />
@@ -17,11 +19,25 @@
       </ComboBox>
     </Grid>
     <Border Classes="settingsRowDivider" />
-    <Grid Classes="settingsRow" ColumnDefinitions="2*,3*" ColumnSpacing="24">
-      <TextBlock Text="{i18n:T SendShortcut}" Classes="settingsLabel" />
-      <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding SendShortcutChoices}"
-        SelectedIndex="{Binding SendMode}" AutomationProperties.Name="{i18n:T SendShortcut}" />
-    </Grid>
+    <StackPanel Margin="20,8,20,12" Spacing="10">
+      <TextBlock Text="{i18n:T LanguagePacks}" Classes="settingsLabel" />
+      <Border Classes="settingsDrop" Classes.active="{Binding LanguagePackDropActive}" Padding="16,14">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{i18n:T DropLanguagePack}" FontSize="14" />
+          <TextBlock Text="{i18n:T LanguagePackHelp}" Classes="muted" FontSize="13" TextWrapping="Wrap" />
+          <TextBlock Text="{i18n:T CustomLanguagePack}" Classes="muted" FontSize="13" IsVisible="{Binding CanRemoveLanguagePack}" />
+          <TextBlock Text="{Binding LanguagePackNotice}" Classes="muted" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding HasLanguagePackNotice}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="settingsSecondary" Content="{i18n:T ExportLanguageTemplate}" Command="{Binding ExportLanguageTemplate}"
+              AutomationProperties.Name="{i18n:T ExportLanguageTemplate}" />
+            <Button Classes="settingsSecondary" Content="{i18n:T ImportLanguagePack}" Command="{Binding ImportLanguagePack}"
+              AutomationProperties.Name="{i18n:T ImportLanguagePack}" />
+            <Button Classes="settingsSecondary" Content="{i18n:T RemoveLanguagePack}" Command="{Binding RemoveLanguagePack}"
+              IsVisible="{Binding CanRemoveLanguagePack}" AutomationProperties.Name="{i18n:T RemoveLanguagePack}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
   </StackPanel>
   </Border>
 </UserControl>

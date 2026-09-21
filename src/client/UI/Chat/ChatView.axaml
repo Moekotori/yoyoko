@@ -1,5 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:markup="using:Chat.UI.Markup" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
   x:Class="Chat.UI.Chat.ChatView" x:DataType="vm:ShellViewModel" x:Name="ChatRoot"
   Classes.compact="{Binding CompactLayout}" Classes.reduceMotion="{Binding ReduceMotion}">
   <UserControl.Styles>
@@ -14,8 +14,6 @@
     <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,0,1" /></Style>
     <Style Selector="SelectableTextBlock.messageText"><Setter Property="FontSize" Value="16" /><Setter Property="LineHeight" Value="25" /><Setter Property="Foreground" Value="#CCCCCC" /></Style>
     <Style Selector="UserControl.compact SelectableTextBlock.messageText"><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="22" /></Style>
-    <Style Selector="markup|MessageBody"><Setter Property="EmSize" Value="16" /></Style>
-    <Style Selector="UserControl.compact markup|MessageBody"><Setter Property="EmSize" Value="14" /></Style>
     <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /></Style>
     <Style Selector="Grid.messageRow:pointerover Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
     <Style Selector="Grid.messageRow:focus-within Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
@@ -68,14 +66,14 @@
                         <Button HorizontalAlignment="Left" Padding="0" Background="Transparent" Command="{Binding Save}" IsVisible="{Binding HasPreview}" ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
                           <Image Source="{Binding Preview}" MaxWidth="280" MaxHeight="200" Stretch="Uniform" />
                         </Button>
-                        <Button HorizontalAlignment="Left" Padding="10,6" Background="{StaticResource RaisedBrush}" Command="{Binding Save}" IsVisible="{Binding ShowChip}" ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
+                        <Button HorizontalAlignment="Left" Padding="10,6" Background="{DynamicResource RaisedBrush}" Command="{Binding Save}" IsVisible="{Binding ShowChip}" ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
                           <Panel><TextBlock Text="{Binding Label}" FontSize="13" IsVisible="{Binding !IsSaving}" /><TextBlock Text="{i18n:T Downloading}" FontSize="13" IsVisible="{Binding IsSaving}" /></Panel>
                         </Button>
                       </StackPanel>
                     </DataTemplate></ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
-                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
+                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
                   <StackPanel Orientation="Horizontal">
                     <Button Classes="icon" Click="CopyMessage" AutomationProperties.Name="{i18n:T CopyMessage}" ToolTip.Tip="{i18n:T CopyText}"><PathIcon Data="{StaticResource IconCopy}" Width="16" Height="16" /></Button>
                     <Button Classes="icon" Click="EditMessage" IsVisible="{Binding CanEdit}" AutomationProperties.Name="{i18n:T EditMessage}" ToolTip.Tip="{i18n:T EditMessage}"><PathIcon Data="{StaticResource IconEdit}" Width="16" Height="16" /></Button>
@@ -87,7 +85,7 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <Border Background="#E51C1C1C" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" Margin="12" CornerRadius="8" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False"><TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" /></Border>
+        <Border Background="#E51C1C1C" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" Margin="12" CornerRadius="8" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False"><TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" /></Border>
       </Panel>
       </motion:MotionHost>
       <StackPanel Grid.Row="2" Margin="24,0,24,22" Spacing="8">
@@ -104,12 +102,12 @@
         <ItemsControl ItemsSource="{Binding PendingFiles}" IsVisible="{Binding HasPending}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="chat:PendingFileItem">
-            <Border Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="8" Padding="8,4" Margin="0,0,6,2">
+            <Border Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="8" Padding="8,4" Margin="0,0,6,2">
               <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" /><Button Classes="icon" Width="22" Height="22" Padding="4" Command="{Binding Remove}" ToolTip.Tip="{i18n:T RemoveFile}" AutomationProperties.Name="{i18n:T RemoveFile}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button></StackPanel>
             </Border>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Border Classes="composerFrame" Background="{StaticResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="10">
+        <Border Classes="composerFrame" Background="{DynamicResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="10">
           <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <Grid ColumnDefinitions="30,*,30" ColumnSpacing="9">
             <Button Classes="icon" Command="{Binding AttachFile}" IsEnabled="{Binding !IsEditing}" ToolTip.Tip="{Binding AttachTip}" AutomationProperties.Name="{i18n:T AddFile}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>

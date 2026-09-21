@@ -80,9 +80,6 @@ public sealed class TextCatalog : ITextCatalog
     // One row per string: key, English, Chinese, Japanese. Add new copy here only.
     private static readonly (string Key, string En, string Zh, string Ja)[] Rows =
     [
-        (TextKey.NewMessages, "{0} new messages", "{0} 条新消息", "新しいメッセージ {0} 件"),
-        (TextKey.JumpToPresent, "Jump to latest", "回到最新", "最新へ移動"),
-        (TextKey.EditingMessage, "Editing message", "正在编辑消息", "メッセージを編集中"),
         (TextKey.UltraLightMode, "UltraLight", "UltraLight", "UltraLight"),
         (TextKey.UltraLightHelp, "Unload the interface when minimized or hidden; keep chats and voice connected.", "最小化或隐藏时卸载界面，保持消息与语音连接。", "最小化・非表示時に画面を解放し、チャットと音声の接続を維持します。"),
         ("RenameChannel", "Rename channel", "重命名频道", "チャンネル名を変更"),
@@ -309,7 +306,8 @@ public sealed class TextCatalog : ITextCatalog
         ("ShortcutNextTab", "Next tab", "下一个标签", "次のタブ"),
         ("ShortcutPressKey", "Press keys", "按下按键", "キーを入力"),
         ("ShortcutUnbound", "None", "未绑定", "なし"),
-        ("ShortcutResetAll", "Reset to defaults", "恢复默认", "デフォルトに戻す"),
+        ("ShortcutResetAll", "Reset all", "全部恢复", "すべて戻す"),
+        ("ShortcutReset", "Reset", "恢复", "戻す"),
         ("You", "You", "你", "あなた"),
         ("UserId", "User ID", "用户 ID", "ユーザーID"),
         ("CopyUserId", "Copy user ID", "复制用户 ID", "ユーザーIDをコピー"),

@@ -7,45 +7,105 @@ using Chat.UI.Shortcuts;
 
 namespace Chat.UI.Settings;
 
-public sealed class ShortcutGroup(string title, IReadOnlyList<ShortcutRow> rows)
+public sealed class ShortcutGroup : ObservableObject
 {
-    public string Title { get; internal set; } = title;
-    public IReadOnlyList<ShortcutRow> Rows { get; } = rows;
+    private string _title;
+    public ShortcutGroup(string titleKey, string title, IReadOnlyList<ShortcutRow> rows)
+    {
+        TitleKey = titleKey;
+        _title = title;
+        Rows = rows;
+    }
+    public string TitleKey { get; }
+    public IReadOnlyList<ShortcutRow> Rows { get; }
+    public string Title { get => _title; internal set { if (_title == value) return; _title = value; Changed(); } }
 }
 
-public sealed class ShortcutRow(ShortcutAction action, string title, string gesture, bool last = false) : ObservableObject
+public sealed class ShortcutRow : ObservableObject
 {
-    private string _title = title;
-    private string _gesture = gesture;
+    private string _title;
+    private string _gesture;
+    private IReadOnlyList<string> _tokens;
     private bool _recording;
-    public ShortcutAction Action { get; } = action;
-    public bool ShowDivider { get; } = !last;
-    public string Title { get => _title; internal set { if (_title == value) return; _title = value; Changed(); } }
-    public string Gesture { get => _gesture; internal set { if (_gesture == value) return; _gesture = value; Changed(); } }
-    public bool IsRecording { get => _recording; internal set { if (_recording == value) return; _recording = value; Changed(); } }
+    private bool _custom;
+    public ShortcutRow(ShortcutAction action, string titleKey, string title, string gesture, IReadOnlyList<string> tokens, bool custom, bool last)
+    {
+        Action = action;
+        TitleKey = titleKey;
+        _title = title;
+        _gesture = gesture;
+        _tokens = tokens;
+        _custom = custom;
+        ShowDivider = !last;
+    }
+    public ShortcutAction Action { get; }
+    public string TitleKey { get; }
+    public bool ShowDivider { get; }
+    public string Title { get => _title; private set { if (_title == value) return; _title = value; Changed(); } }
+    public string Gesture { get => _gesture; private set { if (_gesture == value) return; _gesture = value; Changed(); } }
+    public IReadOnlyList<string> Tokens { get => _tokens; private set { _tokens = value; Changed(); Changed(nameof(ShowKeys)); Changed(nameof(ShowUnbound)); } }
+    public bool IsRecording
+    {
+        get => _recording;
+        private set
+        {
+            if (_recording == value) return;
+            _recording = value;
+            Changed();
+            Changed(nameof(ShowKeys));
+            Changed(nameof(ShowUnbound));
+        }
+    }
+    public bool IsCustom { get => _custom; private set { if (_custom == value) return; _custom = value; Changed(); } }
+    public bool ShowKeys => !_recording && _tokens.Count > 0;
+    public bool ShowUnbound => !_recording && _tokens.Count == 0;
+    internal void Present(string title, string gesture, IReadOnlyList<string> tokens, bool custom, bool recording)
+    {
+        Title = title;
+        Gesture = gesture;
+        Tokens = tokens;
+        IsCustom = custom;
+        IsRecording = recording;
+    }
 }
 
 public sealed class ShortcutSettingsViewModel : ObservableObject, IDisposable
 {
     private readonly IShortcutPreference _preference;
+    private readonly IChatChrome _chrome;
     private readonly I18n _text;
     private ShortcutRow? _recording;
-    public ShortcutSettingsViewModel(IShortcutPreference preference, I18n text)
+    public ShortcutSettingsViewModel(IShortcutPreference preference, IChatChrome chrome, I18n text)
     {
         _preference = preference;
+        _chrome = chrome;
         _text = text;
         Capture = new(BeginCapture);
+        ResetRow = new(ResetOne);
         ResetAll = new(_ => { CancelCapture(); _preference.Reset(); });
         _preference.Changed += Refresh;
+        _chrome.Changed += OnChrome;
         _text.PropertyChanged += OnText;
         Rebuild();
     }
 
     public ObservableCollection<ShortcutGroup> Groups { get; } = [];
     public ActionCommand Capture { get; }
+    public ActionCommand ResetRow { get; }
     public ActionCommand ResetAll { get; }
     public bool IsRecording => _recording is not null;
+    public bool CanResetAll => _preference.Overrides.Count > 0;
     public IReadOnlyDictionary<string, string> Overrides => _preference.Overrides;
+    public IReadOnlyList<string> SendShortcutChoices =>
+    [
+        _text.Get(TextKey.EnterToSend),
+        _text.Get(TextKey.CtrlEnterToSend)
+    ];
+    public int SendMode
+    {
+        get => _chrome.EnterToSend ? 0 : 1;
+        set { if (value is 0 or 1 && value != SendMode) _chrome.SetEnterToSend(value == 0); }
+    }
 
     public bool HandleCapture(KeyChord? chord, bool backspace)
     {
@@ -77,15 +137,16 @@ public sealed class ShortcutSettingsViewModel : ObservableObject, IDisposable
     public void CancelCapture()
     {
         if (_recording is null) return;
-        _recording.IsRecording = false;
+        var row = _recording;
         _recording = null;
         Changed(nameof(IsRecording));
-        Refresh();
+        Apply(row);
     }
 
     public void Dispose()
     {
         _preference.Changed -= Refresh;
+        _chrome.Changed -= OnChrome;
         _text.PropertyChanged -= OnText;
     }
 
@@ -93,56 +154,88 @@ public sealed class ShortcutSettingsViewModel : ObservableObject, IDisposable
     {
         if (value is not ShortcutRow row) return;
         if (ReferenceEquals(_recording, row)) { CancelCapture(); return; }
-        if (_recording is not null) _recording.IsRecording = false;
+        var previous = _recording;
         _recording = row;
-        row.IsRecording = true;
-        row.Gesture = _text.Get(TextKey.ShortcutPressKey);
+        if (previous is not null) Apply(previous);
+        row.Present(row.Title, _text.Get(TextKey.ShortcutPressKey), [], row.IsCustom, true);
         Changed(nameof(IsRecording));
     }
 
+    private void ResetOne(object? value)
+    {
+        if (value is not ShortcutRow row) return;
+        if (ReferenceEquals(_recording, row)) CancelCapture();
+        _preference.Assign(row.Action.Id(), null);
+    }
+
     private void OnText(object? sender, PropertyChangedEventArgs args) => Refresh();
+    private void OnChrome()
+    {
+        Changed(nameof(SendMode));
+        Changed(nameof(SendShortcutChoices));
+    }
 
     private void Refresh()
     {
-        if (_recording is not null)
+        if (Groups.Count == 0) Rebuild();
+        else
         {
             foreach (var group in Groups)
-                foreach (var row in group.Rows)
-                    if (!row.IsRecording) row.Gesture = Gesture(row.Action);
-            return;
+            {
+                group.Title = _text.Get(group.TitleKey);
+                foreach (var row in group.Rows) Apply(row);
+            }
         }
-        Rebuild();
+        Changed(nameof(CanResetAll));
+        Changed(nameof(SendShortcutChoices));
     }
 
     private void Rebuild()
     {
         Groups.Clear();
-        Groups.Add(new(_text.Get(TextKey.ShortcutNavigation),
+        Groups.Add(Group(TextKey.ShortcutNavigation,
         [
-            Row(ShortcutAction.Jump, TextKey.JumpToChannel),
-            Row(ShortcutAction.PreviousChannel, TextKey.ShortcutPreviousChannel),
-            Row(ShortcutAction.NextChannel, TextKey.ShortcutNextChannel),
-            Row(ShortcutAction.PreviousTab, TextKey.ShortcutPreviousTab),
-            Row(ShortcutAction.NextTab, TextKey.ShortcutNextTab),
-            Row(ShortcutAction.CloseTab, TextKey.CloseTab),
-            Row(ShortcutAction.Settings, TextKey.Settings, last: true)
+            Item(ShortcutAction.Jump, TextKey.JumpToChannel),
+            Item(ShortcutAction.PreviousChannel, TextKey.ShortcutPreviousChannel),
+            Item(ShortcutAction.NextChannel, TextKey.ShortcutNextChannel),
+            Item(ShortcutAction.PreviousTab, TextKey.ShortcutPreviousTab),
+            Item(ShortcutAction.NextTab, TextKey.ShortcutNextTab),
+            Item(ShortcutAction.CloseTab, TextKey.CloseTab),
+            Item(ShortcutAction.Settings, TextKey.Settings, last: true)
         ]));
-        Groups.Add(new(_text.Get(TextKey.ChatBehavior),
+        Groups.Add(Group(TextKey.ChatBehavior,
         [
-            Row(ShortcutAction.Search, TextKey.SearchMessages),
-            Row(ShortcutAction.Members, TextKey.ToggleMembers),
-            Row(ShortcutAction.Attach, TextKey.AddFile, last: true)
+            Item(ShortcutAction.Search, TextKey.SearchMessages),
+            Item(ShortcutAction.Members, TextKey.ToggleMembers),
+            Item(ShortcutAction.Attach, TextKey.AddFile, last: true)
         ]));
-        Groups.Add(new(_text.Get(TextKey.Voice),
+        Groups.Add(Group(TextKey.Voice,
         [
-            Row(ShortcutAction.Mute, TextKey.Mute),
-            Row(ShortcutAction.Deafen, TextKey.Deafen, last: true)
+            Item(ShortcutAction.Mute, TextKey.Mute),
+            Item(ShortcutAction.Deafen, TextKey.Deafen, last: true)
         ]));
+        Changed(nameof(CanResetAll));
     }
 
-    private ShortcutRow Row(ShortcutAction action, string key, bool last = false) =>
-        new(action, _text.Get(key), Gesture(action), last);
+    private ShortcutGroup Group(string titleKey, IReadOnlyList<ShortcutRow> rows) =>
+        new(titleKey, _text.Get(titleKey), rows);
 
-    private string Gesture(ShortcutAction action) =>
+    private ShortcutRow Item(ShortcutAction action, string key, bool last = false)
+    {
+        var recording = _recording?.Action == action;
+        return new(action, key, _text.Get(key), recording ? _text.Get(TextKey.ShortcutPressKey) : Label(action),
+            recording ? [] : ShortcutScheme.Tokens(action, _preference.Overrides),
+            ShortcutScheme.Custom(action, _preference.Overrides), last);
+    }
+
+    private void Apply(ShortcutRow row)
+    {
+        var recording = ReferenceEquals(_recording, row);
+        row.Present(_text.Get(row.TitleKey), recording ? _text.Get(TextKey.ShortcutPressKey) : Label(row.Action),
+            recording ? [] : ShortcutScheme.Tokens(row.Action, _preference.Overrides),
+            ShortcutScheme.Custom(row.Action, _preference.Overrides), recording);
+    }
+
+    private string Label(ShortcutAction action) =>
         ShortcutScheme.Display(action, _preference.Overrides, _text.Get(TextKey.ShortcutUnbound));
 }

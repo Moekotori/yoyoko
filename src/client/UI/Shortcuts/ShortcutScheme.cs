@@ -49,4 +49,10 @@ public static class ShortcutScheme
 
     public static string Display(ShortcutAction action, IReadOnlyDictionary<string, string> overrides, string unbound)
         => Resolve(action, overrides)?.Display() ?? unbound;
+
+    public static IReadOnlyList<string> Tokens(ShortcutAction action, IReadOnlyDictionary<string, string> overrides)
+        => Resolve(action, overrides)?.TokenLabels() ?? [];
+
+    public static bool Custom(ShortcutAction action, IReadOnlyDictionary<string, string> overrides)
+        => overrides.ContainsKey(action.Id());
 }

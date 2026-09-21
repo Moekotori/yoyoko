@@ -9,8 +9,8 @@
   <Panel>
   <appearance:WallpaperView DataContext="{Binding Wallpaper}" />
   <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsHitTestVisible="{Binding !ProfileOpen}">
-    <Border Grid.ColumnSpan="3" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" />
-    <Border Grid.ColumnSpan="3" Width="292" HorizontalAlignment="Left" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
+    <Border Grid.ColumnSpan="3" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" />
+    <Border Grid.ColumnSpan="3" Width="292" HorizontalAlignment="Left" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding InstanceHost}">
         <Grid ColumnDefinitions="*,16" ColumnSpacing="8"><TextBlock Text="{Binding InstanceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></Grid>
         <Button.Flyout>
@@ -40,7 +40,7 @@
       </Grid>
     </Border>
     <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" RowDefinitions="Auto,*" IsVisible="{Binding !ShowSettings}">
-      <Border Height="52" IsVisible="{Binding !ShowChat}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
+      <Border Height="52" IsVisible="{Binding !ShowChat}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
         <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
       </Border>
       <Panel Grid.Row="1">
@@ -62,7 +62,7 @@
     <Panel Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding ShowSettings}">
       <settings:SettingsView DataContext="{Binding Settings}" />
     </Panel>
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="#333333" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" CornerRadius="8" Padding="14,6" MinWidth="280">
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="#333333" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" CornerRadius="8" Padding="14,6" MinWidth="280">
       <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Workspace.Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding Workspace.DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
     </Border>
   </Grid>

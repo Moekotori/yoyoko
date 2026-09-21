@@ -37,6 +37,7 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         _text = text;
         Choose = new(ChooseAsync, OnError);
         Clear = new(_ => Remove());
+        Toggle = new(_ => Enabled = !Enabled);
         _appearance.Changed += OnAppearance;
         _chrome.Changed += OnChrome;
         Notify();
@@ -45,6 +46,7 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     public Func<Task<PickedFile?>>? PickFile { get; set; }
     public AsyncCommand Choose { get; }
     public ActionCommand Clear { get; }
+    public ActionCommand Toggle { get; }
     public Bitmap? Frame { get => _frame; private set { if (ReferenceEquals(_frame, value)) return; _frame = value; Changed(); Changed(nameof(IsActive)); } }
     public bool IsActive => _appearance.WallpaperEnabled && Frame is not null;
     public bool HasFile => _appearance.WallpaperFile.Length > 0;
@@ -103,6 +105,12 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         }
         else if (wasSuspended) Reload();
         else OnChrome();
+    }
+
+    public async Task AcceptAsync(PickedFile file)
+    {
+        try { await ImportAsync(file); }
+        catch (Exception exception) { OnError(exception); }
     }
 
     public async Task ImportAsync(PickedFile file)

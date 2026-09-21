@@ -5,7 +5,7 @@
     <Style Selector="Button.off"><Setter Property="Foreground" Value="#ED9292" /></Style>
     <Style Selector="Button.off /template/ ContentPresenter"><Setter Property="Foreground" Value="#ED9292" /></Style>
   </UserControl.Styles>
-  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,1,0" Padding="6,8">
+  <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,1,0" Padding="6,8">
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="2">
       <Button x:Name="ProfileButton" Classes="account" Command="{Binding OpenProfile}" IsEnabled="{Binding IsSignedIn}" ToolTip.Tip="{i18n:T Profile}" AutomationProperties.Name="{i18n:T Profile}">
         <Grid ColumnDefinitions="30,*" ColumnSpacing="8">

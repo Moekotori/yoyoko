@@ -54,7 +54,7 @@ public readonly record struct KeyChord(ChordModifier Modifiers, string Key)
         return string.Join('+', parts);
     }
 
-    public string Display()
+    public IReadOnlyList<string> TokenLabels()
     {
         var mac = OperatingSystem.IsMacOS();
         var parts = new List<string>(5);
@@ -64,8 +64,10 @@ public readonly record struct KeyChord(ChordModifier Modifiers, string Key)
         if (Has(ChordModifier.Alt)) parts.Add(mac ? "⌥" : "Alt");
         if (Has(ChordModifier.Shift)) parts.Add(mac ? "⇧" : "Shift");
         parts.Add(KeyLabel());
-        return string.Join(' ', parts);
+        return parts;
     }
+
+    public string Display() => string.Join(' ', TokenLabels());
 
     public bool Matches(KeyChord pressed)
     {

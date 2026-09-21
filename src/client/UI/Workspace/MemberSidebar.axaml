@@ -10,9 +10,9 @@
       <Setter Property="Margin" Value="0,0,0,1" />
     </Style>
   </UserControl.Styles>
-  <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0" Width="220">
+  <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,0,0,0" Width="220">
     <Grid RowDefinitions="52,*">
-      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+      <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,0">
         <TextBlock Text="{i18n:T Members}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" />
       </Border>
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">

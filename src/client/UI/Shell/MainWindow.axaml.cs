@@ -37,6 +37,8 @@ public partial class MainWindow : Window
             shell.PickAvatar = PickAvatarAsync;
             shell.OpenSaveStream = OpenSaveStreamAsync;
             shell.Wallpaper.PickFile = PickWallpaperAsync;
+            shell.Settings.PickLanguagePackPaths = PickLanguagePacksAsync;
+            shell.Settings.SaveLanguageTemplate = SaveLanguageTemplateAsync;
         }
     }
 
@@ -99,6 +101,48 @@ public partial class MainWindow : Window
         var props = await file.GetBasicPropertiesAsync();
         var stream = await file.OpenReadAsync();
         return new PickedFile(file.Name, FileKinds.MimeFromFileName(file.Name), stream, (long)(props.Size ?? 0));
+    }
+
+    private async Task<IReadOnlyList<string>> PickLanguagePacksAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = global::Chat.UI.Localization.I18n.T(TextKey.ImportLanguagePack),
+            AllowMultiple = true,
+            FileTypeFilter =
+            [
+                new FilePickerFileType(global::Chat.UI.Localization.I18n.T(TextKey.LanguagePacks))
+                {
+                    Patterns = ["*.json"],
+                    MimeTypes = ["application/json"]
+                }
+            ]
+        });
+        var paths = new List<string>();
+        foreach (var file in files)
+            if (file.TryGetLocalPath() is { Length: > 0 } path) paths.Add(path);
+        return paths;
+    }
+
+    private async Task SaveLanguageTemplateAsync(string fileName, string json)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = global::Chat.UI.Localization.I18n.T(TextKey.ExportLanguageTemplate),
+            SuggestedFileName = fileName,
+            FileTypeChoices =
+            [
+                new FilePickerFileType(global::Chat.UI.Localization.I18n.T(TextKey.LanguagePacks))
+                {
+                    Patterns = ["*.json"],
+                    MimeTypes = ["application/json"]
+                }
+            ]
+        });
+        if (file is null) return;
+        await using var stream = await file.OpenWriteAsync();
+        await using var writer = new StreamWriter(stream);
+        await writer.WriteAsync(json);
     }
 
     private async Task<Stream?> OpenSaveStreamAsync(string fileName)

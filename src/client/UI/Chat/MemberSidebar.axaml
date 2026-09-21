@@ -11,9 +11,9 @@
       <Setter Property="Margin" Value="0,0,0,1" />
     </Style>
   </UserControl.Styles>
-  <Border Width="220" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0">
+  <Border Width="220" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,0,0,0">
     <Grid RowDefinitions="52,*">
-      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+      <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,0">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
           <TextBlock Text="{i18n:T PageParticipants}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
           <TextBlock Grid.Column="1" Text="{Binding ParticipantCount}" Classes="quiet" FontSize="12" VerticalAlignment="Center" IsVisible="{Binding HasParticipants}" />

@@ -2,16 +2,16 @@
  x:Class="Chat.UI.Preview.DesignPreviewWindow" x:DataType="vm:WorkspaceViewModel" Width="1200" Height="854" MinWidth="980" MinHeight="640" ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="42">
   <Window.KeyBindings><KeyBinding Gesture="Meta+F" Command="{Binding ToggleSearch}" /><KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearch}" /><KeyBinding Gesture="Escape" Command="{Binding Escape}" /></Window.KeyBindings>
   <Grid ColumnDefinitions="72,220,*" RowDefinitions="42,*,66">
-    <Border Grid.ColumnSpan="2" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
+    <Border Grid.ColumnSpan="2" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Command="{Binding Unavailable}"><StackPanel Orientation="Horizontal" Spacing="10"><TextBlock Text="林间" FontSize="13" FontWeight="Medium" /><PathIcon Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></StackPanel></Button>
     </Border>
     <vm:ChannelTabs Grid.Column="2" />
-    <Border Grid.Row="1" Background="{StaticResource RailBrush}">
+    <Border Grid.Row="1" Background="{DynamicResource RailBrush}">
       <StackPanel Margin="0,14" Spacing="10">
         <ItemsControl ItemsSource="{Binding PreviewServers}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:PreviewServerItem">
             <Grid Height="58">
-              <Border Width="3" Height="28" Background="{StaticResource AccentBrush}" CornerRadius="1" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsSelected}" />
+              <Border Width="3" Height="28" Background="{DynamicResource AccentBrush}" CornerRadius="1" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding IsSelected}" />
               <Border Width="42" Height="42" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.Tip="{Binding Name}"><c:Avatar Source="{Binding Avatar}" /></Border>
             </Grid>
           </DataTemplate></ItemsControl.ItemTemplate>
@@ -22,7 +22,7 @@
     <preview:PreviewChannelSidebar Grid.Row="1" Grid.Column="1" />
     <vm:AccountBar Grid.Row="2" Grid.ColumnSpan="2" />
     <motion:MotionHost Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Preset="Fade" Trigger="{Binding SelectedChannel}"><vm:ConversationView /></motion:MotionHost>
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Background="#333333" BorderBrush="{StaticResource FocusBrush}" BorderThickness="1" IsVisible="{Binding HasNotice}" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="280" Padding="14,6" Margin="20,0,20,106">
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Background="#333333" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" IsVisible="{Binding HasNotice}" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="280" Padding="14,6" Margin="20,0,20,106">
       <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
     </Border>
   </Grid>

@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:channel="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Channels.LiveChannelTabs" x:DataType="vm:ShellViewModel" x:Name="Tabs">
-  <Border Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1">
+  <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
       <ItemsControl ItemsSource="{Binding OpenChannels}" HorizontalAlignment="Left">
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -14,7 +14,7 @@
               </StackPanel>
             </Button>
             <Button Grid.Column="1" Classes="icon tabClose" Command="{Binding #Tabs.((vm:ShellViewModel)DataContext).CloseOpenChannel}" CommandParameter="{Binding}" AutomationProperties.Name="{i18n:T CloseChannelTab}" ToolTip.Tip="{Binding #Tabs.((vm:ShellViewModel)DataContext).CloseTabShortcutTip}"><PathIcon Data="{StaticResource IconClose}" Width="12" Height="12" /></Button>
-            <Border Grid.ColumnSpan="2" Background="{StaticResource AccentBrush}" Height="2" CornerRadius="1" Margin="16,0" VerticalAlignment="Bottom" IsVisible="{Binding IsSelected}" IsHitTestVisible="False" />
+            <Border Grid.ColumnSpan="2" Background="{DynamicResource AccentBrush}" Height="2" CornerRadius="1" Margin="16,0" VerticalAlignment="Bottom" IsVisible="{Binding IsSelected}" IsHitTestVisible="False" />
           </Grid>
         </DataTemplate></ItemsControl.ItemTemplate>
       </ItemsControl>

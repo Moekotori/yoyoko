@@ -1,0 +1,13 @@
+{
+  "code": "ko",
+  "name": "한국어",
+  "fallback": "en",
+  "strings": {
+    "Settings": "설정",
+    "Language": "언어",
+    "GeneralSettings": "일반",
+    "ImportLanguagePack": "가져오기",
+    "ExportLanguageTemplate": "템플릿 내보내기",
+    "DropLanguagePack": "JSON 언어 팩을 여기에 드롭"
+  }
+}

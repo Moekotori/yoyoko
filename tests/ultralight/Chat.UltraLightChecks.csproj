@@ -2,6 +2,10 @@
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/client/App/Chat.App.csproj" />
+    <ProjectReference Include="../../src/client/UI/Chat.UI.csproj" />
+    <ProjectReference Include="../../src/client/Core/Chat.Core.csproj" />
+    <ProjectReference Include="../../src/client/Domain/Chat.Domain.csproj" />
+    <ProjectReference Include="../../src/client/Protocol/Chat.Protocol.csproj" />
     <PackageReference Include="Avalonia.Headless" />
   </ItemGroup>
 </Project>

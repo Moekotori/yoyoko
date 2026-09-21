@@ -8,7 +8,7 @@
     <Style Selector="ListBoxItem:selected TextBlock.deviceCheck"><Setter Property="Opacity" Value="1" /></Style>
   </UserControl.Styles>
   <StackPanel Spacing="4">
-    <TextBlock Text="{Binding Title, ElementName=Root}" FontSize="11" Foreground="{StaticResource MutedTextBrush}" Margin="8,4,8,5" />
+    <TextBlock Text="{Binding Title, ElementName=Root}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" Margin="8,4,8,5" />
     <ListBox x:Name="DeviceList" ItemsSource="{Binding Choices, ElementName=Root}"
       SelectedItem="{Binding SelectedDevice, ElementName=Root, Mode=TwoWay}" MaxHeight="224"
       AutomationProperties.Name="{Binding Title, ElementName=Root}" PointerReleased="OnChoose" KeyDown="OnKeyDown">

@@ -95,6 +95,29 @@ Check(Locale.Parse("fr").Code == "en", "unsupported locale falls back to English
 Check(catalog.Get(Locale.Chinese, TextKey.Settings) == "设置", "Chinese settings label");
 Check(catalog.Get(Locale.English, TextKey.Settings) == "Settings", "English settings label");
 Check(catalog.Get(Locale.Japanese, TextKey.Settings) == "設定", "Japanese settings label");
+var packDir = Path.Combine(Path.GetTempPath(), "chat-lang-" + Guid.NewGuid());
+try
+{
+    var packs = LanguagePackStore.Open(packDir);
+    var overlay = """{"code":"en","name":"English","strings":{"Settings":"Prefs"}}"""u8.ToArray();
+    packs.ImportBytes(overlay);
+    var overlayed = new TextCatalog(packs);
+    Check(overlayed.Get(Locale.English, TextKey.Settings) == "Prefs", "imported pack overlays built-in English");
+    Check(overlayed.Get(Locale.English, TextKey.Language) == "Language", "overlay keeps missing keys");
+    var korean = """{"code":"ko","name":"한국어","fallback":"en","strings":{"Settings":"설정"}}"""u8.ToArray();
+    var ko = packs.ImportBytes(korean);
+    Check(ko.Code == "ko" && overlayed.Available.Any(item => item.Code == "ko"), "custom locale appears in available list");
+    Check(overlayed.Get(ko, TextKey.Settings) == "설정", "custom locale uses pack strings");
+    Check(overlayed.Get(ko, TextKey.Language) == "Language", "custom locale falls back to English");
+    Check(Locale.Parse("ko-KR", packs.Available).Code == "ko", "system ko-KR maps to imported pack");
+    var template = packs.TemplateJson(new TextCatalog());
+    Check(template.Contains("\"Settings\"", StringComparison.Ordinal) && template.Contains("\"code\": \"xx\"", StringComparison.Ordinal), "template json includes keys");
+    try { packs.ImportBytes("{}"u8.ToArray()); throw new Exception("empty pack accepted"); }
+    catch (LanguagePackException fault) { Check(fault.Key == TextKey.LanguagePackInvalid, "invalid pack rejected"); }
+    packs.Remove("en");
+    Check(overlayed.Get(Locale.English, TextKey.Settings) == "Settings", "removing overlay restores built-in");
+}
+finally { if (Directory.Exists(packDir)) Directory.Delete(packDir, true); }
 Check(catalog.Get(Locale.Chinese, TextKey.ConnectedServer) == "已连接", "Chinese connected label");
 Check(catalog.Get(Locale.Chinese, TextKey.DisconnectServer) == "断开", "Chinese disconnect label");
 Check(MessageMarkup.MentionsUser("hey @Ada now", "ada"), "mention scan is case-insensitive");
@@ -186,6 +209,19 @@ if (args.Length == 2 && args[0] == "--gateway")
     await gateway.SendAsync(new GatewayEnvelope("identify", null, null, identify), timeout.Token);
     Check(!await events.MoveNextAsync(), "live Gateway rejects incompatible version");
 }
+var markup = MessageMarkup.Parse("say **bold** and `code`");
+Check(markup.Any(span => span is { Kind: MarkupKind.Bold, Text: "bold" })
+    && markup.Any(span => span is { Kind: MarkupKind.Code, Text: "code" }), "markdown bold and code");
+Check(MessageMarkup.Parse("~~old~~")[0] is { Kind: MarkupKind.Strike, Text: "old" }, "strikethrough");
+var mathSpans = MessageMarkup.Parse("energy $E=mc^2$ rest");
+Check(mathSpans.Count == 3 && mathSpans[1] is { Kind: MarkupKind.Math, Text: "E=mc^2" }, "inline latex delimiter");
+Check(MessageMarkup.Parse("$$\\frac{1}{2}$$")[0].Kind == MarkupKind.DisplayMath, "display latex delimiter");
+Check(MessageMarkup.MentionsUser("ping @alice now", "alice"), "mention scan ignores surrounding text");
+Check(MessageMarkup.Parse("[docs](https://example.com)")[0] is { Kind: MarkupKind.Link, Text: "docs", Extra: "https://example.com" }, "markdown link");
+Check(MathMarkup.Parse("\\frac{1}{2}") is MathFrac, "latex fraction tree");
+Check(MathMarkup.Parse("\\alpha") is MathText { Text: "α" }, "latex greek");
+Check(MathMarkup.Parse("x^2") is MathScripts, "latex superscript");
+Check(MathMarkup.Parse("\\mathbb{R}") is MathText { Text: "ℝ" }, "latex blackboard");
 Console.WriteLine($"{checks} foundation checks passed.");
 
 public class NoVoiceIo : System.Reflection.DispatchProxy
