@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Animation.Easings;
 
 namespace Chat.Motion;
 
@@ -12,12 +13,14 @@ public sealed class Motion : AvaloniaObject
     public static void SetReduceMotion(StyledElement element, bool value) => element.SetValue(ReduceMotionProperty, value);
 }
 
-public enum MotionPreset { None, Fade, Enter, SlideLeft, SlideRight }
+public enum MotionPreset { None, Fade, Enter, SlideLeft, SlideRight, SlideUp, SlideDown }
 
 /// <summary>Short, finite durations shared by page motion and control feedback.</summary>
 public static class MotionTokens
 {
     public static TimeSpan Feedback { get; } = TimeSpan.FromMilliseconds(120);
     public static TimeSpan Page { get; } = TimeSpan.FromMilliseconds(160);
+    public static TimeSpan Reveal { get; } = TimeSpan.FromMilliseconds(220);
+    public static Easing RevealEase { get; } = new SplineEasing(0.16, 1, 0.3, 1);
     public const double Distance = 8;
 }

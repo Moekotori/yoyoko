@@ -51,6 +51,7 @@ public sealed partial class ShellViewModel
     {
         if (!IsSignedIn || IsChannelEditorOpen) return;
         if (ProfileOpen) ProfileOpen = false;
+        CloseMention();
         if (SwitcherOpen)
         {
             FocusSwitcher?.Invoke();
@@ -114,7 +115,7 @@ public sealed partial class ShellViewModel
 
     public void OpenSearch()
     {
-        if (IsChannelEditorOpen || SelectedChannel is not { Kind: "text" }) return;
+        if (IsChannelEditorOpen || SelectedChannel is not { CanChat: true }) return;
         if (ProfileOpen) ProfileOpen = false;
         CloseJump();
         ShowSettings = false;
@@ -160,7 +161,7 @@ public sealed partial class ShellViewModel
     private void RefreshJump()
     {
         var query = SwitcherQuery.Trim();
-        var all = TextChannels.Concat(VoiceChannels).ToList();
+        var all = TextChannels.Concat(VoiceChannels).Concat(DirectChannels).ToList();
         var visited = new Dictionary<Guid, long>();
         foreach (var row in _inbox.Values)
             if (row.VisitedAt is long at) visited[row.ChannelId] = at;
@@ -205,10 +206,16 @@ public sealed partial class ShellViewModel
         var seen = new HashSet<Guid>();
         foreach (var person in Participants.Concat(VoicePeople()))
         {
-            if (!seen.Add(person.Id)) continue;
+            if (person.IsFixture || !seen.Add(person.Id)) continue;
             if (person.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
                 || person.Username.Contains(query, StringComparison.OrdinalIgnoreCase))
                 yield return person;
+        }
+        if (query.Length == 0) yield break;
+        foreach (var person in CommunityPeople(query))
+        {
+            if (person.IsFixture || !seen.Add(person.Id)) continue;
+            yield return person;
         }
     }
 
@@ -235,8 +242,9 @@ public sealed partial class ShellViewModel
     private IReadOnlyList<ChannelItem> VisibleChannels()
     {
         var list = new List<ChannelItem>();
+        if (DirectExpanded) list.AddRange(DirectChannels);
         if (TextExpanded) list.AddRange(TextChannels);
-        if (list.Count == 0) list.AddRange(TextChannels);
+        if (list.Count == 0) list.AddRange(DirectChannels.Concat(TextChannels));
         return list;
     }
 

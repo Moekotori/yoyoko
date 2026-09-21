@@ -1,0 +1,9 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:Chat.UI.Components"
+  x:Class="Chat.UI.Components.Banner" x:DataType="local:Banner" x:Name="Root" ClipToBounds="True">
+  <Panel>
+    <Border Background="{Binding Fallback, ElementName=Root}" />
+    <Image Stretch="UniformToFill" Source="{Binding Source, ElementName=Root}"
+      IsVisible="{Binding HasImage, ElementName=Root}" IsHitTestVisible="False" />
+  </Panel>
+</UserControl>

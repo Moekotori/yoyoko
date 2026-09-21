@@ -8,7 +8,18 @@ namespace Chat.UI.Chat;
 
 public partial class UserCard : UserControl
 {
-    public UserCard() => InitializeComponent();
+    public UserCard()
+    {
+        InitializeComponent();
+        DataContextChanged += (_, _) => RequestBanner();
+        AttachedToVisualTree += (_, _) => RequestBanner();
+    }
+
+    private void RequestBanner()
+    {
+        if (DataContext is MemberProfile member && Shell() is { } shell)
+            shell.RequestBanner(member);
+    }
 
     private async void CopyId(object? sender, RoutedEventArgs e)
     {
@@ -21,6 +32,14 @@ public partial class UserCard : UserControl
     {
         if (DataContext is MemberProfile { HasHandle: true } member)
             await MemberGestures.CopyAsync(this, member.Username);
+        e.Handled = true;
+    }
+
+    private void Message(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MemberProfile member && Shell() is { } shell)
+            shell.MessageMember(member);
+        CloseFlyout();
         e.Handled = true;
     }
 
@@ -37,6 +56,13 @@ public partial class UserCard : UserControl
         if (Shell() is { } shell)
             shell.OpenProfile.Execute(null);
         CloseFlyout();
+        e.Handled = true;
+    }
+
+    private void ChangeBanner(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MemberProfile { IsSelf: true } && Shell() is { } shell)
+            shell.Settings.Profile.ChangeBanner.Execute(null);
         e.Handled = true;
     }
 

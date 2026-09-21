@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voice</title>
+  <link rel="stylesheet" href="/voice/app.css">
+</head>
+<body>
+  <main>
+    <p id="instance" class="quiet"></p>
+    <h1 id="room">Voice</h1>
+    <p id="count" class="quiet"></p>
+    <p id="status" class="status" hidden></p>
+    <form id="gate">
+      <label for="name" id="nameLabel">Display name</label>
+      <input id="name" name="name" maxlength="100" autocomplete="nickname" required>
+      <button type="submit" id="join">Join</button>
+    </form>
+    <section id="call" hidden>
+      <ul id="people"></ul>
+      <div class="actions">
+        <button type="button" id="mute"></button>
+        <button type="button" id="deaf"></button>
+        <button type="button" id="leave" class="danger"></button>
+      </div>
+    </section>
+  </main>
+  <script src="/voice/livekit-client.js"></script>
+  <script src="/voice/app.js"></script>
+</body>
+</html>

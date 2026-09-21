@@ -30,13 +30,13 @@ public sealed class AvatarPlayback : IDisposable, INotifyPropertyChanged
     public bool IsAnimated { get; }
     public long DecodedBytes => _frames.Sum(frame => (long)frame.PixelSize.Width * frame.PixelSize.Height * 4);
 
-    public static AvatarPlayback Decode(byte[] bytes, int maxEdge, bool allowAnimation = true)
+    public static AvatarPlayback Decode(byte[] bytes, int maxEdge, bool allowAnimation = true, int maxFrames = MaxFrames)
     {
         using var data = SKData.CreateCopy(bytes);
         using var codec = SKCodec.Create(data) ?? throw new InvalidDataException("Invalid avatar.");
         if (allowAnimation && codec.FrameCount > 1)
         {
-            try { return DecodeMotion(codec, maxEdge); }
+            try { return DecodeMotion(codec, maxEdge, Math.Clamp(maxFrames, 1, MaxFrames)); }
             catch { /* A failed animation falls back to a bounded first frame. */ }
         }
         using var input = new MemoryStream(bytes, writable: false);
@@ -63,14 +63,14 @@ public sealed class AvatarPlayback : IDisposable, INotifyPropertyChanged
         SyncTimer();
     }
 
-    private static AvatarPlayback DecodeMotion(SKCodec codec, int maxEdge)
+    private static AvatarPlayback DecodeMotion(SKCodec codec, int maxEdge, int maxFrames)
     {
         var info = codec.Info;
         var scale = Math.Min(1f, maxEdge / (float)Math.Max(info.Width, info.Height));
         var width = Math.Max(1, (int)(info.Width * scale));
         var height = Math.Max(1, (int)(info.Height * scale));
         var imageInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        var count = Math.Min(codec.FrameCount, MaxFrames);
+        var count = Math.Min(codec.FrameCount, maxFrames);
         var frames = new Bitmap[count];
         var delays = new int[count];
         var frameInfo = codec.FrameInfo;

@@ -8,54 +8,52 @@
   </Style>
   <Style Selector="Border.settingsDivider"><Setter Property="Height" Value="1" /><Setter Property="Background" Value="{DynamicResource DividerBrush}" /><Setter Property="Margin" Value="0,32" /></Style>
   <Style Selector="Button.settingsNav">
-    <Setter Property="Height" Value="42" /><Setter Property="Padding" Value="14,0" />
-    <Setter Property="FontSize" Value="14" /><Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Height" Value="46" /><Setter Property="Padding" Value="12,0" />
+    <Setter Property="FontSize" Value="15" /><Setter Property="CornerRadius" Value="8" />
     <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Name="NavSurface" Background="#00363636" CornerRadius="{TemplateBinding CornerRadius}">
-          <Grid>
-            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-              Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <Border Name="ActiveLine" CornerRadius="1" Width="2" Height="8" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{DynamicResource AccentBrush}" Opacity="0" />
-          </Grid>
+        <Border Name="NavSurface" Background="Transparent" CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+            Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Stretch" />
         </Border>
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector="Button.settingsNav.selected"><Setter Property="Foreground" Value="#E8E8E8" /><Setter Property="FontWeight" Value="Medium" /></Style>
-  <Style Selector="Button.settingsNav.selected /template/ Border#NavSurface"><Setter Property="Background" Value="#383838" /></Style>
-  <Style Selector="Button.settingsNav.selected /template/ Border#ActiveLine"><Setter Property="Height" Value="16" /><Setter Property="Opacity" Value="1" /></Style>
-  <Style Selector="Button.settingsNav:pointerover /template/ Border#NavSurface"><Setter Property="Background" Value="#333333" /></Style>
-  <Style Selector="Button.settingsNav.selected:pointerover /template/ Border#NavSurface"><Setter Property="Background" Value="#404040" /></Style>
+  <Style Selector="Button.settingsNav.selected"><Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" /></Style>
+  <Style Selector="Button.settingsNav:pointerover /template/ Border#NavSurface"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /></Style>
+  <Style Selector="Button.settingsNav.selected PathIcon"><Setter Property="Opacity" Value="1" /></Style>
   <Style Selector="Button.settingsNav:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Button.settingsNav:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Button.settingsNav:focus-visible /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="BorderThickness" Value="0" /><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /></Style>
-  <Style Selector="Button.settingsNav:focus-visible /template/ Border#ActiveLine"><Setter Property="Height" Value="16" /><Setter Property="Opacity" Value="1" /></Style>
   <Style Selector="Border.settingsDrop">
-    <Setter Property="Background" Value="#2A2A2A" /><Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="#2A2A2A" /><Setter Property="CornerRadius" Value="8" />
     <Setter Property="BorderBrush" Value="Transparent" /><Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Border.settingsDrop.active"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Style>
   <Style Selector="Border.settingsGroup">
-    <Setter Property="Background" Value="#242424" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource RaisedBrush}" />
+    <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="0,4" />
-    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
   </Style>
   <Style Selector="Border.settingsGroup.drop"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /><Setter Property="Background" Value="#2A2A2A" /></Style>
   <Style Selector="Border.settingsHit, Border.settingsPad">
-    <Setter Property="MinHeight" Value="52" /><Setter Property="Padding" Value="16,8" />
-    <Setter Property="Margin" Value="4,0" /><Setter Property="CornerRadius" Value="6" />
+    <Setter Property="MinHeight" Value="44" /><Setter Property="Padding" Value="12,6" />
+    <Setter Property="Margin" Value="4,0" /><Setter Property="CornerRadius" Value="8" />
     <Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Border.settingsHit"><Setter Property="Cursor" Value="Hand" /></Style>
-  <Style Selector="Border.settingsHit:pointerover, Border.settingsPad:pointerover"><Setter Property="Background" Value="#2E2E2E" /></Style>
   <Style Selector="Border.settingsHit:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
-  <Style Selector="Grid.settingsRow"><Setter Property="MinHeight" Value="52" /><Setter Property="Margin" Value="20,8" /></Style>
+  <Style Selector="Grid.settingsRow">
+    <Setter Property="MinHeight" Value="44" /><Setter Property="Margin" Value="16,6" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
   <Style Selector="Border.settingsHit.recording"><Setter Property="Background" Value="#333333" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Border.shortcutCap">
     <Setter Property="MinWidth" Value="26" /><Setter Property="Height" Value="26" /><Setter Property="Padding" Value="7,0" />
@@ -67,12 +65,21 @@
     <Setter Property="Width" Value="26" /><Setter Property="Height" Value="26" /><Setter Property="Padding" Value="6" />
     <Setter Property="VerticalAlignment" Value="Center" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
   </Style>
-  <Style Selector="Grid.settingsFact"><Setter Property="MinHeight" Value="52" /><Setter Property="Margin" Value="20,0" /></Style>
-  <Style Selector="TextBlock.settingsLabel"><Setter Property="FontSize" Value="15" /><Setter Property="VerticalAlignment" Value="Center" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
-  <Style Selector="Border.settingsRowDivider"><Setter Property="Height" Value="1" /><Setter Property="Background" Value="#303030" /></Style>
+  <Style Selector="Grid.settingsFact"><Setter Property="MinHeight" Value="44" /><Setter Property="Margin" Value="16,0" /></Style>
+  <Style Selector="TextBlock.settingsLabel"><Setter Property="FontSize" Value="14" /><Setter Property="VerticalAlignment" Value="Center" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
+  <Style Selector="Border.settingsRowDivider"><Setter Property="Height" Value="1" /><Setter Property="Background" Value="{DynamicResource DividerBrush}" /><Setter Property="Margin" Value="16,0" /></Style>
   <Style Selector="ComboBox.settingsSelect">
-    <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Height" Value="40" /><Setter Property="FontSize" Value="14" />
+    <Setter Property="HorizontalAlignment" Value="Right" /><Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Height" Value="30" /><Setter Property="MinHeight" Value="30" />
+    <Setter Property="MinWidth" Value="240" /><Setter Property="Width" Value="240" /><Setter Property="MaxWidth" Value="240" />
+    <Setter Property="Padding" Value="8,2,6,2" /><Setter Property="FontSize" Value="13" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="ComboBox.settingsSelect[IsDropDownOpen=true] /template/ Border#PopupBorder">
+    <Setter Property="CornerRadius" Value="10" /><Setter Property="Padding" Value="4" />
+  </Style>
+  <Style Selector="ComboBox.settingsSelect ComboBoxItem">
+    <Setter Property="MinHeight" Value="30" /><Setter Property="Padding" Value="8,4" /><Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="ToggleSwitch.settingsToggle">
     <Setter Property="MinWidth" Value="0" /><Setter Property="VerticalAlignment" Value="Center" />
@@ -101,19 +108,21 @@
   <Style Selector="ToggleSwitch.settingsToggle:focus-visible /template/ Border#SwitchFocus"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="ToggleSwitch.settingsToggle:disabled /template/ Border#SwitchFocus"><Setter Property="Opacity" Value="0.4" /></Style>
   <Style Selector="TextBox.settingsField">
-    <Setter Property="Height" Value="44" /><Setter Property="Padding" Value="14,10" /><Setter Property="FontSize" Value="14" />
+    <Setter Property="Height" Value="36" /><Setter Property="Padding" Value="10,6" /><Setter Property="FontSize" Value="13" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="VerticalContentAlignment" Value="Center" /><Setter Property="Background" Value="#292929" />
     <Setter Property="BorderBrush" Value="#424242" /><Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="TextBox.settingsField:focus /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Background" Value="#2B2B2B" /></Style>
   <Style Selector="Button.settingsSecondary">
-    <Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="Padding" Value="12,6" /><Setter Property="FontSize" Value="13" />
-    <Setter Property="MinHeight" Value="34" /><Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="Padding" Value="10,4" /><Setter Property="FontSize" Value="13" />
+    <Setter Property="MinHeight" Value="30" /><Setter Property="Height" Value="30" /><Setter Property="CornerRadius" Value="8" />
     <Setter Property="Background" Value="#333333" /><Setter Property="Foreground" Value="#DCDCDC" />
   </Style>
   <Style Selector="Button.settingsPrimary">
-    <Setter Property="HorizontalAlignment" Value="Right" /><Setter Property="MinWidth" Value="104" /><Setter Property="Height" Value="38" />
-    <Setter Property="Padding" Value="20,8" /><Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="HorizontalAlignment" Value="Right" /><Setter Property="MinWidth" Value="104" /><Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="16,8" /><Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="CornerRadius" Value="8" />
   </Style>
   <Style Selector="Button.settingsPrimary:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#F0F0F0" /><Setter Property="Foreground" Value="#212121" /></Style>
   <Style Selector="Button.settingsPrimary:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#CCCCCC" /><Setter Property="Foreground" Value="#212121" /></Style>

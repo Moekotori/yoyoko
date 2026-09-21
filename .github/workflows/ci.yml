@@ -128,7 +128,7 @@ jobs:
       - run: docker compose up -d
       - run: |
           for i in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8080/health/live; then
+            if curl --fail --silent http://127.0.0.1:8080/health/ready; then
               CHAT_BASE_URL=http://127.0.0.1:8080 node --test tests/node/live.test.mjs
               exit $?
             fi

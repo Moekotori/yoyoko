@@ -2,7 +2,7 @@ namespace Chat.Core.Messaging;
 
 public enum MarkupKind
 {
-    Text, Bold, Italic, Code, Fence, Spoiler, Mention, Link, Strike, Math, DisplayMath,
+    Text, Bold, Italic, Code, Fence, Spoiler, Mention, Link, Strike, Underline, Math, DisplayMath,
     Heading, Quote, ListItem, Table, Rule
 }
 
@@ -17,6 +17,13 @@ public static class MessageMarkup
     private static readonly MarkupSpan[][] CacheValues = new MarkupSpan[CacheSlots][];
     private static uint _cacheClock;
 
+    public const string Everyone = "everyone";
+    public const string Here = "here";
+
+    public static bool IsReserved(string token) =>
+        token.Equals(Everyone, StringComparison.OrdinalIgnoreCase)
+        || token.Equals(Here, StringComparison.OrdinalIgnoreCase);
+
     public static bool MentionsUser(string? content, string username)
     {
         if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(username)) return false;
@@ -24,6 +31,46 @@ public static class MessageMarkup
             if (span.Kind == MarkupKind.Mention && span.Text.Equals(username, StringComparison.OrdinalIgnoreCase))
                 return true;
         return false;
+    }
+
+    public static bool MentionsEveryone(string? content)
+    {
+        if (string.IsNullOrEmpty(content)) return false;
+        foreach (var span in Parse(content))
+            if (span.Kind == MarkupKind.Mention && span.Text.Equals(Everyone, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
+
+    public static bool MentionsHere(string? content)
+    {
+        if (string.IsNullOrEmpty(content)) return false;
+        foreach (var span in Parse(content))
+            if (span.Kind == MarkupKind.Mention && span.Text.Equals(Here, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
+
+    public static bool MentionsAccount(string? content, string username, bool mentionEveryone = false,
+        bool mentionHere = false, string? displayName = null) =>
+        mentionEveryone || mentionHere || MentionsEveryone(content) || MentionsHere(content)
+        || MentionsUser(content, username)
+        || MentionsUser(content, displayName ?? "");
+
+    public readonly record struct MentionQuery(int At, int End, string Filter);
+
+    public static bool TryComposerQuery(string? text, int caret, out MentionQuery query)
+    {
+        query = default;
+        if (string.IsNullOrEmpty(text) || caret < 1 || caret > text.Length) return false;
+        var end = caret;
+        while (end < text.Length && IsNameChar(text[end])) end++;
+        var scan = caret;
+        while (scan > 0 && IsNameChar(text[scan - 1])) scan--;
+        if (scan == 0 || text[scan - 1] != '@') return false;
+        if (scan >= 2 && IsNameChar(text[scan - 2])) return false;
+        query = new(scan - 1, end, text[scan..caret]);
+        return true;
     }
 
     public static bool IdAfter(Guid message, Guid? cursor) =>
@@ -37,6 +84,8 @@ public static class MessageMarkup
         {
             var c = content[i];
             if (c is '*' or '_' or '~' or '`' or '$' or '[' or '\\') return false;
+            if (c == '<' && HtmlMarkup.LooksLike(content, i)) return false;
+            if (c == '&' && HtmlMarkup.LooksLikeEntity(content, i)) return false;
             if ((c is 'h' or 'H') && StartsUrl(content, i, out _)) return false;
             if (lineStart)
             {
@@ -65,7 +114,7 @@ public static class MessageMarkup
         if (IsPlain(content)) parsed = [new(MarkupKind.Text, content)];
         else
         {
-            var spans = ParseCore(content);
+            var spans = ParseCore(content, 0);
             parsed = Merge(spans);
             if (parsed.Length > MaxSpans)
                 parsed = [.. parsed.AsSpan(0, MaxSpans)];
@@ -79,7 +128,17 @@ public static class MessageMarkup
         return parsed;
     }
 
-    private static List<MarkupSpan> ParseCore(string content)
+    internal static void AppendParsed(string content, List<MarkupSpan> spans, int depth)
+    {
+        if (string.IsNullOrEmpty(content) || depth > HtmlMarkup.MaxDepth) return;
+        foreach (var span in ParseCore(content, depth))
+        {
+            if (spans.Count >= MaxSpans) break;
+            spans.Add(span);
+        }
+    }
+
+    private static List<MarkupSpan> ParseCore(string content, int depth)
     {
         var spans = new List<MarkupSpan>(8);
         var i = 0;
@@ -105,6 +164,12 @@ public static class MessageMarkup
             if (TryMath(content, ref i, display: false, spans)) continue;
             if (TryWrapped(content, ref i, "*", "*", MarkupKind.Italic, spans)) continue;
             if (TryUnderscoreItalic(content, ref i, spans)) continue;
+            if (HtmlMarkup.TryParse(content, ref i, spans, depth, AppendParsed)) continue;
+            if (HtmlMarkup.TryEntity(content, ref i, out var entity))
+            {
+                spans.Add(new(MarkupKind.Text, entity));
+                continue;
+            }
             if (TryMention(content, ref i, spans)) continue;
             if (TryMarkdownLink(content, ref i, spans)) continue;
             if (TryLink(content, ref i, spans)) continue;
@@ -300,7 +365,7 @@ public static class MessageMarkup
         var start = i + 1;
         var end = start;
         while (end < text.Length && IsNameChar(text[end])) end++;
-        if (end - start < 2) return false;
+        if (end <= start) return false;
         spans.Add(new(MarkupKind.Mention, text[start..end]));
         i = end;
         return true;
@@ -330,11 +395,13 @@ public static class MessageMarkup
     {
         var c = text[i];
         if (c is '*' or '`' or '|' or '@' or '$' or '~' or '_' or '[') return true;
+        if (c == '<' && HtmlMarkup.LooksLike(text, i)) return true;
+        if (c == '&' && HtmlMarkup.LooksLikeEntity(text, i)) return true;
         return (c is 'h' or 'H') && StartsUrl(text, i, out _);
     }
 
     private static bool IsNameChar(char value) =>
-        char.IsAsciiLetterOrDigit(value) || value is '_' or '-';
+        char.IsLetterOrDigit(value) || value is '_' or '-';
 
     private static bool IsRule(string text, int i)
     {

@@ -2,6 +2,8 @@ use chat_media_worker::devices::parse_device_id;
 use livekit::options::{AudioEncoding, TrackPublishOptions};
 use livekit::prelude::*;
 use livekit::{AudioProcessingOptions, PlatformAudio, PlayoutDeviceId, RecordingDeviceId};
+use serde_json::json;
+use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -206,6 +208,12 @@ fn set_remote_audio_enabled(room: &Room, enabled: bool) {
     }
 }
 
+fn emit_event(name: &str, mut payload: serde_json::Value) {
+    payload["event"] = json!(name);
+    let _ = writeln!(io::stdout(), "{payload}");
+    let _ = io::stdout().flush();
+}
+
 fn spawn_events(
     room: Arc<Room>,
     deaf: Arc<AtomicBool>,
@@ -213,11 +221,27 @@ fn spawn_events(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         while let Some(event) = events.recv().await {
-            if let RoomEvent::TrackSubscribed { publication, .. } = event
-                && publication.kind() == TrackKind::Audio
-                && deaf.load(Ordering::Relaxed)
-            {
-                publication.set_enabled(false);
+            match event {
+                RoomEvent::TrackSubscribed { publication, .. }
+                    if publication.kind() == TrackKind::Audio
+                        && deaf.load(Ordering::Relaxed) =>
+                {
+                    publication.set_enabled(false);
+                }
+                RoomEvent::ActiveSpeakersChanged { speakers } => {
+                    let ids: Vec<String> = speakers
+                        .iter()
+                        .map(|speaker| speaker.identity().to_string())
+                        .collect();
+                    emit_event("speaking", json!({ "ids": ids }));
+                }
+                RoomEvent::Disconnected { reason } => {
+                    emit_event(
+                        "fault",
+                        json!({ "error": format!("LiveKit disconnected: {reason:?}") }),
+                    );
+                }
+                _ => {}
             }
             let _ = &room;
         }

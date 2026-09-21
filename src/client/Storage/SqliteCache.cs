@@ -9,10 +9,12 @@ namespace Chat.Storage;
 
 public sealed partial class SqliteCache : IInstanceStore, IMessageCache
 {
+    private readonly string _directory;
     private readonly string _connectionString;
     public SqliteCache(string path)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        _directory = Path.GetDirectoryName(Path.GetFullPath(path))!;
+        Directory.CreateDirectory(_directory);
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = path,
@@ -29,11 +31,12 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
         command.ExecuteNonQuery();
         command.CommandText = "PRAGMA user_version;";
         var version = Convert.ToInt32(command.ExecuteScalar());
-        if (version > 4) throw new InvalidDataException("Cache schema newer than this client.");
+        if (version > 5) throw new InvalidDataException("Cache schema newer than this client.");
         if (version < 1) Apply(connection, "Chat.Storage.Migrations.001_cache.sql");
         if (version < 2) Apply(connection, "Chat.Storage.Migrations.002_sync.sql");
         if (version < 3) Apply(connection, "Chat.Storage.Migrations.003_inbox.sql");
         if (version < 4) Apply(connection, "Chat.Storage.Migrations.004_visits.sql");
+        if (version < 5) Apply(connection, "Chat.Storage.Migrations.005_outbox.sql");
     }, cancellationToken);
 
     private static void Apply(SqliteConnection connection, string resource)
@@ -76,14 +79,65 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
         using var transaction = connection.BeginTransaction();
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "INSERT INTO messages VALUES ($instance,$account,$channel,$id,$payload) ON CONFLICT(instance_id,account_id,id) DO UPDATE SET payload=$payload";
-        Scope(command, scope);
-        command.Parameters.AddWithValue("$channel", message.ChannelId.ToString());
-        command.Parameters.AddWithValue("$id", message.Id.ToString());
-        command.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(message, ProtocolJson.Default.MessageDto));
+        WriteMessage(command, scope, message);
+        transaction.Commit();
+    }, cancellationToken);
+
+    public Task CommitMessageAsync(CacheScope scope, MessageDto message, string? sessionId, long seq,
+        CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        WriteMessage(command, scope, message);
+        WriteCursor(command, scope, sessionId, seq);
         command.ExecuteNonQuery();
-        // Initial bounded retention: max 1,000 rows per account/channel, expanded in Phase 1.
-        command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel AND id NOT IN (SELECT id FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel ORDER BY id DESC LIMIT 1000)";
+        transaction.Commit();
+    }, cancellationToken);
+
+    public Task CommitDeleteAsync(CacheScope scope, Guid channelId, Guid messageId, string? sessionId, long seq,
+        CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel AND id=$id";
+        Scope(command, scope);
+        command.Parameters.AddWithValue("$channel", channelId.ToString());
+        command.Parameters.AddWithValue("$id", messageId.ToString());
+        command.ExecuteNonQuery();
+        command.Parameters.Clear();
+        WriteCursor(command, scope, sessionId, seq);
+        command.ExecuteNonQuery();
+        transaction.Commit();
+    }, cancellationToken);
+
+    public Task RemoveMessageAsync(CacheScope scope, Guid channelId, Guid messageId, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel AND id=$id";
+        Scope(command, scope);
+        command.Parameters.AddWithValue("$channel", channelId.ToString());
+        command.Parameters.AddWithValue("$id", messageId.ToString());
+        command.ExecuteNonQuery();
+    }, cancellationToken);
+
+    public Task ClearChannelAsync(CacheScope scope, Guid channelId, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        Scope(command, scope);
+        command.Parameters.AddWithValue("$channel", channelId.ToString());
+        command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel";
+        command.ExecuteNonQuery();
+        command.CommandText = "DELETE FROM channel_inbox WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel";
+        command.ExecuteNonQuery();
+        command.CommandText = "DELETE FROM pending_sends WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel";
         command.ExecuteNonQuery();
         transaction.Commit();
     }, cancellationToken);
@@ -114,12 +168,13 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         Scope(command, scope);
-        foreach (var table in new[] { "messages", "servers", "channels", "users", "sync_state", "channel_inbox" })
+        foreach (var table in new[] { "messages", "servers", "channels", "users", "sync_state", "channel_inbox", "pending_sends" })
         {
             command.CommandText = $"DELETE FROM {table} WHERE instance_id=$instance AND account_id=$account";
             command.ExecuteNonQuery();
         }
         transaction.Commit();
+        DeleteOutboxRoot(scope);
     }, cancellationToken);
 
     public Task SaveCommunityAsync(CacheScope scope, CommunitySnapshot snapshot, CancellationToken cancellationToken) => Task.Run(() =>
@@ -149,7 +204,7 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
             command.Parameters.Clear();
             Scope(command, scope);
             command.Parameters.AddWithValue("$id", channel.Id.ToString());
-            command.Parameters.AddWithValue("$server", channel.ServerId.ToString());
+            command.Parameters.AddWithValue("$server", channel.ServerId?.ToString() ?? "");
             command.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(channel, ProtocolJson.Default.ChannelDto));
             command.ExecuteNonQuery();
         }
@@ -158,6 +213,8 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
         command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id NOT IN (SELECT id FROM channels WHERE instance_id=$instance AND account_id=$account)";
         command.ExecuteNonQuery();
         command.CommandText = "DELETE FROM channel_inbox WHERE instance_id=$instance AND account_id=$account AND channel_id NOT IN (SELECT id FROM channels WHERE instance_id=$instance AND account_id=$account)";
+        command.ExecuteNonQuery();
+        command.CommandText = "DELETE FROM pending_sends WHERE instance_id=$instance AND account_id=$account AND channel_id NOT IN (SELECT id FROM channels WHERE instance_id=$instance AND account_id=$account)";
         command.ExecuteNonQuery();
         foreach (var user in snapshot.Users)
         {
@@ -183,10 +240,7 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
     {
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO sync_state VALUES ($instance,$account,$session,$seq) ON CONFLICT(instance_id,account_id) DO UPDATE SET session_id=$session, last_committed_seq=$seq";
-        Scope(command, scope);
-        command.Parameters.AddWithValue("$session", (object?)sessionId ?? DBNull.Value);
-        command.Parameters.AddWithValue("$seq", seq);
+        WriteCursor(command, scope, sessionId, seq);
         command.ExecuteNonQuery();
     }, cancellationToken);
 
@@ -250,6 +304,38 @@ public sealed partial class SqliteCache : IInstanceStore, IMessageCache
         command.ExecuteNonQuery();
         return connection;
     }
+    private static void WriteMessage(SqliteCommand command, CacheScope scope, MessageDto message)
+    {
+        command.Parameters.Clear();
+        command.CommandText = "INSERT INTO messages VALUES ($instance,$account,$channel,$id,$payload) ON CONFLICT(instance_id,account_id,id) DO UPDATE SET payload=$payload";
+        Scope(command, scope);
+        command.Parameters.AddWithValue("$channel", message.ChannelId.ToString());
+        command.Parameters.AddWithValue("$id", message.Id.ToString());
+        command.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(message, ProtocolJson.Default.MessageDto));
+        command.ExecuteNonQuery();
+        command.CommandText = "DELETE FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel AND id NOT IN (SELECT id FROM messages WHERE instance_id=$instance AND account_id=$account AND channel_id=$channel ORDER BY id DESC LIMIT 1000)";
+        command.ExecuteNonQuery();
+    }
+
+    private static void WriteCursor(SqliteCommand command, CacheScope scope, string? sessionId, long seq)
+    {
+        command.Parameters.Clear();
+        command.CommandText =
+            """
+            INSERT INTO sync_state VALUES ($instance,$account,$session,$seq)
+            ON CONFLICT(instance_id,account_id) DO UPDATE SET
+                session_id=$session,
+                last_committed_seq=CASE
+                    WHEN $session IS NULL THEN 0
+                    WHEN $seq > last_committed_seq THEN $seq
+                    ELSE last_committed_seq
+                END
+            """;
+        Scope(command, scope);
+        command.Parameters.AddWithValue("$session", (object?)sessionId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$seq", seq);
+    }
+
     private static void Scope(SqliteCommand command, CacheScope scope)
     {
         command.Parameters.AddWithValue("$instance", scope.InstanceId.Value.ToString());

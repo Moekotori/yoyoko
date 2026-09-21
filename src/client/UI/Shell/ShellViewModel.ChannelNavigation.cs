@@ -27,7 +27,14 @@ public sealed partial class ShellViewModel
         var session = SelectedInstance?.Context.Session;
         var channel = SelectedChannel;
         DetachTimeline();
-        SetChannelLoading(session is not null && channel?.Kind == "text");
+        if (channel?.IsFixture == true)
+        {
+            SetChannelLoading(false);
+            Messages.Clear();
+            RefreshMessagePresentation();
+            return;
+        }
+        SetChannelLoading(session is not null && channel is { CanChat: true });
         Messages.Clear();
         RefreshMessagePresentation();
         if (session is null || channel is null) return;
@@ -35,7 +42,6 @@ public sealed partial class ShellViewModel
         {
             NotifyVoice();
             _ = Devices.RefreshAsync();
-            return;
         }
 
         var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
@@ -44,31 +50,36 @@ public sealed partial class ShellViewModel
         _timeline = timeline;
         // Both cached and remote snapshots belong to this selection. A queued callback
         // from an abandoned channel must never update or scroll the current one.
-        _timelineChanged = () => Dispatcher.UIThread.Post(() =>
+        _timelineChanged = () =>
         {
-            if (!ReferenceEquals(_timeline, timeline) || cancellation.IsCancellationRequested) return;
-            var firstSnapshot = IsChannelLoading;
-            SetChannelLoading(false);
-            SyncMessages();
-            if (firstSnapshot)
+            void Apply()
             {
-                _channelContentVersion++;
-                Changed(nameof(ChannelContentVersion));
-                if (!CanObserveTimeline) return;
-                if (ChannelHasUnread)
+                if (!ReferenceEquals(_timeline, timeline) || cancellation.IsCancellationRequested) return;
+                var firstSnapshot = IsChannelLoading;
+                SetChannelLoading(false);
+                SyncMessages();
+                if (firstSnapshot)
                 {
-                    _awayFromBottom = true;
-                    Changed(nameof(ShowJumpBar));
-                    ScrollToUnread?.Invoke();
-                }
-                else
-                {
-                    ScrollToLatest?.Invoke();
-                    if (LatestVisibleId() is Guid latest && SelectedChannel is { } selected)
-                        _ = MarkReadAsync(selected.Id, latest);
+                    _channelContentVersion++;
+                    Changed(nameof(ChannelContentVersion));
+                    if (!CanObserveTimeline) return;
+                    if (ChannelHasUnread)
+                    {
+                        _awayFromBottom = true;
+                        Changed(nameof(ShowJumpBar));
+                        ScrollToUnread?.Invoke();
+                    }
+                    else
+                    {
+                        ScrollToLatest?.Invoke();
+                        if (LatestVisibleId() is Guid latest && SelectedChannel is { } selected)
+                            _ = MarkReadAsync(selected.Id, latest);
+                    }
                 }
             }
-        });
+            if (Dispatcher.UIThread.CheckAccess()) Apply();
+            else Dispatcher.UIThread.Post(Apply);
+        };
         timeline.Changed += _timelineChanged;
         try { await timeline.LoadLatestAsync(cancellation.Token); }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
@@ -91,7 +102,6 @@ public sealed partial class ShellViewModel
         cancellation?.Dispose();
         if (_timeline is not null && _timelineChanged is not null)
             _timeline.Changed -= _timelineChanged;
-        _timeline?.ReleaseUnsent();
         _timeline = null;
         _timelineChanged = null;
         SetChannelLoading(false);
@@ -101,13 +111,25 @@ public sealed partial class ShellViewModel
     {
         channel ??= SelectedChannel is { Kind: "voice" } selected ? selected : null;
         if (channel is not { Kind: "voice" }) return;
-        var session = SelectedInstance?.Context.Session ?? throw new InvalidOperationException(_text.Get(TextKey.NeedSignIn));
-        if (session.Voice.ChannelId == channel.Id && string.IsNullOrEmpty(session.Voice.MediaError)) return;
-        session.Voice.ApplyRoute(Devices.Route);
-        await Devices.StopLoopbackAsync();
-        await session.Voice.JoinAsync(channel.Id, SelectedAudioQuality?.Id, _lifetime);
-        NoteVisit(channel.Id);
-        NotifyVoice();
-        _ = Devices.RefreshAsync();
+        if (channel.IsFixture || SelectedInstance?.Context.Session is not { } session)
+        {
+            OpenVoiceChat(channel);
+            return;
+        }
+        if (session.Voice.ChannelId != channel.Id || !string.IsNullOrEmpty(session.Voice.MediaError))
+        {
+            session.Voice.ApplyRoute(Devices.Route);
+            await Devices.StopLoopbackAsync();
+            await session.Voice.JoinAsync(channel.Id, SelectedAudioQuality?.Id, _lifetime);
+            NotifyVoice();
+            _ = Devices.RefreshAsync();
+        }
+        OpenVoiceChat(channel);
+    }
+
+    private void OpenVoiceChat(ChannelItem channel)
+    {
+        if (ShowSettings) ShowSettings = false;
+        if (SelectedChannel?.Id != channel.Id) SelectedChannel = channel;
     }
 }

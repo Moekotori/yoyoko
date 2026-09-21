@@ -12,4 +12,4 @@ Status: Accepted · 2026-09-20
 
 ## Consequences
 
-两个客户端可以先在同一语音频道里看见对方，再接真实听筒。自定义 RNNoise/C ABI 与进程恢复仍属后续阶段。
+两个客户端可以先在同一语音频道里看见对方，再接真实听筒。`rtc.public_url` 为 loopback 时，发现与 join 按局域网 `Host` 改写 RTC 主机名并保留端口。worker 或 LiveKit 断开后，已加入的会话会重签短期 JWT 并重连，不把 crash 堆进 UI。说话状态只从 LiveKit 活跃说话人进客户端，不写 PostgreSQL。网页访客走同一套 LiveKit JWT，但 access token 仅限该语音频道。自定义 RNNoise/C ABI 仍属后续阶段。

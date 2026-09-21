@@ -10,6 +10,7 @@ public sealed partial class ShellViewModel
 {
     private readonly WorkspaceConnection _connection;
     private readonly HashSet<InstanceSession> _boundSessions = [];
+    private CancellationTokenSource? _workspaceWork;
     public ConnectionSettingsViewModel Connection { get; }
 
     private void UnbindSession(InstanceSession session)
@@ -25,27 +26,54 @@ public sealed partial class ShellViewModel
         ShowSettings = true;
     }
 
+    private CancellationToken StartWorkspaceWork()
+    {
+        _workspaceWork?.Dispose();
+        _workspaceWork = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
+        return _workspaceWork.Token;
+    }
+
+    private void CancelWorkspaceWork()
+    {
+        try { _workspaceWork?.Cancel(); }
+        catch (ObjectDisposedException) { }
+    }
+
+    private void FinishWorkspaceWork()
+    {
+        _workspaceWork?.Dispose();
+        _workspaceWork = null;
+    }
+
     private async Task ConnectWorkspaceAsync()
     {
         if (Connection.IsBusy) return;
         var keepSettings = ShowSettings;
+        var work = StartWorkspaceWork();
         Connection.IsBusy = true;
         Connection.Status = _text.Get(TextKey.ConnectingServer);
         try
         {
             var invite = _connection.Resolve(Connection.Address);
-            var context = await _connection.ConnectAsync(invite.Address, _lifetime,
-                allowBootstrapCommunity: !invite.HasCommunityCode);
+            Connection.Address = invite.Address;
+            var context = await _connection.ConnectAsync(invite.Address, work,
+                allowBootstrapCommunity: !invite.HasCommunityCode,
+                preferredUsername: Connection.Username);
+            Connection.Username = "";
             var item = TrackInstance(context);
             if (context.Session is { } session)
             {
                 BindSession(session);
-                if (invite.CommunityCode is { } code) await session.JoinAsync(code, _lifetime);
+                if (invite.CommunityCode is { } code) await session.JoinAsync(code, work);
             }
             SelectedInstance = item;
             Connection.Address = context.Descriptor.BaseUrl.AbsoluteUri;
             Connection.Status = "";
             Status = "";
+        }
+        catch (OperationCanceledException) when (work.IsCancellationRequested)
+        {
+            Connection.Status = _text.Get(TextKey.Cancelled);
         }
         catch (Exception error)
         {
@@ -68,12 +96,13 @@ public sealed partial class ShellViewModel
         var item = SelectedInstance;
         if (item is null) return;
         var keepSettings = ShowSettings;
+        var work = StartWorkspaceWork();
         Connection.IsBusy = true;
         Connection.Status = _text.Get(TextKey.DisconnectingServer);
         try
         {
             if (item.Context.Session is { } session) UnbindSession(session);
-            await _connection.DisconnectAsync(item.Context, _lifetime);
+            await _connection.DisconnectAsync(item.Context, work);
             ClearAccountDrafts();
             DetachTimeline();
             foreach (var pending in PendingFiles.ToList())
@@ -87,6 +116,10 @@ public sealed partial class ShellViewModel
             NotifySession();
             Connection.Status = "";
             Status = "";
+        }
+        catch (OperationCanceledException) when (work.IsCancellationRequested)
+        {
+            Connection.Status = _text.Get(TextKey.Cancelled);
         }
         catch (Exception error)
         {
@@ -109,6 +142,7 @@ public sealed partial class ShellViewModel
 
     private void FinishConnection(bool keepSettings)
     {
+        FinishWorkspaceWork();
         Connection.IsBusy = false;
         Connection.Bind(SelectedInstance?.Context);
         ShowSettings = keepSettings;

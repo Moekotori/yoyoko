@@ -1,16 +1,22 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:instances="using:Chat.UI.Instances" xmlns:channels="using:Chat.UI.Channels"
-  xmlns:auth="using:Chat.UI.Auth" xmlns:chat="using:Chat.UI.Chat" xmlns:voice="using:Chat.UI.Voice"
+  xmlns:chat="using:Chat.UI.Chat" xmlns:voice="using:Chat.UI.Voice"
   xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:settings="using:Chat.UI.Settings"
   xmlns:appearance="using:Chat.UI.Appearance" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:chrome="using:Avalonia.Controls.Chrome"
   x:Class="Chat.UI.Shell.ShellSurface" x:DataType="vm:ShellViewModel"
 >
-  <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Shell/ShellMotion.axaml" /></UserControl.Styles>
+  <UserControl.Styles>
+    <StyleInclude Source="avares://Chat.UI/Shell/ShellMotion.axaml" />
+  </UserControl.Styles>
   <Panel>
   <appearance:WallpaperView DataContext="{Binding Wallpaper}" />
   <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsHitTestVisible="{Binding !ProfileOpen}">
-    <Border Grid.ColumnSpan="3" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" />
-    <Border Grid.ColumnSpan="3" Width="292" HorizontalAlignment="Left" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
+    <Border Grid.ColumnSpan="3" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1"
+      chrome:WindowDecorationProperties.ElementRole="TitleBar" />
+    <Border Grid.ColumnSpan="3" Classes="communityTitle" Classes.collapsed="{Binding ShowSettings}" Classes.motion="{Binding !ReduceMotion}"
+      HorizontalAlignment="Left" Background="{DynamicResource ChromeBrush}" Padding="100,0,14,0"
+      chrome:WindowDecorationProperties.ElementRole="TitleBar" IsHitTestVisible="{Binding !ShowSettings}">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding InstanceHost}">
         <Grid ColumnDefinitions="*,16" ColumnSpacing="8"><TextBlock Text="{Binding InstanceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></Grid>
         <Button.Flyout>
@@ -28,10 +34,9 @@
       </StackPanel>
     </Grid>
     <instances:InstanceRail Grid.Row="1" Grid.RowSpan="2" />
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Classes="channelSlot"
-      Classes.collapsed="{Binding ShowSettings}" Classes.motion="{Binding !ReduceMotion}"
-      ClipToBounds="True" IsHitTestVisible="{Binding !ShowSettings}" IsEnabled="{Binding !ShowSettings}">
-      <Grid Width="220" HorizontalAlignment="Left" RowDefinitions="*,Auto">
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Classes="channelSlot" Classes.collapsed="{Binding ShowSettings}"
+      Classes.motion="{Binding !ReduceMotion}" IsHitTestVisible="{Binding !ShowSettings}">
+      <Grid Width="260" HorizontalAlignment="Left" RowDefinitions="*,Auto">
         <channels:ChannelSidebar />
         <StackPanel Grid.Row="1">
           <voice:VoiceSessionBar IsVisible="{Binding InVoice}" />
@@ -50,18 +55,20 @@
             <TextBlock Text="{Binding Connection.Status}" TextWrapping="Wrap" HorizontalAlignment="Center" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
               <Button Content="{i18n:T ConnectServer}" Command="{Binding Connection.Connect}" IsEnabled="{Binding !Connection.IsBusy}" />
+              <Button Content="{i18n:T CancelConnection}" Command="{Binding Connection.Cancel}"
+                IsVisible="{Binding Connection.ShowCancel}" IsEnabled="{Binding Connection.CanCancel}" />
               <Button Content="{i18n:T Settings}" Command="{Binding OpenSettings}" />
             </StackPanel>
           </StackPanel>
         </motion:MotionHost>
         <chat:ChatView IsVisible="{Binding ShowChat}" />
-        <motion:MotionHost IsVisible="{Binding ShowVoice}" Trigger="{Binding SelectedChannel}" Preset="Fade"><voice:VoiceView /></motion:MotionHost>
         <TextBlock Text="{i18n:T SelectChannel}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowChannelEmpty}" />
       </Panel>
     </Grid>
-    <Panel Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding ShowSettings}">
+    <motion:MotionHost Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding ShowSettings}"
+      Preset="SlideLeft" StartOpacity="0.88" Duration="0:0:0.16">
       <settings:SettingsView DataContext="{Binding Settings}" />
-    </Panel>
+    </motion:MotionHost>
     <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="#333333" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" CornerRadius="8" Padding="14,6" MinWidth="280">
       <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Workspace.Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding Workspace.DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
     </Border>

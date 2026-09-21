@@ -3,13 +3,13 @@
   x:Class="Chat.UI.Chat.UserCard" x:DataType="chat:MemberProfile">
   <UserControl.Styles>
     <Style Selector="Button.cardAction">
-      <Setter Property="MinHeight" Value="30" />
-      <Setter Property="Padding" Value="10,6" />
-      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="Padding" Value="14,8" />
+      <Setter Property="CornerRadius" Value="10" />
       <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
-      <Setter Property="Background" Value="#2E2E2E" />
     </Style>
     <Style Selector="Button.handle">
       <Setter Property="Padding" Value="0" />
@@ -20,37 +20,101 @@
     <Style Selector="Button.handle:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
+    <Style Selector="Border.youBadge">
+      <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="7,2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="8,0,0,0" />
+    </Style>
+    <Style Selector="Border.youBadge TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+    </Style>
+    <Style Selector="Border.idWell">
+      <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="12,10" />
+    </Style>
+    <Style Selector="Button.bannerHit">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.bannerHit:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.bannerHit Border.bannerScrim">
+      <Setter Property="Background" Value="#66000000" />
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Button.bannerHit:pointerover Border.bannerScrim">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
   </UserControl.Styles>
-  <Border Width="260" VerticalAlignment="Top" Background="#242424" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+  <Border Width="360" VerticalAlignment="Top" Background="{DynamicResource PopupBrush}"
+    BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="16" ClipToBounds="True">
     <StackPanel>
-      <Panel Height="84">
-        <Border Height="52" VerticalAlignment="Top" Background="#1A1A1A" />
-        <Border Width="64" Height="64" CornerRadius="32" Background="#242424" Margin="12,24,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-          <c:Avatar Width="52" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center"
-            Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" />
+      <Panel Height="188">
+        <c:Banner Height="140" VerticalAlignment="Top" Fallback="{Binding Accent}" Playback="{Binding BannerPlayback}" />
+        <Button Classes="bannerHit" Height="140" VerticalAlignment="Top" Click="ChangeBanner"
+          IsVisible="{Binding IsSelf}" ToolTip.Tip="{i18n:T ChangeBanner}" AutomationProperties.Name="{i18n:T ChangeBanner}">
+          <Border Classes="bannerScrim">
+            <PathIcon Data="{StaticResource IconCamera}" Width="18" Height="18" Foreground="#F2F2F2"
+              HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </Button>
+        <Border Width="100" Height="100" CornerRadius="50" Background="{DynamicResource PopupBrush}"
+          Margin="20,88,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+          <c:Avatar Width="88" Height="88" HorizontalAlignment="Center" VerticalAlignment="Center"
+            Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}"
+            IsOnline="{Binding IsOnline}" />
         </Border>
       </Panel>
-      <StackPanel Margin="12,4,12,12" Spacing="10">
-        <StackPanel Spacing="1">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{i18n:T You}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsSelf}" />
-          </StackPanel>
-          <Button Classes="handle" Click="CopyUsername" IsVisible="{Binding HasHandle}" ToolTip.Tip="{i18n:T CopyUsername}" AutomationProperties.Name="{i18n:T CopyUsername}">
-            <TextBlock Text="{Binding Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
+      <StackPanel Margin="20,8,20,20" Spacing="14">
+        <StackPanel Spacing="4">
+          <DockPanel>
+            <Border DockPanel.Dock="Right" Classes="youBadge" IsVisible="{Binding IsSelf}">
+              <TextBlock Text="{i18n:T You}" />
+            </Border>
+            <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold"
+              TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          </DockPanel>
+          <Button Classes="handle" Click="CopyUsername" IsVisible="{Binding HasHandle}"
+            ToolTip.Tip="{i18n:T CopyUsername}" AutomationProperties.Name="{i18n:T CopyUsername}">
+            <TextBlock Text="{Binding Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="14" />
           </Button>
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+              Fill="{DynamicResource SuccessBrush}" IsVisible="{Binding IsOnline}" />
+            <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+              Fill="{DynamicResource QuietTextBrush}" IsVisible="{Binding !IsOnline}" />
+            <TextBlock Text="{i18n:T Online}" Classes="muted" FontSize="13" IsVisible="{Binding IsOnline}" />
+            <TextBlock Text="{i18n:T Offline}" Classes="muted" FontSize="13" IsVisible="{Binding !IsOnline}" />
+          </StackPanel>
         </StackPanel>
+        <Button Classes="primary cardAction" Click="Message" IsVisible="{Binding !IsSelf}"
+          Content="{i18n:T MessageUser}" AutomationProperties.Name="{i18n:T MessageUser}" />
         <Button Classes="cardAction" Click="Mention" IsVisible="{Binding !IsSelf}"
           Content="{i18n:T MentionMember}" AutomationProperties.Name="{i18n:T MentionMember}" />
-        <Button Classes="cardAction" Click="EditProfile" IsVisible="{Binding IsSelf}"
+        <Button Classes="primary cardAction" Click="EditProfile" IsVisible="{Binding IsSelf}"
           Content="{i18n:T Profile}" AutomationProperties.Name="{i18n:T Profile}" />
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4" Opacity="0.7">
-          <SelectableTextBlock Text="{Binding IdText}" FontSize="10" FontFamily="Menlo, Consolas, monospace" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="{DynamicResource QuietTextBrush}" />
-          <Button Grid.Column="1" Classes="icon" Width="22" Height="22" Padding="4" Click="CopyId"
-            ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
-            <PathIcon Data="{StaticResource IconCopy}" Width="11" Height="11" />
-          </Button>
-        </Grid>
+        <Border Classes="idWell">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{i18n:T UserId}" Classes="section" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+              <SelectableTextBlock Text="{Binding IdText}" FontSize="12"
+                FontFamily="Menlo, Consolas, monospace" TextTrimming="CharacterEllipsis"
+                VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
+              <Button Grid.Column="1" Classes="icon" Width="28" Height="28" Padding="5" Click="CopyId"
+                ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
+                <PathIcon Data="{StaticResource IconCopy}" Width="13" Height="13" />
+              </Button>
+            </Grid>
+          </StackPanel>
+        </Border>
       </StackPanel>
     </StackPanel>
   </Border>

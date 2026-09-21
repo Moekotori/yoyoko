@@ -1,6 +1,6 @@
 use crate::{
-    configuration::Settings, identity::TokenService, objects::ObjectStore, rate_limit::RateLimiter,
-    realtime::Hub, store::Store, voice::VoiceRoster,
+    cache::HotCache, configuration::Settings, identity::TokenService, objects::ObjectStore,
+    rate_limit::RateLimiter, realtime::Hub, store::Store, voice::VoiceRoster,
 };
 use std::sync::Arc;
 
@@ -12,6 +12,7 @@ pub struct AppState {
     pub hub: Hub,
     pub limiter: RateLimiter,
     pub voice: VoiceRoster,
+    pub hot: HotCache,
 }
 
 impl AppState {
@@ -29,6 +30,7 @@ impl AppState {
             hub: Hub::new(),
             limiter: RateLimiter::new(),
             voice: VoiceRoster::default(),
+            hot: HotCache::new(),
         })
     }
 }

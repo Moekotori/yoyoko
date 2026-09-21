@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:ch="using:Chat.UI.Channels" xmlns:chat="using:Chat.UI.Chat" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
+ xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion"
  x:Class="Chat.UI.Channels.ChannelSidebar" x:DataType="vm:ShellViewModel" x:Name="Sidebar">
   <UserControl.Styles>
     <Style Selector="Button.groupHeader"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Height" Value="30" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
@@ -20,16 +21,53 @@
     <Style Selector="Button.memberRow:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#323232" /></Style>
     <Style Selector="Button.memberRow.self TextBlock"><Setter Property="Foreground" Value="#E8E8E8" /><Setter Property="FontWeight" Value="Medium" /></Style>
   </UserControl.Styles>
-  <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
+  <Border Background="{DynamicResource SidebarBrush}">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="8,13,8,16" Spacing="0" IsVisible="{Binding IsSignedIn}">
+      <StackPanel Margin="8,13,8,16" Spacing="0" IsVisible="{Binding ShowChannelNav}">
+        <StackPanel IsVisible="{Binding HasDirectChannels}" Margin="0,0,0,8">
+          <Button Classes="groupHeader" Command="{Binding ToggleDirectMessages}" AutomationProperties.Name="{i18n:T DirectMessages}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Classes="groupChevron" Classes.collapsed="{Binding !DirectExpanded}" Data="{StaticResource IconChevronDown}" Width="9" Height="9" VerticalAlignment="Center" />
+              <TextBlock Text="{i18n:T DirectMessages}" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <motion:RevealHost IsOpen="{Binding DirectExpanded}">
+            <ItemsControl ItemsSource="{Binding DirectChannels}">
+              <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
+                <Button Classes="channel" Classes.selected="{Binding IsSelected}" Classes.unread="{Binding HasUnread}" Classes.mention="{Binding HasMention}" Classes.muted="{Binding IsMuted}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
+                  <Button.ContextMenu><ContextMenu Opening="OnChannelMenuOpening">
+                    <MenuItem Header="{i18n:T OpenChannel}" />
+                    <MenuItem Header="{i18n:T MarkAsRead}" />
+                    <MenuItem Header="{i18n:T MarkAsUnread}" />
+                    <Separator />
+                    <MenuItem Header="{i18n:T NotificationsAll}" />
+                    <MenuItem Header="{i18n:T NotificationsMentions}" />
+                    <MenuItem Header="{i18n:T NotificationsMute}" />
+                    <Separator />
+                    <MenuItem Header="{i18n:T RenameChannel}" />
+                    <MenuItem Header="{i18n:T CreateChannel}" />
+                    <Separator />
+                    <MenuItem Header="{i18n:T DeleteChannel}" Foreground="#E3A09A" />
+                  </ContextMenu></Button.ContextMenu>
+                  <Panel>
+                    <Border Classes="unreadMark" IsVisible="{Binding HasUnread}" />
+                    <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="9">
+                      <PathIcon Data="{StaticResource IconPeople}" Width="15" Height="15" Foreground="{DynamicResource QuietTextBrush}" />
+                      <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      <Border Grid.Column="2" Classes="mentionMark" IsVisible="{Binding HasMention}">
+                        <TextBlock Text="@" FontSize="9" FontWeight="SemiBold" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                    </Grid>
+                  </Panel>
+                </Button>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </motion:RevealHost>
+        </StackPanel>
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
           <Button Classes="groupHeader" Command="{Binding ToggleTextChannels}" AutomationProperties.Name="{i18n:T TextChannels}">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <Panel Width="10" Height="10" VerticalAlignment="Center">
-                <PathIcon Data="{StaticResource IconChevronDown}" Width="9" Height="9" IsVisible="{Binding TextExpanded}" />
-                <PathIcon Data="M 2,0 L 7,5 L 2,10 L 1,9 L 5,5 L 1,1 Z" Width="9" Height="9" IsVisible="{Binding !TextExpanded}" />
-              </Panel>
+              <PathIcon Classes="groupChevron" Classes.collapsed="{Binding !TextExpanded}" Data="{StaticResource IconChevronDown}" Width="9" Height="9" VerticalAlignment="Center" />
               <TextBlock Text="{i18n:T TextChannels}" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
@@ -37,7 +75,14 @@
             <PathIcon Data="{StaticResource IconAdd}" Width="12" Height="12" />
           </Button>
         </Grid>
-        <ItemsControl ItemsSource="{Binding TextChannels}" IsVisible="{Binding TextExpanded}">
+        <motion:RevealHost IsOpen="{Binding TextExpanded}">
+        <StackPanel>
+        <motion:RevealHost IsOpen="{Binding HasNewTextChannelEditor}">
+          <ContentControl Content="{Binding NewTextChannelEditor}">
+            <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
+          </ContentControl>
+        </motion:RevealHost>
+        <ItemsControl ItemsSource="{Binding TextChannels}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
             <Panel>
             <Button IsVisible="{Binding !IsEditing}" Classes="channel" Classes.selected="{Binding IsSelected}" Classes.unread="{Binding HasUnread}" Classes.mention="{Binding HasMention}" Classes.muted="{Binding IsMuted}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
@@ -72,16 +117,12 @@
             </Panel>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <ContentControl Content="{Binding NewTextChannelEditor}" IsVisible="{Binding HasNewTextChannelEditor}">
-          <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
-        </ContentControl>
+        </StackPanel>
+        </motion:RevealHost>
         <Grid ColumnDefinitions="*,Auto" Margin="0,19,0,5">
           <Button Classes="groupHeader" Command="{Binding ToggleVoiceChannels}" AutomationProperties.Name="{i18n:T VoiceChannels}">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <Panel Width="10" Height="10" VerticalAlignment="Center">
-                <PathIcon Data="{StaticResource IconChevronDown}" Width="9" Height="9" IsVisible="{Binding VoiceExpanded}" />
-                <PathIcon Data="M 2,0 L 7,5 L 2,10 L 1,9 L 5,5 L 1,1 Z" Width="9" Height="9" IsVisible="{Binding !VoiceExpanded}" />
-              </Panel>
+              <PathIcon Classes="groupChevron" Classes.collapsed="{Binding !VoiceExpanded}" Data="{StaticResource IconChevronDown}" Width="9" Height="9" VerticalAlignment="Center" />
               <TextBlock Text="{i18n:T VoiceChannels}" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
@@ -89,12 +130,20 @@
             <PathIcon Data="{StaticResource IconAdd}" Width="12" Height="12" />
           </Button>
         </Grid>
-        <ItemsControl ItemsSource="{Binding VoiceChannels}" IsVisible="{Binding VoiceExpanded}">
+        <motion:RevealHost IsOpen="{Binding VoiceExpanded}">
+        <StackPanel>
+        <motion:RevealHost IsOpen="{Binding HasNewVoiceChannelEditor}">
+          <ContentControl Content="{Binding NewVoiceChannelEditor}">
+            <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
+          </ContentControl>
+        </motion:RevealHost>
+        <ItemsControl ItemsSource="{Binding VoiceChannels}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
             <StackPanel>
-            <Button IsVisible="{Binding !IsEditing}" Classes="channel" Classes.selected="{Binding IsSelected}" Classes.connected="{Binding IsConnected}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{i18n:T VoiceJoinHint}" Loaded="OnChannelLoaded" DoubleTapped="OnVoiceDoubleTapped">
+            <Button IsVisible="{Binding !IsEditing}" Classes="channel" Classes.selected="{Binding IsSelected}" Classes.connected="{Binding IsConnected}" Classes.unread="{Binding HasUnread}" Classes.mention="{Binding HasMention}" Classes.muted="{Binding IsMuted}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).JoinVoice}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{i18n:T VoiceJoinHint}" Loaded="OnChannelLoaded">
               <Button.ContextMenu><ContextMenu Opening="OnVoiceMenuOpening">
                 <MenuItem Header="{i18n:T JoinVoiceChannel}" />
+                <MenuItem Header="{i18n:T CopyWebVoiceLink}" />
                 <MenuItem Header="{i18n:T Settings}" />
                 <Separator />
                 <MenuItem Header="{i18n:T RenameChannel}" />
@@ -102,10 +151,16 @@
                 <Separator />
                 <MenuItem Header="{i18n:T DeleteChannel}" Foreground="#E3A09A" />
               </ContextMenu></Button.ContextMenu>
-              <Grid ColumnDefinitions="16,*" ColumnSpacing="9">
-                <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" Foreground="{DynamicResource QuietTextBrush}" />
-                <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-              </Grid>
+              <Panel>
+                <Border Classes="unreadMark" IsVisible="{Binding HasUnread}" />
+                <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="9">
+                  <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" Foreground="{DynamicResource QuietTextBrush}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  <Border Grid.Column="2" Classes="mentionMark" IsVisible="{Binding HasMention}">
+                    <TextBlock Text="@" FontSize="9" FontWeight="SemiBold" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                </Grid>
+              </Panel>
             </Button>
             <ItemsControl ItemsSource="{Binding VoiceMembers}" IsVisible="{Binding HasVoiceMembers}" Margin="24,0,0,6">
               <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:VoiceMemberRow">
@@ -116,7 +171,7 @@
                     </Flyout>
                   </Button.Flyout>
                   <Grid ColumnDefinitions="20,*,Auto" ColumnSpacing="8">
-                    <c:Avatar Width="20" Height="20" Playback="{Binding Playback}" Initial="{Binding Initial}" />
+                    <c:Avatar Width="20" Height="20" Playback="{Binding Playback}" Initial="{Binding Initial}" Speaking="{Binding Speaking}" />
                     <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     <Panel Grid.Column="2" Width="14" Height="14" VerticalAlignment="Center" Opacity="0.9">
                       <Panel IsVisible="{Binding ShowMute}">
@@ -138,9 +193,8 @@
             </StackPanel>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <ContentControl Content="{Binding NewVoiceChannelEditor}" IsVisible="{Binding HasNewVoiceChannelEditor}">
-          <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
-        </ContentControl>
+        </StackPanel>
+        </motion:RevealHost>
       </StackPanel>
     </ScrollViewer>
   </Border>

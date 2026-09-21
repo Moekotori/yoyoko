@@ -23,7 +23,7 @@ using ChannelItem = Chat.UI.Channels.ChannelItem;
 
 namespace Chat.UI.Shell;
 
-public sealed partial class ShellViewModel : ObservableObject, IDisposable
+public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoiceQualityHost
 {
     private readonly InstanceManager _instances;
     private readonly IMessageCache _cache;
@@ -82,9 +82,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _previews = new(lifetime);
         Devices = new(media, devices, text, () => SelectedInstance?.Context.Session, lifetime);
         AuthForm = new(AuthenticateAsync, error => { AuthForm!.Status = _text.Error(error); OnError(error); });
-        Connection = new(ConnectWorkspaceAsync, DisconnectWorkspaceAsync, ProbeLatencyAsync, OnError, text);
+        Connection = new(ConnectWorkspaceAsync, DisconnectWorkspaceAsync, ProbeLatencyAsync, CancelWorkspaceWork, OnError, text);
         Wallpaper = new(appearance, chrome, text);
-        Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm, packs, transport);
+        Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm, packs, transport, this);
         chrome.Changed += OnChromeChanged;
         shortcuts.Changed += OnShortcutsChanged;
         OpenAddInstance = new(_ =>
@@ -101,6 +101,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             }
             ShowSettings = true;
             Settings.Profile.Reload();
+            _ = Devices.RefreshAsync();
+        });
+        OpenVoiceSettings = new(_ =>
+        {
+            CloseJump();
+            RebuildQualityChoices();
+            Settings.Section = SettingsSection.Voice;
+            ShowSettings = true;
             _ = Devices.RefreshAsync();
         });
         _text.PropertyChanged += OnTextChanged;
@@ -120,6 +128,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         BeginAddInstance = new(_ => OpenConnectionSettings());
         Workspace = new(false, text);
         InitializePresentation();
+        RebuildQualityChoices();
         OpenProfile = new(_ => { if (!IsSignedIn) return; CloseJump(); Settings.Profile.Reload(); ProfileOpen = !ProfileOpen; });
         CloseProfile = new(_ => ProfileOpen = false);
     }
@@ -180,6 +189,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     }
     public ActionCommand OpenAddInstance { get; }
     public ActionCommand OpenSettings { get; }
+    public ActionCommand OpenVoiceSettings { get; }
     public SettingsViewModel Settings { get; }
     public WallpaperSession Wallpaper { get; }
     public VoiceDevicesViewModel Devices { get; }
@@ -213,7 +223,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         }
     }
     public bool OnCooldown => CooldownLeft > 0;
-    public bool CanSend => !OnCooldown && (IsEditing ? Draft.Trim().Length > 0 : Draft.Trim().Length > 0 || HasPending);
+    public bool ChannelForbidden => _timeline?.AccessDenied == true;
+    public bool CanSend => !ChannelForbidden && !OnCooldown && (_timeline?.CanQueue ?? true)
+        && (IsEditing ? Draft.Trim().Length > 0 : Draft.Trim().Length > 0 || HasPending);
     public bool HasOlder => _timeline?.HasOlder == true;
     public ServerDto? ActiveServer
     {
@@ -248,13 +260,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             Changed(nameof(InstanceHost));
             Changed(nameof(ShowAddInstance));
             Changed(nameof(ShowAuth));
+            Changed(nameof(ShowChannelNav));
             Changed(nameof(ShowChat));
-            Changed(nameof(ShowVoice));
             Changed(nameof(ShowSettings));
             Changed(nameof(IsSignedIn));
             Changed(nameof(PaneTitle));
             Changed(nameof(AccountName));
             Changed(nameof(AccountHandle));
+            Changed(nameof(SelfUsername));
+            Changed(nameof(SelfDisplayName));
             Changed(nameof(AccountInitial));
             Changed(nameof(AccountPlayback));
             Changed(nameof(HasAvatar));
@@ -274,7 +288,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             Changed();
             Changed(nameof(PaneTitle));
             Changed(nameof(ShowChat));
-            Changed(nameof(ShowVoice));
             Changed(nameof(ActiveServer));
             Changed(nameof(CanModerate));
             FillModeration();
@@ -297,16 +310,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             Changed(nameof(ShowAddInstance));
             Changed(nameof(ShowAuth));
             Changed(nameof(ShowChat));
-            Changed(nameof(ShowVoice));
             Changed(nameof(PaneTitle));
             Connection.SetWatching(value && Settings.Section == SettingsSection.Connection);
         }
     }
     public bool ShowAddInstance => false;
-    public bool ShowAuth => !IsSignedIn && !ShowSettings;
+    public bool ShowAuth => !IsSignedIn && !ShowSettings && SelectedChannel is null;
     public bool ShowGuest => !IsSignedIn;
-    public bool ShowChat => IsSignedIn && SelectedChannel is { Kind: "text" } && !ShowSettings;
-    public bool ShowVoice => IsSignedIn && SelectedChannel is { Kind: "voice" } && !ShowSettings;
+    public bool ShowChannelNav => IsSignedIn || Channels.Count > 0;
+    public bool ShowChat => !ShowSettings && SelectedChannel is { CanChat: true };
     public bool InVoice => SelectedInstance?.Context.Session?.Voice.Joined == true;
     public bool InSelectedVoice =>
         SelectedChannel is { Kind: "voice" } channel && IsJoinedVoice(channel);
@@ -320,6 +332,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             var voice = SelectedInstance?.Context.Session?.Voice;
             if (voice is null || !voice.Joined) return "";
+            if (voice.Reconnecting) return _text.Get(TextKey.VoiceReconnecting);
             return string.IsNullOrEmpty(voice.MediaError)
                 ? _text.Get(TextKey.VoiceConnected)
                 : _text.Get(TextKey.VoiceAudioOff);
@@ -335,6 +348,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             var voice = SelectedInstance?.Context.Session?.Voice;
             if (voice is null) return "";
+            if (voice.Reconnecting) return _text.Get(TextKey.VoiceReconnecting);
             if (voice.MediaError is { Length: > 0 } error) return _text.Get(TextKey.VoiceMediaError, error);
             return voice.Joined ? _text.Get(TextKey.VoiceConnected) : _text.Get(TextKey.VoiceJoinHint);
         }
@@ -352,6 +366,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public string AccountName => SelectedInstance?.Context.Account?.DisplayName ?? "";
     public string AccountInitial => Avatar.FromName(AccountName);
     public string AccountHandle => SelectedInstance?.Context.Account is { Username: { Length: > 0 } name } ? "@" + name : "";
+    public string SelfUsername => SelectedInstance?.Context.Session?.Me.Username ?? "";
+    public string SelfDisplayName => SelectedInstance?.Context.Session?.Me.DisplayName ?? "";
     public AvatarPlayback? AccountPlayback { get; private set; }
     public bool HasAvatar => AccountPlayback is not null;
     public string InviteCode => SelectedInstance?.Context.Session?.Servers.FirstOrDefault()?.InviteCode ?? "";
@@ -384,13 +400,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             await initializeCache(_lifetime);
             await _instances.LoadCachedAsync(_lifetime);
             Connection.Address = await _connection.StartupAddressAsync(_lifetime);
+            var work = StartWorkspaceWork();
             Connection.IsBusy = true;
             Connection.Status = _text.Get(TextKey.ConnectingServer);
             InstanceContext? preferred = null;
             Exception? preparationError = null;
             if (prepareWorkspace is not null)
             {
-                try { preferred = await prepareWorkspace(_lifetime); }
+                try { preferred = await prepareWorkspace(work); }
+                catch (OperationCanceledException) when (work.IsCancellationRequested)
+                {
+                    preparationError = null;
+                    Connection.Status = _text.Get(TextKey.Cancelled);
+                }
                 catch (Exception exception) { preparationError = exception; }
             }
             foreach (var item in _instances.Contexts) Instances.Add(new(item));
@@ -399,29 +421,31 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 ?? Instances.FirstOrDefault();
             foreach (var item in Instances.ToList())
             {
+                if (work.IsCancellationRequested) break;
                 if (item.Context.Session is { } session)
                 {
                     BindSession(session);
                     if (SelectedInstance == item) RefreshCommunity();
                 }
-                else await RestoreAsync(item);
+                else await RestoreAsync(item, work);
             }
             if (preparationError is not null) OnError(preparationError);
-            Connection.Status = preparationError is null ? "" : _text.Error(preparationError);
+            if (work.IsCancellationRequested) Connection.Status = _text.Get(TextKey.Cancelled);
+            else Connection.Status = preparationError is null ? "" : _text.Error(preparationError);
             Connection.Bind(SelectedInstance?.Context);
             Settings.Profile.Reload();
         }
         catch (Exception exception) { Connection.Status = Status = _text.Get(TextKey.CacheLoadFailed, exception.Message); }
-        finally { Connection.IsBusy = false; Connection.Bind(SelectedInstance?.Context); }
+        finally { FinishWorkspaceWork(); Connection.IsBusy = false; Connection.Bind(SelectedInstance?.Context); }
     }
 
-    private async Task RestoreAsync(InstanceItem item)
+    private async Task RestoreAsync(InstanceItem item, CancellationToken token)
     {
         try
         {
-            var info = await _discovery.DiscoverAsync(item.Context.Descriptor.BaseUrl, _lifetime);
+            var info = await _discovery.DiscoverAsync(item.Context.Descriptor.BaseUrl, token);
             var session = await InstanceSession.RestoreAsync(item.Context.Descriptor, _apis.Create(info.Api, info.Gateway),
-                _cache, _vault, _gateways, _media, _lifetime);
+                _cache, _vault, _gateways, _media, token);
             if (session is null) return;
             session.ApplyDiscovery(info);
             item.Context.AttachDiscovery(info);
@@ -480,6 +504,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         session.MessageArrived += message => Dispatcher.UIThread.Post(() =>
         {
             _ = NoteArrivalAsync(session, message);
+            ForgetTyping(message.ChannelId, message.AuthorId);
             if (SelectedChannel?.Id == message.ChannelId)
             {
                 _timeline?.ApplyRemote(message);
@@ -501,6 +526,23 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             _timeline?.ApplyRemote(message);
             SyncMessages();
         });
+        session.MessageDeleted += deleted => Dispatcher.UIThread.Post(() =>
+        {
+            if (IsEditing && _editingId == deleted.Id) CancelEdit();
+            if (IsReplying && _replyTo == deleted.Id) CancelReply();
+            if (SelectedChannel?.Id == deleted.ChannelId)
+            {
+                _timeline?.RemoveRemote(deleted.Id);
+                SyncMessages();
+            }
+        });
+        session.TypingStarted += typing => Dispatcher.UIThread.Post(() => NoteTyping(session, typing));
+        session.ResyncNeeded += () => Dispatcher.UIThread.Post(() =>
+        {
+            if (_timeline is null || _channelLoad is not { } cancellation) return;
+            _ = _timeline.LoadLatestAsync(cancellation.Token);
+        });
+        session.Outbound.Changed += _ => Dispatcher.UIThread.Post(() => Changed(nameof(CanSend)));
         _ = ReloadInboxAsync(session);
     }
 
@@ -510,13 +552,24 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Channels.Clear();
         if (session is null)
         {
-            SelectedChannel = null;
+            if (Channels.Any(item => !item.IsFixture))
+            {
+                Channels.Clear();
+                SelectedChannel = null;
+            }
+            SeedLayoutFixtures();
             NotifySession();
             Connection.Bind(SelectedInstance?.Context);
             return;
         }
         foreach (var channel in session.Channels)
-            Channels.Add(new(channel.Id, channel.ServerId, channel.Name, channel.Kind, channel.AudioQuality));
+        {
+            var item = new ChannelItem(channel.Id, channel.ServerId ?? Guid.Empty, session.ChannelTitle(channel),
+                channel.Kind, channel.AudioQuality, false, channel.Participants);
+            if (_enteringChannelId == channel.Id) item.RequestEnter();
+            Channels.Add(item);
+        }
+        _enteringChannelId = null;
         if (SelectedChannel is null || Channels.All(item => item.Id != SelectedChannel.Id))
             SelectedChannel = Channels.FirstOrDefault(channel => channel.Kind == "text") ?? Channels.FirstOrDefault();
         if (SelectedChannel is { } selected && Channels.FirstOrDefault(item => item.Id == selected.Id) is { } updated)
@@ -546,9 +599,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(IsSignedIn));
         Changed(nameof(ShowAuth));
         Changed(nameof(ShowGuest));
+        Changed(nameof(ShowChannelNav));
         Changed(nameof(ShowChat));
         Changed(nameof(AccountName));
         Changed(nameof(AccountHandle));
+        Changed(nameof(SelfUsername));
+        Changed(nameof(SelfDisplayName));
         Changed(nameof(AccountInitial));
         Changed(nameof(AccountPlayback));
         Changed(nameof(HasAvatar));
@@ -558,7 +614,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(PaneTitle));
         Changed(nameof(ShowSettings));
         if (SelectedInstance?.Context.Session is { } session)
+        {
             _ = LoadUserAvatarAsync(session.Me.Id);
+            _ = LoadUserBannerAsync(session.Me.Id);
+            foreach (var id in _banners.Keys.Where(id => id != session.Me.Id).ToArray())
+                _ = LoadUserBannerAsync(id);
+        }
         else
             ClearPlaybacks();
         NotifyVoice();
@@ -589,13 +650,18 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         OnShortcutsChanged();
         Changed(nameof(ComposerPlaceholder));
         Changed(nameof(SendTip));
+        Changed(nameof(ComposerBannerText));
+        Changed(nameof(ComposerCancelTip));
+        Changed(nameof(EmptyMessageTitle));
+        RefreshTyping();
+        RefreshParticipants();
         RebuildQualityChoices();
         Devices.Relabel();
+        RefreshTyping();
     }
 
     private void NotifyVoice()
     {
-        Changed(nameof(ShowVoice));
         Changed(nameof(ShowChat));
         Changed(nameof(InVoice));
         Changed(nameof(IsSelfMuted));
@@ -645,7 +711,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                         _ = LoadUserAvatarAsync(state.UserId);
                         return new VoiceMemberRow(state.UserId, state.DisplayName, user?.Username ?? "",
                             state.SelfMute, state.SelfDeaf, session?.Me.Id == state.UserId,
-                            ProfileOf(state.UserId, state.DisplayName), playback);
+                            ProfileOf(state.UserId, state.DisplayName), playback, voice.IsSpeaking(state.UserId));
                     })
                     .ToList());
         }
@@ -700,6 +766,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             Messages.Clear();
             _previews.Clear();
+            RefreshMessagePresentation();
             Changed(nameof(HasOlder));
             return;
         }
@@ -711,8 +778,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         {
             var row = Messages.FirstOrDefault(existing => existing.Item.LocalId == item.LocalId);
             if (row is null)
-                row = new(item, session?.AuthorName(item.Message.AuthorId) ?? "", SaveAttachmentAsync, RetryFailedAsync, OnError,
-                    session is not null && item.Message.AuthorId == session.Me.Id);
+                row = new(item, session?.AuthorName(item.Message.AuthorId) ?? "", SaveAttachmentAsync, RetryFailedAsync,
+                    CancelSendAsync, OnError, session is not null && item.Message.AuthorId == session.Me.Id);
             else
             {
                 row.Update(item);
@@ -721,6 +788,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             }
             if (_playbacks.TryGetValue(item.Message.AuthorId, out var cached))
                 row.Playback = cached.Playback;
+            row.SetModerate(session is not null && ActiveServer?.OwnerId == session.Me.Id);
+            row.ReplyLabel = ReplyPreview(item.Message, session);
             ordered.Add(row);
         }
         for (var i = 0; i < ordered.Count; i++)
@@ -737,64 +806,85 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (session is not null)
             _previews.Update(Messages.SelectMany(row => row.Files), session.DownloadAsync);
         Changed(nameof(HasOlder));
+        Changed(nameof(ChannelForbidden));
+        Changed(nameof(CanSend));
         var prepended = previousFirst != Guid.Empty && ordered.Count > 0
             && ordered[0].Item.LocalId != previousFirst
             && ordered.Exists(row => row.Item.LocalId == previousFirst);
         var appended = ordered.Count > 0 && ordered[^1].Item.LocalId != previousLast && !prepended;
-        if (appended && (IsNearBottom?.Invoke() ?? true))
+        var keepLast = previousLast != Guid.Empty && ordered.Exists(row => row.Item.LocalId == previousLast);
+        if (appended && keepLast && !ordered[^1].IsOwn)
+            ordered[^1].RequestEnter();
+        if (appended && (ordered[^1].IsPending || (IsNearBottom?.Invoke() ?? true)))
             ScrollToLatest?.Invoke();
     }
 
-    private async Task SendAsync()
+    private Task SendAsync()
     {
-        if (_timeline is null || !CanSend) return;
+        if (_timeline is null || !CanSend) return Task.CompletedTask;
         var text = Draft.Trim();
-        if (IsEditing)
-        {
-            if (text.Length == 0 || _editingId is not Guid editing) return;
-            if (ContainsBlocked(text))
-            {
-                Status = _text.Get(TextKey.BlockedWord);
-                return;
-            }
-            Status = "";
-            try
-            {
-                await _timeline.EditAsync(editing, text, _lifetime);
-                CancelEdit();
-                FocusComposer?.Invoke();
-            }
-            catch { throw; }
-            return;
-        }
-        if (text.Length == 0 && PendingFiles.Count == 0) return;
+        if (IsEditing) return CommitEditAsync(text);
+        if (text.Length == 0 && PendingFiles.Count == 0) return Task.CompletedTask;
         if (text.Length > 0 && ContainsBlocked(text))
         {
             Status = _text.Get(TextKey.BlockedWord);
-            return;
+            return Task.CompletedTask;
         }
+        if (!_timeline.CanQueue) return Task.CompletedTask;
         var files = PendingFiles.Select(item => item.File).ToList();
         foreach (var file in files)
             if (file.Content.CanSeek) file.Content.Position = 0;
+        var replyTo = _replyTo;
+        var timeline = _timeline;
+        var channel = SelectedChannel;
         Draft = "";
         Status = "";
         PendingFiles.Clear();
         NotifyPending();
+        CancelReply();
+        FocusComposer?.Invoke();
+        _ = FinishSendAsync(timeline, text, files, replyTo, channel);
+        return Task.CompletedTask;
+    }
+
+    private async Task CommitEditAsync(string text)
+    {
+        if (text.Length == 0 || _editingId is not Guid editing) return;
+        if (ContainsBlocked(text))
+        {
+            Status = _text.Get(TextKey.BlockedWord);
+            return;
+        }
+        Status = "";
+        await _timeline!.EditAsync(editing, text, _lifetime);
+        CancelEdit();
+        FocusComposer?.Invoke();
+    }
+
+    private async Task FinishSendAsync(ChannelTimeline timeline, string text, List<PickedFile> files, Guid? replyTo,
+        ChannelItem? channel)
+    {
         try
         {
-            await _timeline.SendAsync(text.Length == 0 ? null : text, files, _lifetime);
-            ScrollToLatest?.Invoke();
-            if (SelectedChannel is { } channel && LatestVisibleId() is Guid latest)
-                _ = MarkReadAsync(channel.Id, latest);
+            await timeline.SendAsync(text.Length == 0 ? null : text, files, replyTo, _lifetime);
+            if (!ReferenceEquals(_timeline, timeline)) return;
+            if (channel is { } selected && SelectedChannel?.Id == selected.Id && LatestVisibleId() is Guid latest)
+                _ = MarkReadAsync(selected.Id, latest);
             BeginCooldown(ActiveServer?.CooldownSeconds ?? 0);
-            FocusComposer?.Invoke();
         }
         catch (ChatApiException exception) when (exception.Code == "blocked_word")
         {
-            Draft = text;
-            var failed = _timeline.Items.LastOrDefault(item => item.Status == SendStatus.Failed);
-            if (failed is not null) _timeline.DropFailed(failed.LocalId);
-            throw;
+            if (ReferenceEquals(_timeline, timeline))
+            {
+                Draft = text;
+                var failed = timeline.Items.LastOrDefault(item => item.Status == SendStatus.Failed);
+                if (failed is not null) timeline.DropFailed(failed.LocalId);
+            }
+            OnError(exception);
+        }
+        catch (Exception exception)
+        {
+            OnError(exception);
         }
     }
 
@@ -815,6 +905,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         ScrollToLatest?.Invoke();
         BeginCooldown(ActiveServer?.CooldownSeconds ?? 0);
         FocusComposer?.Invoke();
+    }
+
+    private async Task CancelSendAsync(TimelineItem item)
+    {
+        if (_timeline is null) return;
+        await _timeline.CancelAsync(item.LocalId, _lifetime);
+        Changed(nameof(CanSend));
     }
 
     public async Task QueueFilesAsync(IReadOnlyList<PickedFile> files)
@@ -923,6 +1020,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Messages.Clear();
         SelectedChannel = null;
         ClearPlaybacks();
+        SeedLayoutFixtures();
         NotifySession();
         Changed(nameof(ShowAuth));
         Changed(nameof(ShowGuest));
@@ -1060,6 +1158,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     {
         DetachTimeline();
         FlushDraft();
+        _typingTimer?.Stop();
         DisposePresentation();
         _previews.Dispose();
         ClearRailAvatars();
@@ -1073,9 +1172,4 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Workspace.Dispose();
         _transport.Dispose();
     }
-}
-
-public sealed record AudioQualityChoice(string Id, string Title, string Detail)
-{
-    public string Label => Title + "  " + Detail;
 }

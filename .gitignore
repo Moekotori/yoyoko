@@ -10,4 +10,5 @@
 .DS_Store
 config.local.toml
 /data/
+/.tools/
 node_modules/

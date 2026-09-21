@@ -8,17 +8,37 @@ Text channels use one 42px header: channel tabs on the left, search and particip
 
 Verified in a real macOS window: the duplicate title is absent, and both search and participant toggles work. Release validation used an isolated HEAD copy with these two layout files, the existing working-tree wallpaper fixes and a temporary correction of the baseline account-tooltip XAML. It built with one existing Watermark deprecation warning. The concurrently changing workspace build was blocked by unrelated edits; Windows/Linux layout and full workspace integration were not verified. No messages were sent.
 
+## Member pane (2026-09-21)
+
+The conversation member column is 300px (wider than the 260px channel nav), with 40px avatars and 14/12 name/handle type so long display names stay readable. It shares the chat canvas/wallpaper, keeps a left divider, and groups people as Online / Offline with counts. Loaded-message authors and the signed-in account sit under Online. Ten local layout names (Mika, 苏晚, Nova, 林栖迟, Alexander Whitfield online; 陈默, 江河, 月见里, Ryo, 阿布杜勒·拉赫曼 offline) fill the pane until presence exists. `start.cmd` / `dev.cmd` seed fixture channels (`日常`, `设计`, `深夜电台`), members and eight layout messages as soon as the window opens, before sign-in. Real community data replaces fixture channels after connect. They are not membership, not persisted, and do not appear in ⌘K or unread/read cursors. Presence protocol is **Not implemented yet**.
+
+Release Chat.UI compiled with zero warnings/errors. Native window click-through and wallpaper contrast on Windows/macOS/Linux were not revalidated in this pass.
+
+## Message layout (2026-09-21)
+
+The timeline follows Discord: every message stays on the left. Wheel scrolling eases over 160ms instead of jumping 50px per notch, and the virtualizing panel keeps one extra viewport cached so rows do not pop in. The avatar occupies a fixed leading column; the name and timestamp sit on one line, with the body underneath. Consecutive messages from the same author hide the avatar and name but keep the column so wrapped text still lines up. Hover actions stay on the trailing edge: copy, reply, edit (own) and delete (own or community owner). Reply shows a one-line quote when the parent is still in the loaded window. Composer shows an edit/reply banner; typing from others appears above it. Listing a channel that returns 403/404 clears that channel cache and shows no access. Presence protocol is **Not implemented yet**.
+
+Release Chat.UI compiled with zero warnings/errors. Native signed-in click-through on Windows/macOS/Linux was not repeated in this pass.
+
+## Send motion and typing (2026-09-21)
+
+Sending clears the composer and reply banner immediately and leaves the command free for the next Enter. The optimistic row appears at once; the timeline pins to the bottom for own sends (and for incoming messages only when already near the bottom), then follows one layout pass so virtualization does not leave a gap. Own sends do not play enter motion or insert the “新消息” divider. Incoming rows play a 120ms fade-and-rise via `ItemEnter`; pending text is slightly dimmed instead of inserting a “Sending” line. Cancel stays on the hover/pending toolbar. History pages and channel switches do not play enter motion. Reduced motion skips it. Composer keystrokes call `POST /channels/{id}/typing` at most once every 3s; peers see “X is typing…” above the composer for 8s or until that user sends. No looping dots. `TYPING_START` is not persisted.
+
+Release Chat.UI compiled with zero warnings/errors. Native signed-in send click-through on Windows/macOS/Linux was not repeated in this pass.
+
 ## Settings
 
-The settings button is fixed at the bottom of the instance rail. Clicking it while settings is open returns to the previous workspace view, matching Escape and ⌘/,. The redundant upper-right settings close button has been removed. The channel/account column stays visible; choosing a channel closes settings and opens that channel. Channel tabs stay hidden while settings occupies the main pane. This does not change the protocol or roadmap phase.
+The settings button is fixed at the bottom of the instance rail. Clicking it while settings is open returns to the previous workspace view, matching Escape and ⌘/,. The redundant upper-right settings close button has been removed. Opening settings collapses the 260px channel/account column and the community title so the 240px settings sidebar sits next to the instance rail; the current instance or Escape closes settings and restores that column. Channel tabs stay hidden while settings occupies the main pane. This does not change the protocol or roadmap phase.
 
-Settings has a 184px sidebar for General, Appearance, Keyboard, Voice, Profile and Server, with 42px navigation targets and a restrained 2px selection surface. The 28px section title and left-aligned body share a consistent starting edge, 40px from the sidebar. The header and body fill the remaining window width with 40px side insets; the body is inset from the vertical scrollbar so controls are not flush with the bar. The compact 32px close button stays at the page upper right. Form pages use the same 10px charcoal groups as Profile, with 52px inset rows and thin separators; Keyboard bindings stay in a 560px list with a 160px key column. The sidebar and header remain visible while the body scrolls.
+Settings takes the space freed by the channel column. The 240px sidebar lists General, Appearance, Keyboard, Voice, Profile and Server as 46px rows with 15px labels. The current section uses brighter text and icon; hover still uses a quiet fill, but selected no longer paints a full-row slab. The 26px section title and body share a 36px starting edge from the sidebar; the header and form still fill the remaining width. Form pages keep the same 12px raised groups as Profile, with 44px rows, 14px labels and a shared 240px control column so dropdowns, actions and switches line up on the right. Groups, fields, dropdowns and actions use 8–12px corners. The sidebar and header remain visible while the body scrolls.
 
 - General: language and language packs stay in one grouped card, with styled dark popup menus and 14px text. Two-way selection updates the existing preferences; changing locale preserves option identity and updates the section title.
 - Appearance: color scheme, compact layout, reduced motion and custom background share one grouped card. Dark/Light switches theme tokens immediately. Toggle and file rows are full-row targets; the color label opens the dropdown. Custom background accepts a dropped image or video (video files up to 2 GiB on disk). File picker and blur/brightness appear after the background is on. Still images decode at most 1920×1080, video at most 1280×720 / 20 fps so RAM stays bounded; the source file stays on disk. Blur/brightness sliders do not restart video. Playback pauses when the window is minimized, hidden, or reduced motion is on.
-- Keyboard: send (Enter vs Ctrl/⌘ Enter) sits at the top. Workspace shortcuts are grouped; the whole row starts capture, keys render as compact caps, and a customized row shows a reset. Escape or a click outside cancels capture; Backspace clears; Reset all appears only when something has been changed. Overrides stay in `preferences.json`. Tab 1–9 and Escape stay reserved.
-- Voice: existing input/output device selectors use the same dropdown dimensions; device errors remain visible. Headset media keys is an opt-in switch (default off): while in a voice channel it registers a system Now Playing session so headset play/pause mutes the microphone, and it clears on leave. This is presentation of existing mute, not new media functionality.
-- Profile: username, avatar actions and display name share one full-width charcoal group with 10px corners and thin row separators. Labels and editors use consistent 2:3 columns; the 56px avatar and action buttons wrap within the editor column. Inputs and buttons use 6px corners; save/status remain outside the group. Signed-out authentication, existing bindings, Close and Escape are preserved.
+- Keyboard: send (Enter vs Ctrl/⌘ Enter) sits at the top in the same 240px control column. Workspace shortcuts are grouped; the whole row starts capture, keys render as compact caps, and a customized row shows a reset. Escape or a click outside cancels capture; Backspace clears; Reset all appears only when something has been changed. Overrides stay in `preferences.json`. Tab 1–9 and Escape stay reserved.
+- Voice: input/output selectors share the 30×240 dropdown used on other settings pages; the device-check action stays content-sized and right-aligned in that column. Audio quality and the owner-only channel cap sit in the same group. Device errors remain visible. Headset media keys is an opt-in switch (default off): while in a voice channel it registers a system Now Playing session so headset play/pause mutes the microphone, and it clears on leave. This is presentation of existing mute, not new media functionality. Joining a voice channel opens that channel’s text chat instead of this settings page.
+- Profile: a single settings group for the current account. A 120px banner strip sits above the 88px avatar well; both are clickable (hover camera scrim). Change/remove actions cover avatar and banner beside the preview name and handle. Display name and username use the shared 240px field column; save and status sit in the group footer. No sign-in or sign-up form. Signed-out instances show the same layout disabled.
+
+Profile grouping (2026-09-21): settings groups use a 12px raised surface; fields, secondary actions and the save button use 8px corners; row dividers are inset. `Chat.UI` Release compiled with zero warnings/errors. An Avalonia Headless + Skia render of the production Settings/Profile view used a local signed-in fixture. [Rounded profile](settings/profile-rounded.png). This is offscreen layout evidence, not a native Windows click-through or profile-save acceptance.
 - Server: the address field accepts an origin or a shareable `{origin}/join/{invite_code}` link. After a session is up, the page shows Connected, instance name, host, community, `/health/live` latency, protocol, and the community invite with copy. Copy writes the join link so another client can paste it into this field to discover the instance and join that community. Disconnect stops Gateway/voice for that instance and keeps the saved account so Connect can restore it. Changing the address while connected shows Connect again to switch.
 
 Server connection status (2026-09-21): Release Chat.UI then Chat.App built with zero warnings/errors. 58 client foundation checks passed, including zh/en/ja copy and a loopback `/health/live` RTT probe. The LAN instance `http://10.19.144.83:8080/health/live` returned 200. Native window click-through of disconnect/reconnect was not repeated in this pass; Windows/Linux were not exercised.
@@ -43,7 +63,7 @@ Profile reference styling (2026-09-21): Release build passed with zero warnings/
 
 ### Settings motion and switches
 
-Settings control feedback is scoped in `SettingsMotion.axaml`. Switches use a 42×24 track, a 20px light thumb, subtle edge/shadow separation, an 18px travel over 180ms with CubicEaseOut, 160ms track/colour blending and 90ms press feedback. Sidebar selection markers animate opacity/height; dropdown arrows rotate, menus fade/slide in, buttons respond to press, and field focus/hover colours blend over 100–140ms.
+Settings control feedback is scoped in `SettingsMotion.axaml`. Switches use a 42×24 track, a 20px light thumb, subtle edge/shadow separation, an 18px travel over 180ms with CubicEaseOut, 160ms track/colour blending and 90ms press feedback. Sidebar hover blends a quiet fill; selected state is text/icon contrast only. Dropdown arrows rotate, menus fade/slide in, buttons respond to press, and field focus/hover colours blend over 100–140ms. Section changes use a 140ms fade from 0.92 opacity plus an 8px directional slide that follows nav order.
 
 `SettingsMotionScope` enables these transitions only while the settings view and ancestors are visible, the window is not minimized, and reduced motion is off. It unsubscribes on detach; removing the motion class cancels control transitions and snaps to the bound state. Rapid toggles retarget the ongoing transition. Page motion is owned by the shared MotionHost, so the old per-page fade is removed to avoid double animation. There are no looping UI animations or dedicated timers.
 
@@ -86,23 +106,19 @@ Default chords:
 
 ## Message markup (2026-09-21)
 
-The composer still sends plain UTF-8. The timeline renders a bounded subset in-process: `**bold**`, `_italic_`, `~~strike~~`, `` `code` ``, fenced blocks, headings, lists, quotes, simple tables, `||spoilers||`, `@username`, autolinks, `[label](https://…)`, and TeX between `$…$` / `$$…$$` (including `pmatrix`). Plain messages skip parsing. Parsed markup and math trees are cached (96 / 48 slots). Simple formulas such as `$x^2$` flatten to Unicode instead of a visual tree; fractions, roots and matrices stay as light panels. Unknown commands stay visible as source. Copy still copies the original source. HTML, markdown images, syntax highlighting and full TeX packages are **Not implemented yet**. Protocol and fixtures are unchanged.
+Typing `@` in the composer opens a bounded picker for `@everyone`, `@here`, and matching community, conversation, or voice members (including display names and Unicode tokens); ↑/↓ moves the highlight, Enter or Tab inserts the token, Escape closes it. The composer still sends plain UTF-8. The timeline renders a bounded subset in-process: `**bold**`, `_italic_`, `~~strike~~`, `` `code` ``, fenced blocks, headings, lists, quotes, simple tables, `||spoilers||`, `@username`, `@everyone`, `@here`, autolinks, `[label](https://…)`, TeX between `$…$` / `$$…$$` (including `pmatrix`), and a safe HTML subset (`b`/`strong`, `i`/`em`, `u`, `s`/`del`, `code`, `pre`, `a href`, `p`, `br`, `h1`–`h3`, `ul`/`ol`/`li`, `blockquote`, `table`, plus common entities). Script/style/iframe, event handlers, `javascript:` links and remote `<img src>` are dropped; `<img alt>` keeps the alt text only. Clicking `@user` opens the member card. Messages that mention you, `@everyone`, or `@here` use a light row tint and stronger chips. Plain messages skip parsing. Parsed markup and math trees are cached (96 / 48 slots). Simple formulas such as `$x^2$` flatten to Unicode instead of a visual tree; fractions, roots and matrices stay as light panels. Unknown commands stay visible as source. Copy still copies the original source. Markdown images, syntax highlighting and full TeX packages are **Not implemented yet**. Protocol Message DTO includes optional `mention_everyone` and `mention_here`.
 
 ## Automatic connection and account settings (2026-09-21)
 
 The server field accepts `localhost` or `http://localhost` as a shortcut to the configured default instance, including its port; explicit ports and other hosts retain their meaning. Verified by entering `localhost` in a real macOS Release window: the field resolved to `http://10.19.144.83:8080/`, the connection succeeded, and the same account/channels remained active. Release build passed; 45 client foundation checks passed, including alias configuration and explicit-address boundaries.
 
-Startup opens the real default channel without a credential form. The server rail plus button opens Settings → Server. Settings → Profile edits the current instance username, display name and avatar; the authentication form is only shown there for a signed-out instance. The Core connection coordinator stores the last successful server address and restores its session; a failed connection does not replace the current account or saved address. Settings → Server reflects that live session (connected/disconnected, name, latency) without adding a second connection protocol.
+Startup opens the real default channel without a credential form. The server rail plus button opens Settings → Server. Connecting to a server without a saved account shows a username field; empty uses `User`, and a taken default becomes `User2` and so on. Settings → Profile edits the current instance avatar, banner, display name and username. The Core connection coordinator stores the last successful server address and restores its session; a failed connection does not replace the current account or saved address. Settings → Server reflects that live session (connected/disconnected, name, latency) without adding a second connection protocol.
 
 Verified in an actual macOS Release window with an isolated cache: first-use registration and default channel, saving username/display name to the LAN server, restarting into the same account, opening server settings via the plus button, failed connection feedback and reconnecting to the configured LAN endpoint. No messages were sent. Build passed with zero warnings/errors and client dependency checks passed. Windows/Linux, expired-session recovery and cross-server switching were not exercised in this pass. Existing development credential-file storage remains unchanged; OS vault support is still pending.
 
 ## Authentication form
 
-The real authentication view uses a centered form capped at 380 logical pixels, with equal-width 46px inputs and a full-width light submit button. Sign-in and sign-up have separate tabs; display name appears only during sign-up. The form is available only in Settings → Profile when the selected instance needs account recovery; the startup page never asks for credentials. Existing localized labels are reused without additional explanatory copy.
-
-`Auth/AuthFormViewModel` owns credential fields, mode, status and busy presentation state. Both tabs share one submission command, preventing concurrent sign-in/sign-up requests; authentication still runs through the existing instance session. Enter in the password field submits the selected mode. Small windows can scroll the form.
-
-Validation (2026-09-20): Release desktop compilation completed with zero warnings/errors and client boundary checks passed. Native macOS visual/input verification was blocked because the Mac was locked; layout, focus, and tab interaction still require an unlocked-window check. This UI change does not advance the roadmap phase or change the protocol.
+Settings → Profile no longer shows sign-in or sign-up. Account creation remains the first-use auto-register path; Settings → Server asks for a username when the instance has no saved account, defaulting to `User`. Profile is avatar, banner, display name and username only. `Auth/AuthFormViewModel` is still constructed for Core session sign-in, but the settings page does not present those fields. The startup page never asks for credentials.
 
 Implemented in the existing Avalonia desktop client. Neutral charcoal surfaces, a quiet violet active marker, server rail, grouped channel navigation, channel tabs, message timeline, member sidebar and account strip follow `selected-reference.png`. The native OS owns window controls; no fake traffic lights are drawn.
 
@@ -114,7 +130,7 @@ dotnet run --project src/client/App -c Release -- --design-preview
 
 The explicit `--design-preview` flag loads bounded local UI fixtures, marks the window and account area as **设计预览**, skips instance/cache hydration, and blocks adding instances. No fixture data enters Core, the network, or SQLite. Preview channel/tab navigation, current-channel text search, group collapse and member visibility work locally. Sending, reactions, attachment/emoji actions, account settings and voice actions show **Not implemented yet**; drafts are preserved and no message or media success is invented.
 
-For everyday UI work, run `./dev.command` (hot reload), `./start.command` (Release), or `dotnet run --project src/client/App`. All read `default_instance_url` from App/appsettings.json (currently `http://10.19.144.83:8080`), with `CHAT_DEFAULT_INSTANCE_URL` as an override. Launchers do not start or stop the server. Startup uses the last successfully selected server, falling back to the configured default. It restores the account or registers one on first use; an existing account with an expired session is never silently replaced. On a LAN instance without communities, it creates a real community and selects `general`. Settings → Profile edits the account; Settings → Server changes the connection and persists it. Discovery keeps its same-origin checks. `--design-preview` remains isolated.
+For everyday UI work, run `dev.cmd` / `./dev.command` (hot reload), `start.cmd` / `./start.command` (Release), or `dotnet run --project src/client/App`. All read `default_instance_url` from App/appsettings.json (currently `http://localhost:8080`), with `CHAT_DEFAULT_INSTANCE_URL` as an override. Windows `start.cmd` also starts the local LAN server; macOS `start.command` does not. Startup uses the last successfully selected server, falling back to the configured default. It restores the account or registers one on first use (username from Settings → Server, otherwise `User`); an existing account with an expired session is never silently replaced. On a LAN instance without communities, it creates a real community and selects `general`. Settings → Profile edits the account; Settings → Server changes the connection and persists it. Connecting and startup connect can be cancelled from that page (or Escape); a cancelled attempt leaves the previous session untouched. Discovery keeps its same-origin checks. `--design-preview` remains isolated.
 
 The community menu now lets owners create text or voice channels through the existing API. Newly created text channels open immediately; creating voice channels does not join voice. Creating a community selects its own default text channel. These are server-backed operations, without fixture messages or permission bypasses; no protocol version change.
 
@@ -126,13 +142,14 @@ LAN startup verification (2026-09-21): Release build completed with zero warning
 - `Channels/QuickSwitcher`: ⌘ K / Ctrl K channel jump overlay.
 - `Instances`: real instance rail and add-instance form; explicit preview server visuals.
 - `Channels/ChannelSidebar`: grouped navigation with category chevrons and selected-row weight.
-- `Chat/MemberSidebar`: conversation participants from loaded messages, with letter avatars when no image is present. Left-click opens a compact Discord-style user card (banner, overlapping avatar, display name, username, user ID); right-click offers mention, copy ID/username, own profile, and owner kick/ban entries that currently show Not implemented yet. This is not server membership or online presence.
-- `Chat/ProfileDrawer`: account-bar profile is a 300px rounded popout above the account strip (banner, overlapping avatar, ID, compact fields). Full profile editing in Settings is unchanged.
+- `Chat/MemberSidebar`: 300px conversation authors plus the signed-in account, grouped Online / Offline. 40px letter avatars, 14px names and 12px handles. Ten local layout names fill the list; they are not persisted or sent to the server. Left-click opens a 360px user card (16px corners, custom JPEG/PNG/GIF/WebP banner or ID-tinted fallback, overlapping avatar, presence, primary action, labeled user ID). Own card can change the banner. Right-click offers message, mention, copy ID/username, own profile, and owner kick/ban entries that currently show Not implemented yet. Real accounts open a 1:1 DM; fixture names cannot. Server membership and presence are **Not implemented yet**.
+- `Chat/ProfileDrawer`: account-bar profile is a 360px rounded popout above the account strip (custom JPEG/PNG/GIF/WebP banner, overlapping avatar, ID, compact fields). Click the banner to change it. Full profile editing in Settings is unchanged.
+- `Components/Banner`: rectangular cover with color fallback and optional GIF playback; used by the user card, profile drawer and Settings → Profile.
 - `Workspace`: tabs, conversation, member and account views with presentation state.
 - `Styles/Theme.axaml`: dark tokens and focus/hover/selection presentation.
 - `Styles/Icons.axaml`: official Microsoft Fluent System Icons geometries; MIT license in `Assets`.
 - Five generated avatars are stored at 256px; the preview owns five 128px decoded bitmaps and disposes them at application exit. Normal mode does not decode them.
-- The timeline uses Avalonia ListBox's virtualizing panel. Preview fixtures are bounded at five messages; real paging belongs to the future message pipeline.
+- The timeline uses Avalonia ListBox's virtualizing panel. Design-preview fixtures stay in the preview window; the live shell prepends eight local layout messages that never enter Core, SQLite, or the network. Real paging belongs to the message pipeline.
 
 ## Verification
 
@@ -144,19 +161,23 @@ See `../../design-qa.md` for the visual comparison and screenshot evidence.
 
 ### 侧栏与频道管理（2026-09-21）
 
-已实现紧凑频道分组、2 px 选中行圆角和分组旁的新增按钮。所有者可添加文字/语音频道，文字频道右键打开、重命名、添加同类频道或删除。语音频道双击加入，右键「设置」打开设备/音质页；加入后文字频道仍留在主栏，成员列在该语音频道下方，账号条上方可离开。添加与重命名直接在侧栏原位输入，Enter 保存、Esc 取消，无遮罩和居中弹窗；删除在原行展开确认，失败就地显示错误，创建语音频道不会自动加入通话。管理请求走 HTTP，变更通过 Gateway 与 SQLite 同步。
+频道/账号列为 260 px，给底部头像、用户名和麦克风/耳机控件留出间距。已实现紧凑频道分组、2 px 选中行圆角和分组旁的新增按钮。所有者可添加文字/语音频道，文字频道右键打开、重命名、添加同类频道或删除。语音频道单击加入并打开该频道的文字聊天；右键可复制网页语音链接，或打开设置中的设备/音质页。成员列在该语音频道下方，账号条上方可离开。添加与重命名直接在侧栏原位输入，Enter 保存、Esc 取消，无遮罩和居中弹窗；删除在原行展开确认，失败就地显示错误，创建语音频道不会自动加入通话。管理请求走 HTTP，变更通过 Gateway 与 SQLite 同步。
 
-成员栏使用 52 px 标题、会话作者计数（空时隐藏）和悬停行。没有头像时显示名字首字，不表示在线或社区成员名单。左键打开用户卡片（显示名、用户名、用户 ID），右键复制或提及；社区所有者对其他人可见踢出/封禁，这两项目前提示尚未实现。
+成员栏与消息区共用画布/壁纸，按「在线 / 离线」分组并显示人数。当前账号和已加载消息的作者列在在线；另有十个本地占位名（Mika、苏晚、Nova、林栖迟、Alexander Whitfield 在线，陈默、江河、月见里、Ryo、阿布杜勒·拉赫曼离线）只用于排版。`start.cmd` / `dev.cmd` 打开窗口即出现假频道（日常、设计、深夜电台）、假成员和八条假消息，不必等登录；连上真实社区后会换成真频道。这些数据不入库、不上网、不进 ⌘K，也不参与已读游标。没有头像时显示名字首字。左键打开 300px 圆角用户卡片（横幅、叠放头像、在线状态、发私信/提及和用户 ID）；右键可发私信、提及或复制。真实账号会 get-or-create 一条私信频道并出现在频道列「私信」分组；占位名不能私信。社区所有者对其他人可见踢出/封禁，这两项目前提示尚未实现。服务端成员名单与 presence **尚未实现**。离屏渲染见 [user-card](polish/user-card.png)。
 
 验证：macOS Release 构建、本地 API / Gateway 聚焦检查；原生窗口见 [live](polish/sidebar-live.png) 与 [design preview](polish/sidebar-preview.png)。远端部署、PostgreSQL 实际删除和三平台窗口尚未验证。
 
-语音交互（2026-09-21）：Release Chat.UI / Chat.App 零警告编译；86 项客户端契约检查通过。对本机 API 用两个账号加入同一语音频道，成员名单为 2，并签发 LiveKit JWT。`chat-media-worker` 现已链接 LiveKit Rust SDK；对端听筒还需要本机 LiveKit SFU（默认 `localhost:7880`）。Windows/Linux 窗口未验证。
+语音交互（2026-09-21）：Release Chat.UI / Chat.App 零警告编译；86 项客户端契约检查通过。对本机 API 用两个账号加入同一语音频道，成员名单为 2，并签发 LiveKit JWT。`chat-media-worker` 现已链接 LiveKit Rust SDK。
+
+Windows 本机双端媒体（2026-09-21）：本机 `livekit-server` 1.9.0（`127.0.0.1:7880`）+ 本地 API。两个账号加入同一语音频道后，两个 `chat-media-worker` 均 `join ok`；LiveKit `ListParticipants` 为 2 名 ACTIVE、各 1 条 `microphone` 音轨（一侧开麦、一侧静音以免本机回授）。这是与桌面客户端相同的 worker 进房路径，不是两个 Avalonia 窗口里的听筒验收。
+
+随后补上局域网 RTC 改写、频道内有界重连，以及 LiveKit 活跃说话人驱动的侧栏 2 px 绿圈。2026-09-21 本机验收：`Host: 192.168.1.6:8080` 时发现 RTC 为 `http://192.168.1.6:7880`、join 为 `ws://192.168.1.6:7880`；LiveKit 1.9.0 用 `--node-ip` 绑 `0.0.0.0:7880`（YAML 顶层 `node_ip` 会启动失败）。说话事件已进 worker 源码，当前 `chat-media-worker` 发布二进制因 webrtc-sys MT/MD 链接冲突未重编，绿圈要等该 exe 编过才会亮。两个真实窗口对听仍未记录。
 
 ## Account controls (2026-09-21)
 
 The account bar opens an editable profile panel above the account area using the existing profile API. The current compact surface uses a 180ms slide/fade that can reverse during dismissal, respects reduced motion and stops when minimized. Escape and the backdrop dismiss it; focus cycles inside and returns to the opener.
 
-Microphone/deafen controls work before joining voice and carry the chosen state into the next join. Undeafen restores the previous microphone preference. Hover resolves the selected device name (including the current system default); each icon has its own arrow: the microphone opens only inputs, and headphones open only outputs. Each 240px menu lists devices directly in 32px rows, marks the current selection and dismisses on selection; there is no nested dropdown. Enumeration runs on demand with coalesced refreshes, not an idle polling loop. These controls now drive a LiveKit client in `chat-media-worker`. Two-client hearing still needs a running LiveKit SFU; that window acceptance is not recorded here.
+Microphone/deafen controls work before joining voice and carry the chosen state into the next join. Undeafen restores the previous microphone preference. Hover resolves the selected device name (including the current system default); each icon has its own arrow: the microphone opens only inputs, and headphones open only outputs. Each 240px menu lists devices directly in 32px rows, marks the current selection and dismisses on selection; there is no nested dropdown. Enumeration runs on demand with coalesced refreshes, not an idle polling loop. These controls now drive a LiveKit client in `chat-media-worker`. Windows host LiveKit now accepted two workers in one room with published microphone tracks; two-window hearing is still not recorded.
 
 频道原位编辑保持透明背景，移除输入框底色、边框及整行下划线，仅保留文字、光标和保存/取消操作。
 
@@ -176,6 +197,20 @@ Rail selection refinement: selected items use a quiet `#2C2C2C` fill (`#303030` 
 
 ### 设置页空白频道列修复（2026-09-21）
 
-恢复 ShellSurface 的 ShowSettings 折叠绑定；设置打开时频道栏宽度降为 0，关闭后恢复 220 px，保留短促过渡及减少动效偏好。折叠样式由可重建的 ShellSurface 自己持有，UltraLight 恢复后也适用，不改变资料页的登录/注册逻辑。
+恢复 ShellSurface 的 ShowSettings 折叠绑定；设置打开时频道栏宽度降为 0，关闭后恢复 220 px，保留短促过渡及减少动效偏好。折叠样式由可重建的 ShellSurface 自己持有，UltraLight 恢复后也适用，不改变资料页的头像与名称编辑。
 
 验证：使用 d0173f8 的独立源码快照加本次布局改动及当前 SettingsViewModel，完成 Release 构建、设置栏宽度归零与 UltraLight 恢复检查；macOS 原生验证窗口已核对资料页，空白列消失。隔离构建用于避开其他任务正在改写的源码/程序集，不代表所有并行改动已验收。
+
+### 设置侧栏与分类切换（2026-09-21）
+
+设置页只占主内容区：240px 导航不再挤扁频道列，频道/账号列和社区标题保持可见。点频道或左侧实例会关闭设置并回到工作区。分类切换立即换页，不再做上下位移或淡入。当前分类只提高文字和图标对比，不再铺整行选中底。
+
+验证：`Chat.UI` Release 0 警告 0 错误。隔离输出的 UltraLight 确认设置打开后频道列仍为 260px、分类导航 240px 留在主栏。离屏见 [channel-stay.png](settings/channel-stay.png)。本机已有占用默认输出的 Chat.App，未再开第二个原生窗口点频道；Windows 原生点击与 macOS/Linux 未在本轮验收。
+
+### 设置入场收起频道列（2026-09-21）
+
+进入设置时频道/账号列与社区标题在 160ms 内收起并淡出（260→0），设置页以 `SlideLeft` 从右侧 8px、透明度 0.88 入场，分类导航贴着实例栏。减少动效时立即到位。关闭设置后频道列恢复 260px。UltraLight 重建后折叠状态仍由 ShellSurface 样式绑定。
+
+验证：隔离输出目录的 `Chat.UI` / UltraLight Release 0 警告 0 错误；UltraLight 确认设置打开及恢复后频道列宽与透明度归零。离屏见 [channel-collapse.png](settings/channel-collapse.png)。未再开第二个原生窗口点设置；本机已有占用默认输出的 Chat.App。
+
+选中态减重（2026-09-21）：导航选中不再铺 `SelectedBrush` 整行底，也不再 SemiBold；当前项只提高文字/图标对比，悬停仍用浅底。隔离 Release 构建 `Chat.UI` / UltraLight 0 警告 0 错误，UltraLight 布局检查通过。离屏见 [sidebar-select-quiet.png](settings/sidebar-select-quiet.png)。未再开原生窗口点选分类。

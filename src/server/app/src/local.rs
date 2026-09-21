@@ -30,6 +30,10 @@ struct UserRow {
     avatar_id: Option<Uuid>,
     #[serde(default)]
     avatar_animated: bool,
+    #[serde(default)]
+    banner_id: Option<Uuid>,
+    #[serde(default)]
+    banner_animated: bool,
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct SessionRow {
@@ -60,7 +64,8 @@ struct RoleRow {
 #[derive(Serialize, Deserialize, Clone)]
 struct ChannelRow {
     id: Uuid,
-    server_id: Uuid,
+    #[serde(default)]
+    server_id: Option<Uuid>,
     name: String,
     kind: String,
     #[serde(default = "default_audio_quality")]
@@ -81,6 +86,8 @@ struct MessageRow {
     reply_to: Option<Uuid>,
     #[serde(default)]
     mentions: Vec<Uuid>,
+    #[serde(default)]
+    deleted_at: Option<String>,
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct AttachmentRow {
@@ -128,6 +135,8 @@ struct Snapshot {
     outbox_seq: i64,
     gateway: Vec<GwRow>,
     idempotency: Vec<(Uuid, String, Uuid)>,
+    #[serde(default)]
+    dm_pairs: Vec<(Uuid, Uuid, Uuid)>,
 }
 
 struct Inner {
@@ -148,6 +157,7 @@ struct Inner {
     outbox_seq: i64,
     gateway: HashMap<Uuid, GwRow>,
     idempotency: HashMap<(Uuid, String), Uuid>,
+    dm_pairs: HashMap<(Uuid, Uuid), Uuid>,
     path: PathBuf,
 }
 
@@ -183,6 +193,11 @@ impl Inner {
                 .into_iter()
                 .map(|(u, k, m)| ((u, k), m))
                 .collect(),
+            dm_pairs: snap
+                .dm_pairs
+                .into_iter()
+                .map(|(channel, low, high)| ((low, high), channel))
+                .collect(),
             path,
         };
         for user in snap.users {
@@ -200,11 +215,13 @@ impl Inner {
             inner.channels.insert(channel.id, channel);
         }
         for message in snap.messages {
-            inner
-                .by_channel
-                .entry(message.channel_id)
-                .or_default()
-                .insert(message.id, message.id);
+            if message.deleted_at.is_none() {
+                inner
+                    .by_channel
+                    .entry(message.channel_id)
+                    .or_default()
+                    .insert(message.id, message.id);
+            }
             inner.messages.insert(message.id, message);
         }
         for attachment in snap.attachments {
@@ -242,6 +259,11 @@ impl Inner {
                 .iter()
                 .map(|((u, k), m)| (*u, k.clone(), *m))
                 .collect(),
+            dm_pairs: self
+                .dm_pairs
+                .iter()
+                .map(|(pair, channel)| (*channel, pair.0, pair.1))
+                .collect(),
         };
         if let Ok(bytes) = serde_json::to_vec(&snap) {
             let tmp = self.path.with_extension("json.tmp");
@@ -258,12 +280,19 @@ impl Inner {
                 .get(&aid)
                 .map(|row| to_attachment(&row.attachment))
         });
+        let banner = u.banner_id.and_then(|aid| {
+            self.attachments
+                .get(&aid)
+                .map(|row| to_attachment(&row.attachment))
+        });
         Some(User {
             id: u.id,
             username: u.username.clone(),
             display_name: u.display_name.clone(),
             avatar_animated: u.avatar_animated && avatar.is_some(),
             avatar,
+            banner_animated: u.banner_animated && banner.is_some(),
+            banner,
         })
     }
 
@@ -287,12 +316,20 @@ impl Inner {
                 kind: ChannelKind::parse(&c.kind)?,
                 audio_quality: chat_domain::voice::AudioQuality::parse(&c.audio_quality)
                     .unwrap_or(chat_domain::voice::AudioQuality::DEFAULT),
+                participants: self
+                    .dm_pairs
+                    .iter()
+                    .find_map(|(pair, channel)| (*channel == id).then(|| vec![pair.0, pair.1]))
+                    .unwrap_or_default(),
             })
         })
     }
 
     fn message(&self, id: Uuid) -> Option<Message> {
         let row = self.messages.get(&id)?;
+        if row.deleted_at.is_some() {
+            return None;
+        }
         Some(Message {
             id: row.id,
             channel_id: row.channel_id,
@@ -385,6 +422,8 @@ impl Store for LocalStore {
                 password_hash: password_hash.into(),
                 avatar_id: None,
                 avatar_animated: false,
+                banner_id: None,
+                banner_animated: false,
             },
         );
         inner.username.insert(username.into(), id);
@@ -395,6 +434,8 @@ impl Store for LocalStore {
             display_name: display_name.into(),
             avatar: None,
             avatar_animated: false,
+            banner: None,
+            banner_animated: false,
         })
     }
 
@@ -420,6 +461,8 @@ impl Store for LocalStore {
         display_name: &str,
         avatar_id: Option<Uuid>,
         avatar_animated: bool,
+        banner_id: Option<Uuid>,
+        banner_animated: bool,
     ) -> Result<User, StoreError> {
         let mut inner = self.0.lock().await;
         if inner
@@ -445,6 +488,8 @@ impl Store for LocalStore {
             row.display_name = display_name.into();
             row.avatar_id = avatar_id;
             row.avatar_animated = avatar_animated;
+            row.banner_id = banner_id;
+            row.banner_animated = banner_animated;
         }
         let user = inner.user(id).ok_or(StoreError::Unavailable)?;
         inner.persist();
@@ -456,7 +501,7 @@ impl Store for LocalStore {
         Ok(inner
             .users
             .values()
-            .find(|row| row.avatar_id == Some(attachment_id))
+            .find(|row| row.avatar_id == Some(attachment_id) || row.banner_id == Some(attachment_id))
             .map(|row| row.id))
     }
 
@@ -593,7 +638,7 @@ impl Store for LocalStore {
             channel.id,
             ChannelRow {
                 id: channel.id,
-                server_id: server.id,
+                server_id: Some(server.id),
                 name: channel.name.clone(),
                 kind: channel.kind.as_str().into(),
                 audio_quality: channel.audio_quality.as_str().into(),
@@ -621,9 +666,87 @@ impl Store for LocalStore {
         Ok(inner
             .channels
             .values()
-            .filter(|c| c.server_id == server)
+            .filter(|c| c.server_id == Some(server))
             .filter_map(|c| inner.channel(c.id))
             .collect())
+    }
+
+    async fn list_channels_for_user(&self, user: Uuid) -> Result<Vec<Channel>, StoreError> {
+        let inner = self.0.lock().await;
+        let servers: HashSet<Uuid> = inner
+            .members
+            .iter()
+            .filter(|(_, member)| *member == user)
+            .map(|(server, _)| *server)
+            .collect();
+        let mut channels: Vec<Channel> = inner
+            .channels
+            .values()
+            .filter(|c| c.server_id.is_some_and(|server| servers.contains(&server)))
+            .filter_map(|c| inner.channel(c.id))
+            .collect();
+        for (pair, channel) in &inner.dm_pairs {
+            if (pair.0 == user || pair.1 == user)
+                && let Some(row) = inner.channel(*channel)
+                && channels.iter().all(|item| item.id != row.id)
+            {
+                channels.push(row);
+            }
+        }
+        Ok(channels)
+    }
+
+    async fn list_dms(&self, user: Uuid) -> Result<Vec<Channel>, StoreError> {
+        let inner = self.0.lock().await;
+        Ok(inner
+            .dm_pairs
+            .iter()
+            .filter(|(pair, _)| pair.0 == user || pair.1 == user)
+            .filter_map(|(_, channel)| inner.channel(*channel))
+            .collect())
+    }
+
+    async fn find_dm(&self, user: Uuid, peer: Uuid) -> Result<Option<Channel>, StoreError> {
+        let inner = self.0.lock().await;
+        let key = if user < peer { (user, peer) } else { (peer, user) };
+        Ok(inner.dm_pairs.get(&key).and_then(|id| inner.channel(*id)))
+    }
+
+    async fn open_dm(&self, user: Uuid, peer: Uuid) -> Result<(Channel, bool), StoreError> {
+        if user == peer {
+            return Err(StoreError::Conflict("Cannot message yourself.".into()));
+        }
+        let mut inner = self.0.lock().await;
+        let key = if user < peer { (user, peer) } else { (peer, user) };
+        if let Some(id) = inner.dm_pairs.get(&key).copied()
+            && let Some(channel) = inner.channel(id)
+        {
+            return Ok((channel, false));
+        }
+        let id = Uuid::now_v7();
+        inner.channels.insert(
+            id,
+            ChannelRow {
+                id,
+                server_id: None,
+                name: "direct".into(),
+                kind: ChannelKind::Direct.as_str().into(),
+                audio_quality: chat_domain::voice::AudioQuality::Standard.as_str().into(),
+            },
+        );
+        inner.dm_pairs.insert(key, id);
+        let channel = inner.channel(id).ok_or(StoreError::Unavailable)?;
+        inner.persist();
+        Ok((channel, true))
+    }
+
+    async fn list_dm_participants(&self, channel: Uuid) -> Result<Vec<Uuid>, StoreError> {
+        let inner = self.0.lock().await;
+        Ok(inner
+            .dm_pairs
+            .iter()
+            .find_map(|(pair, id)| (*id == channel).then(|| vec![pair.0, pair.1]))
+            .unwrap_or_default())
     }
 
     async fn find_channel(&self, id: Uuid) -> Result<Option<Channel>, StoreError> {
@@ -736,6 +859,23 @@ impl Store for LocalStore {
             .collect())
     }
 
+    async fn list_member_usernames(
+        &self,
+        server: Uuid,
+    ) -> Result<Vec<(Uuid, String, String)>, StoreError> {
+        let inner = self.0.lock().await;
+        Ok(inner
+            .members
+            .iter()
+            .filter(|(s, _)| *s == server)
+            .filter_map(|(_, user)| {
+                inner
+                    .user(*user)
+                    .map(|row| (row.id, row.username, row.display_name))
+            })
+            .collect())
+    }
+
     async fn list_visible_users(&self, user: Uuid) -> Result<Vec<User>, StoreError> {
         let inner = self.0.lock().await;
         let servers: HashSet<Uuid> = inner
@@ -752,6 +892,18 @@ impl Store for LocalStore {
                 users.insert(u.id, u);
             }
         }
+        for (pair, _) in &inner.dm_pairs {
+            let peer = if pair.0 == user {
+                pair.1
+            } else if pair.1 == user {
+                pair.0
+            } else {
+                continue;
+            };
+            if let Some(row) = inner.user(peer) {
+                users.insert(row.id, row);
+            }
+        }
         Ok(users.into_values().collect())
     }
 
@@ -762,17 +914,29 @@ impl Store for LocalStore {
     ) -> Result<PermissionSnapshot, StoreError> {
         let inner = self.0.lock().await;
         let channel = inner.channel(channel).ok_or(StoreError::NotFound)?;
-        let member = inner.members.contains(&(channel.server_id, user));
+        if channel.is_direct() {
+            let member = channel.participants.contains(&user);
+            return Ok(PermissionSnapshot {
+                member,
+                base: Permissions(Permissions::VIEW_CHANNEL.0 | Permissions::SEND_MESSAGE.0),
+                roles: vec![],
+                everyone: (Permissions(0), Permissions(0)),
+                role_overrides: vec![],
+                member_override: (Permissions(0), Permissions(0)),
+            });
+        }
+        let server_id = channel.server_id.ok_or(StoreError::NotFound)?;
+        let member = inner.members.contains(&(server_id, user));
         let base = inner
             .roles
             .values()
-            .find(|r| r.server_id == channel.server_id && r.is_base)
+            .find(|r| r.server_id == server_id && r.is_base)
             .map(|r| Permissions(r.permissions))
             .unwrap_or(Permissions(0));
         let roles = inner
             .member_roles
             .iter()
-            .filter(|(s, u, _)| *s == channel.server_id && *u == user)
+            .filter(|(s, u, _)| *s == server_id && *u == user)
             .filter_map(|(_, _, role)| inner.roles.get(role).map(|r| Permissions(r.permissions)))
             .collect();
         Ok(PermissionSnapshot {
@@ -843,7 +1007,10 @@ impl Store for LocalStore {
         let mut inner = self.0.lock().await;
         let mut bound = Vec::new();
         for id in ids {
-            let in_use = inner.users.values().any(|user| user.avatar_id == Some(*id));
+            let in_use = inner
+                .users
+                .values()
+                .any(|user| user.avatar_id == Some(*id) || user.banner_id == Some(*id));
             let row = inner.attachments.get_mut(id).ok_or(StoreError::NotFound)?;
             if row.uploader_id != uploader || row.message_id.is_some() || in_use {
                 return Err(StoreError::Conflict("Attachment already used.".into()));
@@ -889,6 +1056,7 @@ impl Store for LocalStore {
                 edited_at: message.edited_at.clone(),
                 reply_to: message.reply_to,
                 mentions: message.mentions.clone(),
+                deleted_at: None,
             },
         );
         inner
@@ -938,6 +1106,33 @@ impl Store for LocalStore {
             .collect();
         inner.persist();
         Ok((message, events))
+    }
+
+    async fn delete_message(
+        &self,
+        id: Uuid,
+        member_ids: &[Uuid],
+        event: &str,
+        payload: Value,
+    ) -> Result<Vec<OutboxEvent>, StoreError> {
+        let mut inner = self.0.lock().await;
+        let channel_id = {
+            let row = inner
+                .messages
+                .get_mut(&id)
+                .ok_or(StoreError::NotFound)?;
+            if row.deleted_at.is_some() {
+                return Err(StoreError::NotFound);
+            }
+            row.deleted_at = Some(Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
+            row.channel_id
+        };
+        if let Some(ids) = inner.by_channel.get_mut(&channel_id) {
+            ids.remove(&id);
+        }
+        let events = inner.enqueue(member_ids, event, payload);
+        inner.persist();
+        Ok(events)
     }
 
     async fn page_messages(

@@ -12,18 +12,31 @@ namespace Chat.UI.Shell;
 public sealed partial class ShellViewModel
 {
     private readonly Dictionary<Guid, ChannelInbox> _inbox = [];
+    private readonly List<TypingPeer> _typing = [];
     private readonly MessageRow _unreadDivider = MessageRow.UnreadDivider();
     private Guid? _editingId;
+    private Guid? _replyTo;
+    private string _replyAuthor = "";
     private string _editBackup = "";
+    private DateTimeOffset _typedAt;
     private int _newWhileAway;
     private bool _awayFromBottom;
     private DispatcherTimer? _draftTimer;
+    private DispatcherTimer? _typingTimer;
     private Guid? _draftFlushChannel;
     public ActionCommand JumpPresent { get; private set; } = null!;
     public ActionCommand CancelComposerEdit { get; private set; } = null!;
     public bool IsEditing => _editingId is not null;
+    public bool IsReplying => _replyTo is not null;
+    public bool HasComposerBanner => IsEditing || IsReplying;
+    public string ComposerBannerText => IsEditing
+        ? _text.Get(TextKey.EditingMessage)
+        : _text.Get(TextKey.ReplyingTo, _replyAuthor);
+    public string ComposerCancelTip => _text.Get(IsEditing ? TextKey.CancelEdit : TextKey.CancelReply);
+    public string TypingLabel { get; private set; } = "";
+    public bool HasTyping => TypingLabel.Length > 0;
     public bool ChannelHasUnread =>
-        SelectedChannel is { Kind: "text" } channel
+        SelectedChannel is { CanChat: true } channel
         && _inbox.TryGetValue(channel.Id, out var row)
         && SelectedInstance?.Context.Session is { } session
         && row.HasUnread(session.Me.Id);
@@ -31,8 +44,6 @@ public sealed partial class ShellViewModel
     public string JumpBarLabel => _newWhileAway > 0
         ? _text.Get(TextKey.NewMessages, _newWhileAway)
         : _text.Get(TextKey.JumpToPresent);
-    public string ComposerEditHint => _text.Get(TextKey.EditingMessage);
-
     public void OnTimelineScroll(bool nearBottom)
     {
         if (!CanObserveTimeline) return;
@@ -40,7 +51,7 @@ public sealed partial class ShellViewModel
         if (nearBottom)
         {
             _newWhileAway = 0;
-            if (SelectedChannel is { Kind: "text" } channel && LatestVisibleId() is Guid latest)
+            if (SelectedChannel is { CanChat: true } channel && LatestVisibleId() is Guid latest)
                 _ = MarkReadAsync(channel.Id, latest);
         }
         Changed(nameof(ShowJumpBar));
@@ -52,7 +63,7 @@ public sealed partial class ShellViewModel
         _awayFromBottom = false;
         _newWhileAway = 0;
         ScrollToLatest?.Invoke();
-        if (SelectedChannel is { Kind: "text" } channel && LatestVisibleId() is Guid latest)
+        if (SelectedChannel is { CanChat: true } channel && LatestVisibleId() is Guid latest)
             _ = MarkReadAsync(channel.Id, latest);
         Changed(nameof(ShowJumpBar));
         Changed(nameof(JumpBarLabel));
@@ -60,12 +71,12 @@ public sealed partial class ShellViewModel
 
     public void MarkUnreadFrom(MessageRow row)
     {
-        if (row.IsUnreadDivider || SelectedChannel is not { Kind: "text" } channel) return;
+        if (row.IsUnreadDivider || row.IsFixture || SelectedChannel is not { CanChat: true } channel) return;
         Guid? previous = null;
         foreach (var item in Messages)
         {
             if (item.Id == row.Id) break;
-            if (!item.IsUnreadDivider && !item.IsPending) previous = item.Id;
+            if (!item.IsUnreadDivider && !item.IsPending && !item.IsFixture) previous = item.Id;
         }
         _ = SetReadAsync(channel.Id, previous);
         _awayFromBottom = true;
@@ -75,12 +86,101 @@ public sealed partial class ShellViewModel
     public void BeginEdit(MessageRow row)
     {
         if (!row.CanEdit) return;
+        if (IsReplying) CancelReply();
         if (!IsEditing) _editBackup = Draft;
         _editingId = row.Id;
         Draft = row.Content;
-        Changed(nameof(IsEditing));
-        Changed(nameof(CanSend));
+        NotifyComposer();
         FocusComposer?.Invoke();
+    }
+
+    public void BeginReply(MessageRow row)
+    {
+        if (!row.CanReply) return;
+        if (IsEditing) CancelEdit();
+        _replyTo = row.Id;
+        _replyAuthor = row.Author;
+        NotifyComposer();
+        FocusComposer?.Invoke();
+    }
+
+    public void DeleteMessage(MessageRow row)
+    {
+        if (!row.CanDelete || _timeline is null) return;
+        if (IsEditing && _editingId == row.Id) CancelEdit();
+        if (IsReplying && _replyTo == row.Id) CancelReply();
+        _ = DeleteMessageAsync(row.Id);
+    }
+
+    private async Task DeleteMessageAsync(Guid messageId)
+    {
+        if (_timeline is null) return;
+        try { await _timeline.DeleteAsync(messageId, _lifetime); }
+        catch (Exception error) { OnError(error); }
+    }
+
+    public void NoteComposerActivity()
+    {
+        if (IsEditing || ChannelForbidden || SelectedChannel is not { CanChat: true } channel) return;
+        if (string.IsNullOrWhiteSpace(Draft)) return;
+        if (DateTimeOffset.UtcNow - _typedAt < TimeSpan.FromSeconds(3)) return;
+        var session = SelectedInstance?.Context.Session;
+        if (session is null) return;
+        _typedAt = DateTimeOffset.UtcNow;
+        _ = StartTypingAsync(session, channel.Id);
+    }
+
+    private async Task StartTypingAsync(InstanceSession session, Guid channelId)
+    {
+        try { await session.StartTypingAsync(channelId, _lifetime); }
+        catch (ChatApiException) { }
+        catch (OperationCanceledException) { }
+    }
+
+    private void NoteTyping(InstanceSession session, TypingDto typing)
+    {
+        if (typing.UserId == session.Me.Id) return;
+        _typing.RemoveAll(item => item.ChannelId == typing.ChannelId && item.UserId == typing.UserId);
+        if (_typing.Count >= 16) _typing.RemoveAt(0);
+        _typing.Add(new(typing.ChannelId, typing.UserId, typing.DisplayName, DateTimeOffset.UtcNow.AddSeconds(8)));
+        if (!IsUltraLightParked) EnsureTypingTimer();
+        RefreshTyping();
+    }
+
+    private void ForgetTyping(Guid channelId, Guid userId)
+    {
+        var removed = _typing.RemoveAll(item => item.ChannelId == channelId && item.UserId == userId);
+        if (removed > 0) RefreshTyping();
+    }
+
+    private void EnsureTypingTimer()
+    {
+        if (_typingTimer is null)
+        {
+            _typingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _typingTimer.Tick += (_, _) => RefreshTyping();
+        }
+        if (!_typingTimer.IsEnabled) _typingTimer.Start();
+    }
+
+    private void RefreshTyping()
+    {
+        var now = DateTimeOffset.UtcNow;
+        _typing.RemoveAll(item => item.Until <= now);
+        if (_typing.Count == 0) _typingTimer?.Stop();
+        var channelId = SelectedChannel?.Id;
+        var names = channelId is Guid id
+            ? _typing.Where(item => item.ChannelId == id).Select(item => item.Name).Distinct().Take(3).ToArray()
+            : [];
+        TypingLabel = names.Length switch
+        {
+            0 => "",
+            1 => _text.Get(TextKey.TypingOne, names[0]),
+            2 => _text.Get(TextKey.TypingTwo, names[0], names[1]),
+            _ => _text.Get(TextKey.TypingMany, names[0], names.Length - 1)
+        };
+        Changed(nameof(TypingLabel));
+        Changed(nameof(HasTyping));
     }
 
     public void BeginEditLast()
@@ -98,15 +198,38 @@ public sealed partial class ShellViewModel
         _editingId = null;
         Draft = _editBackup;
         _editBackup = "";
-        Changed(nameof(IsEditing));
-        Changed(nameof(CanSend));
+        NotifyComposer();
         FocusComposer?.Invoke();
+    }
+
+    public void CancelReply()
+    {
+        if (!IsReplying) return;
+        _replyTo = null;
+        _replyAuthor = "";
+        NotifyComposer();
+    }
+
+    public void CancelComposer()
+    {
+        if (IsEditing) CancelEdit();
+        else CancelReply();
+    }
+
+    private void NotifyComposer()
+    {
+        Changed(nameof(IsEditing));
+        Changed(nameof(IsReplying));
+        Changed(nameof(HasComposerBanner));
+        Changed(nameof(ComposerBannerText));
+        Changed(nameof(ComposerCancelTip));
+        Changed(nameof(CanSend));
     }
 
     public void SetChannelNotify(ChannelItem channel, ChannelNotify notify)
     {
         var session = SelectedInstance?.Context.Session;
-        if (session is null || channel.Kind != "text") return;
+        if (session is null || !channel.CanChat) return;
         _ = SaveNotifyAsync(session, channel.Id, notify);
     }
 
@@ -117,7 +240,7 @@ public sealed partial class ShellViewModel
 
     public void MarkChannelUnread(ChannelItem channel)
     {
-        if (channel.Kind != "text") return;
+        if (!channel.CanChat) return;
         _ = SetReadAsync(channel.Id, null);
     }
 
@@ -145,7 +268,8 @@ public sealed partial class ShellViewModel
     {
         var mentioned = message.AuthorId != session.Me.Id
             && (message.Mentions.Contains(session.Me.Id)
-                || MessageMarkup.MentionsUser(message.Content, session.Me.Username));
+                || MessageMarkup.MentionsAccount(message.Content, session.Me.Username,
+                    message.MentionEveryone, message.MentionHere, session.Me.DisplayName));
         await _cache.NoteArrivalAsync(session.Scope, message, mentioned, _lifetime);
         if (SelectedInstance?.Context.Session != session) return;
         var current = _inbox.GetValueOrDefault(message.ChannelId);
@@ -192,7 +316,7 @@ public sealed partial class ShellViewModel
 
     private void QueueDraftSave()
     {
-        if (_draftKey is null || SelectedChannel is not { Kind: "text" } channel) return;
+        if (_draftKey is null || SelectedChannel is not { CanChat: true } channel) return;
         _draftFlushChannel = channel.Id;
         _draftTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(280) };
         _draftTimer.Tick -= OnDraftTick;
@@ -265,9 +389,26 @@ public sealed partial class ShellViewModel
         var profile = new MemberProfile(id, user?.DisplayName ?? name ?? id.ToString("N")[..8], user?.Username ?? "",
             session?.Me.Id == id);
         if (_playbacks.TryGetValue(id, out var cached)) profile.Playback = cached.Playback;
+        if (_banners.TryGetValue(id, out var banner)) profile.BannerPlayback = banner.Playback;
         return profile;
+    }
+
+    private string ReplyPreview(MessageDto message, InstanceSession? session)
+    {
+        if (message.ReplyTo is not Guid id) return "";
+        var parent = _timeline?.Find(id)?.Message;
+        if (parent is null) return _text.Get(TextKey.ReplyMissing);
+        var author = session?.AuthorName(parent.AuthorId) ?? parent.AuthorId.ToString("N")[..8];
+        var snippet = (parent.Content ?? "").Replace('\n', ' ').Trim();
+        if (snippet.Length == 0 && parent.Attachments.Length > 0)
+            snippet = parent.Attachments[0].FileName;
+        if (snippet.Length == 0) return _text.Get(TextKey.ReplyMissing);
+        if (snippet.Length > 72) snippet = snippet[..72] + "…";
+        return _text.Get(TextKey.ReplyQuote, author, snippet);
     }
 
     private static string? DraftKey(InstanceSession session, Guid channelId) =>
         $"{session.Descriptor.Id.Value}:{session.Account.Key.Id}:{channelId}";
+
+    private readonly record struct TypingPeer(Guid ChannelId, Guid UserId, string Name, DateTimeOffset Until);
 }

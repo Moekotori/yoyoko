@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Chat.Core.Messaging;
 using MathView = Chat.UI.Markup.MathView;
@@ -12,6 +13,10 @@ public sealed class MessageText : SelectableTextBlock
 {
     public static readonly StyledProperty<string?> MarkdownProperty =
         AvaloniaProperty.Register<MessageText, string?>(nameof(Markdown));
+    public static readonly StyledProperty<string?> SelfUsernameProperty =
+        AvaloniaProperty.Register<MessageText, string?>(nameof(SelfUsername));
+    public static readonly StyledProperty<string?> SelfDisplayNameProperty =
+        AvaloniaProperty.Register<MessageText, string?>(nameof(SelfDisplayName));
 
     private static readonly AttachedProperty<bool> SpoilerProperty =
         AvaloniaProperty.RegisterAttached<MessageText, Run, bool>("Spoiler");
@@ -19,7 +24,6 @@ public sealed class MessageText : SelectableTextBlock
     private static readonly SolidColorBrush CodeFill = new(Color.FromRgb(36, 36, 36));
     private static readonly SolidColorBrush SpoilerOpen = new(Color.FromRgb(48, 48, 48));
     private static readonly SolidColorBrush SpoilerClosed = new(Color.FromRgb(42, 42, 42));
-    private static readonly SolidColorBrush MentionInk = new(Color.FromRgb(210, 168, 140));
     private static readonly SolidColorBrush LinkInk = new(Color.FromRgb(140, 176, 214));
     private static readonly SolidColorBrush QuoteInk = new(Color.FromRgb(158, 158, 158));
     private static readonly FontFamily MathFont = new("Georgia, Times New Roman, Songti SC, STIX Two Math, serif");
@@ -34,12 +38,34 @@ public sealed class MessageText : SelectableTextBlock
             control._spoilersOpen = false;
             control.Rebuild();
         });
+        SelfUsernameProperty.Changed.AddClassHandler<MessageText>((control, _) =>
+        {
+            control._built = null;
+            control.Rebuild();
+        });
+        SelfDisplayNameProperty.Changed.AddClassHandler<MessageText>((control, _) =>
+        {
+            control._built = null;
+            control.Rebuild();
+        });
     }
 
     public string? Markdown
     {
         get => GetValue(MarkdownProperty);
         set => SetValue(MarkdownProperty, value);
+    }
+
+    public string? SelfUsername
+    {
+        get => GetValue(SelfUsernameProperty);
+        set => SetValue(SelfUsernameProperty, value);
+    }
+
+    public string? SelfDisplayName
+    {
+        get => GetValue(SelfDisplayNameProperty);
+        set => SetValue(SelfDisplayNameProperty, value);
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -97,11 +123,11 @@ public sealed class MessageText : SelectableTextBlock
             if (span.Kind is MarkupKind.Heading or MarkupKind.ListItem or MarkupKind.Table or MarkupKind.Rule)
             {
                 if (Inlines.Count > 0) Inlines.Add(new LineBreak());
-                Inlines.Add(RunFor(span, em));
+                Inlines.Add(InlineFor(span, em));
                 Inlines.Add(new LineBreak());
                 continue;
             }
-            Inlines.Add(RunFor(span, em));
+            Inlines.Add(InlineFor(span, em));
         }
         _built = content;
         _builtSpoilers = _spoilersOpen;
@@ -126,11 +152,37 @@ public sealed class MessageText : SelectableTextBlock
         if (display) Inlines.Add(new LineBreak());
     }
 
+    private Inline InlineFor(MarkupSpan span, double em) =>
+        span.Kind == MarkupKind.Mention ? MentionChip(span.Text, em) : RunFor(span, em);
+
+    private Inline MentionChip(string token, double em)
+    {
+        var reserved = MessageMarkup.IsReserved(token);
+        var self = !reserved && (
+            !string.IsNullOrEmpty(SelfUsername) && token.Equals(SelfUsername, StringComparison.OrdinalIgnoreCase)
+            || !string.IsNullOrEmpty(SelfDisplayName) && token.Equals(SelfDisplayName, StringComparison.OrdinalIgnoreCase));
+        var button = new Button
+        {
+            Content = "@" + token,
+            Tag = token,
+            Padding = new Thickness(4, 0),
+            MinHeight = 0,
+            MinWidth = 0,
+            FontSize = em,
+            FontWeight = FontWeight.Medium,
+            Focusable = false,
+            VerticalAlignment = VerticalAlignment.Center,
+            Cursor = reserved ? Cursor.Default : new Cursor(StandardCursorType.Hand)
+        };
+        button.Classes.Add("mentionChip");
+        if (reserved || self) button.Classes.Add("strong");
+        return new InlineUIContainer(button);
+    }
+
     private Inline RunFor(MarkupSpan span, double em)
     {
         var run = new Run(span.Kind switch
         {
-            MarkupKind.Mention => "@" + span.Text,
             MarkupKind.ListItem => (string.IsNullOrEmpty(span.Extra) ? "• " : span.Extra + ". ") + span.Text,
             MarkupKind.Table => span.Text.Replace('\t', ' '),
             MarkupKind.Rule => "────────",
@@ -148,6 +200,9 @@ public sealed class MessageText : SelectableTextBlock
             case MarkupKind.Strike:
                 run.TextDecorations = Avalonia.Media.TextDecorations.Strikethrough;
                 break;
+            case MarkupKind.Underline:
+                run.TextDecorations = Avalonia.Media.TextDecorations.Underline;
+                break;
             case MarkupKind.Code:
             case MarkupKind.Fence:
             case MarkupKind.Table:
@@ -162,10 +217,6 @@ public sealed class MessageText : SelectableTextBlock
                     run.Foreground = SpoilerClosed;
                     run.Background = SpoilerClosed;
                 }
-                break;
-            case MarkupKind.Mention:
-                run.FontWeight = FontWeight.Medium;
-                run.Foreground = MentionInk;
                 break;
             case MarkupKind.Link:
                 run.Foreground = LinkInk;

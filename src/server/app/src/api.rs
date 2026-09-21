@@ -2,7 +2,6 @@ use crate::{
     configuration,
     error::{ApiErr, ApiResult},
     gateway,
-    identity::AccessClaims,
     services,
     state::AppState,
 };
@@ -48,18 +47,58 @@ impl FromRequestParts<Arc<AppState>> for Auth {
         let token = header
             .strip_prefix("Bearer ")
             .ok_or_else(ApiErr::unauthorized)?;
-        let AccessClaims {
-            user_id,
-            session_id,
-        } = state
+        let claims = state
             .tokens
             .verify_access(token)
             .ok_or_else(ApiErr::unauthorized)?;
-        Ok(Auth(user_id, session_id))
+        if claims.voice_channel.is_some() {
+            return Err(ApiErr::forbidden());
+        }
+        Ok(Auth(claims.user_id, claims.session_id))
     }
 }
 
-struct ClientIp(String);
+pub struct VoiceAuth {
+    pub user: Uuid,
+    pub voice_only: Option<Uuid>,
+}
+
+impl VoiceAuth {
+    pub fn allow(&self, channel: Uuid) -> ApiResult<()> {
+        match self.voice_only {
+            None => Ok(()),
+            Some(allowed) if allowed == channel => Ok(()),
+            Some(_) => Err(ApiErr::forbidden()),
+        }
+    }
+}
+
+impl FromRequestParts<Arc<AppState>> for VoiceAuth {
+    type Rejection = ApiErr;
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &Arc<AppState>,
+    ) -> Result<Self, Self::Rejection> {
+        let header = parts
+            .headers
+            .get(header::AUTHORIZATION)
+            .and_then(|value| value.to_str().ok())
+            .ok_or_else(ApiErr::unauthorized)?;
+        let token = header
+            .strip_prefix("Bearer ")
+            .ok_or_else(ApiErr::unauthorized)?;
+        let claims = state
+            .tokens
+            .verify_access(token)
+            .ok_or_else(ApiErr::unauthorized)?;
+        Ok(VoiceAuth {
+            user: claims.user_id,
+            voice_only: claims.voice_channel,
+        })
+    }
+}
+
+pub(crate) struct ClientIp(pub String);
 impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
     type Rejection = std::convert::Infallible;
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
@@ -104,6 +143,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             "/api/v1/servers/{id}/channels",
             get(list_channels).post(create_channel),
         )
+        .route("/api/v1/dms", get(crate::dm::handler::list).post(crate::dm::handler::open))
         .route("/api/v1/servers/join", post(join_server))
         .route("/api/v1/servers/{id}/moderation", patch(patch_moderation))
         .route(
@@ -116,8 +156,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         )
         .route(
             "/api/v1/channels/{id}/messages/{message_id}",
-            patch(edit_message),
+            patch(edit_message).delete(delete_message),
         )
+        .route("/api/v1/channels/{id}/typing", post(start_typing))
         .route("/api/v1/channels/{id}/rtc-token", post(rtc_token))
         .route("/api/v1/channels/{id}/voice/join", post(voice_join))
         .route("/api/v1/channels/{id}/voice-states", get(voice_states))
@@ -143,6 +184,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/health/ready", get(ready))
         .route("/.well-known/lightchat", get(discovery))
         .route("/gateway", get(gateway::upgrade))
+        .merge(crate::web_voice::router())
         .merge(json_api)
         .merge(files)
         .fallback(|| async {
@@ -227,7 +269,12 @@ async fn discovery(
         api: format!("{origin}/api/v1"),
         gateway: format!("{gateway}/gateway"),
         cdn: state.settings.storage.public_url.clone(),
-        rtc: state.settings.rtc.public_url.clone(),
+        rtc: configuration::advertised_rtc_url(
+            &state.settings.rtc.public_url,
+            headers
+                .get(header::HOST)
+                .and_then(|value| value.to_str().ok()),
+        ),
         max_attachment_bytes: state.settings.storage.max_bytes,
         max_attachments_per_message: MAX_ATTACHMENTS_PER_MESSAGE as u32,
     })
@@ -353,15 +400,26 @@ async fn patch_moderation(
     ))
 }
 
+pub(crate) fn advertised_rtc(state: &AppState, headers: &HeaderMap) -> String {
+    configuration::advertised_rtc_url(
+        &state.settings.rtc.public_url,
+        headers
+            .get(header::HOST)
+            .and_then(|value| value.to_str().ok()),
+    )
+}
+
 async fn rtc_token(
     State(state): State<Arc<AppState>>,
-    Auth(user, _): Auth,
+    auth: VoiceAuth,
     Path(id): Path<Uuid>,
+    headers: HeaderMap,
     Json(flags): Json<VoiceFlags>,
 ) -> ApiResult<Json<chat_protocol::RtcToken>> {
+    auth.allow(id)?;
     if !state
         .limiter
-        .check(&format!("voice:{user}"), 8, Duration::from_secs(30))
+        .check(&format!("voice:{}", auth.user), 8, Duration::from_secs(30))
         .await
     {
         return Err(ApiErr::too_many());
@@ -369,11 +427,13 @@ async fn rtc_token(
     Ok(Json(
         services::join_voice(
             &state,
-            user,
+            auth.user,
             id,
             flags.self_mute,
             flags.self_deaf,
             flags.audio_quality.as_deref(),
+            &advertised_rtc(&state, &headers),
+            auth.voice_only,
         )
         .await?
         .rtc,
@@ -382,13 +442,15 @@ async fn rtc_token(
 
 async fn voice_join(
     State(state): State<Arc<AppState>>,
-    Auth(user, _): Auth,
+    auth: VoiceAuth,
     Path(id): Path<Uuid>,
+    headers: HeaderMap,
     Json(flags): Json<VoiceFlags>,
 ) -> ApiResult<Json<VoiceJoin>> {
+    auth.allow(id)?;
     if !state
         .limiter
-        .check(&format!("voice:{user}"), 8, Duration::from_secs(30))
+        .check(&format!("voice:{}", auth.user), 8, Duration::from_secs(30))
         .await
     {
         return Err(ApiErr::too_many());
@@ -396,11 +458,13 @@ async fn voice_join(
     Ok(Json(
         services::join_voice(
             &state,
-            user,
+            auth.user,
             id,
             flags.self_mute,
             flags.self_deaf,
             flags.audio_quality.as_deref(),
+            &advertised_rtc(&state, &headers),
+            auth.voice_only,
         )
         .await?,
     ))
@@ -408,29 +472,32 @@ async fn voice_join(
 
 async fn voice_states(
     State(state): State<Arc<AppState>>,
-    Auth(user, _): Auth,
+    auth: VoiceAuth,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Vec<VoiceState>>> {
-    Ok(Json(services::list_voice(&state, user, id).await?))
+    auth.allow(id)?;
+    Ok(Json(
+        services::list_voice(&state, auth.user, id, auth.voice_only).await?,
+    ))
 }
 
 async fn voice_leave(
     State(state): State<Arc<AppState>>,
-    Auth(user, _): Auth,
+    auth: VoiceAuth,
 ) -> ApiResult<StatusCode> {
-    services::leave_voice(&state, user).await?;
+    services::leave_voice(&state, auth.user).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 async fn voice_state(
     State(state): State<Arc<AppState>>,
-    Auth(user, _): Auth,
+    auth: VoiceAuth,
     Json(flags): Json<VoiceFlags>,
 ) -> ApiResult<Json<VoiceState>> {
     Ok(Json(
         services::patch_voice(
             &state,
-            user,
+            auth.user,
             flags.self_mute,
             flags.self_deaf,
             flags.audio_quality.as_deref(),
@@ -498,6 +565,38 @@ async fn edit_message(
     Ok(Json(
         services::edit_message(&state, user, id, message_id, body.content).await?,
     ))
+}
+
+async fn delete_message(
+    State(state): State<Arc<AppState>>,
+    Auth(user, _): Auth,
+    Path((id, message_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<StatusCode> {
+    if !state
+        .limiter
+        .check(&format!("del:{user}"), 30, Duration::from_secs(10))
+        .await
+    {
+        return Err(ApiErr::too_many());
+    }
+    services::delete_message(&state, user, id, message_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn start_typing(
+    State(state): State<Arc<AppState>>,
+    Auth(user, _): Auth,
+    Path(id): Path<Uuid>,
+) -> ApiResult<StatusCode> {
+    if !state
+        .limiter
+        .check(&format!("typing:{user}"), 8, Duration::from_secs(10))
+        .await
+    {
+        return Err(ApiErr::too_many());
+    }
+    services::start_typing(&state, user, id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn upload(
@@ -695,6 +794,21 @@ mod tests {
         serde_json::from_slice(&body).unwrap()
     }
 
+    async fn get_json(
+        app: &Router,
+        uri: &str,
+        token: Option<&str>,
+    ) -> axum::response::Response {
+        let mut builder = Request::builder().method("GET").uri(uri);
+        if let Some(token) = token {
+            builder = builder.header("authorization", format!("Bearer {token}"));
+        }
+        app.clone()
+            .oneshot(builder.body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
     async fn post_json(
         app: &Router,
         uri: &str,
@@ -745,6 +859,8 @@ mod tests {
         let lan: InstanceDiscovery = json(lan).await;
         assert_eq!(lan.api, "http://192.168.1.10:8080/api/v1");
         assert_eq!(lan.gateway, "ws://192.168.1.10:8080/gateway");
+        assert_eq!(lan.rtc, "http://192.168.1.10:7880");
+        assert_eq!(lan.rtc, "http://192.168.1.10:7880");
 
         let denied = app
             .clone()
@@ -874,6 +990,33 @@ mod tests {
         assert_eq!(mention.status(), StatusCode::OK);
         let mentioned: Message = json(mention).await;
         assert_eq!(mentioned.mentions, vec![bob.user.id]);
+        assert!(!mentioned.mention_everyone);
+
+        let everyone = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages", channel.id),
+            Some(&alice.access_token),
+            r#"{"content":"ping @everyone and @bob"}"#,
+        )
+        .await;
+        assert_eq!(everyone.status(), StatusCode::OK);
+        let everyone: Message = json(everyone).await;
+        assert!(everyone.mention_everyone);
+        assert!(!everyone.mention_here);
+        assert_eq!(everyone.mentions, vec![bob.user.id]);
+
+        let here = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages", channel.id),
+            Some(&alice.access_token),
+            r#"{"content":"ping @here"}"#,
+        )
+        .await;
+        assert_eq!(here.status(), StatusCode::OK);
+        let here: Message = json(here).await;
+        assert!(here.mention_here);
+        assert!(!here.mention_everyone);
+        assert!(here.mentions.is_empty());
 
         let edited = patch_json(
             &app,
@@ -897,6 +1040,60 @@ mod tests {
         .await;
         assert_eq!(denied_edit.status(), StatusCode::FORBIDDEN);
 
+        let reply = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages", channel.id),
+            Some(&bob.access_token),
+            &format!(r#"{{"content":"re","reply_to":"{}"}}"#, mentioned.id),
+        )
+        .await;
+        assert_eq!(reply.status(), StatusCode::OK);
+        let replied: Message = json(reply).await;
+        assert_eq!(replied.reply_to, Some(mentioned.id));
+        assert_eq!(replied.mentions, vec![alice.user.id]);
+
+        let bad_reply = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages", channel.id),
+            Some(&alice.access_token),
+            r#"{"content":"no","reply_to":"01950000-0000-7000-8000-000000000099"}"#,
+        )
+        .await;
+        assert_eq!(bad_reply.status(), StatusCode::BAD_REQUEST);
+
+        let typing = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/typing", channel.id),
+            Some(&bob.access_token),
+            "{}",
+        )
+        .await;
+        assert_eq!(typing.status(), StatusCode::NO_CONTENT);
+
+        let denied_delete = delete_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages/{}", channel.id, mentioned.id),
+            &bob.access_token,
+        )
+        .await;
+        assert_eq!(denied_delete.status(), StatusCode::FORBIDDEN);
+
+        let deleted = delete_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages/{}", channel.id, mentioned.id),
+            &alice.access_token,
+        )
+        .await;
+        assert_eq!(deleted.status(), StatusCode::NO_CONTENT);
+
+        let gone = delete_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages/{}", channel.id, mentioned.id),
+            &alice.access_token,
+        )
+        .await;
+        assert_eq!(gone.status(), StatusCode::NOT_FOUND);
+
         let joined_voice = post_json(
             &app,
             &format!("/api/v1/channels/{}/voice/join", voice.id),
@@ -907,7 +1104,25 @@ mod tests {
         assert_eq!(joined_voice.status(), StatusCode::OK);
         let session: VoiceJoin = json(joined_voice).await;
         assert_eq!(session.rtc.token.split('.').count(), 3);
+        assert_eq!(session.rtc.url, "ws://localhost:7880");
         assert_eq!(session.state.channel_id, Some(voice.id));
+        let lan_voice = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/v1/channels/{}/voice/join", voice.id))
+                    .header("authorization", format!("Bearer {}", alice.access_token))
+                    .header("content-type", "application/json")
+                    .header("host", "10.19.144.83:8080")
+                    .body(Body::from(r#"{"self_mute":false,"self_deaf":false}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(lan_voice.status(), StatusCode::OK);
+        let lan_voice: VoiceJoin = json(lan_voice).await;
+        assert_eq!(lan_voice.rtc.url, "ws://10.19.144.83:7880");
         assert_eq!(session.audio.id, "studio");
         assert_eq!(session.audio.bitrate_bps, 510_000);
         assert_eq!(session.audio.channels, 2);
@@ -1009,6 +1224,104 @@ mod tests {
         )
         .await;
         assert_eq!(bob_ok.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn web_voice_guest_cannot_read_other_channels() {
+        let app = test_app().await;
+        let alice: AuthResponse = json(
+            post_json(
+                &app,
+                "/api/v1/auth/register",
+                None,
+                r#"{"username":"alice","display_name":"Alice","password":"password1"}"#,
+            )
+            .await,
+        )
+        .await;
+        let created = post_json(
+            &app,
+            "/api/v1/servers",
+            Some(&alice.access_token),
+            r#"{"name":"Friends"}"#,
+        )
+        .await;
+        let server: Server = json(created).await;
+        let channels: Vec<Channel> = json(
+            get_json(
+                &app,
+                &format!("/api/v1/servers/{}/channels", server.id),
+                Some(&alice.access_token),
+            )
+            .await,
+        )
+        .await;
+        let text = channels.iter().find(|c| c.kind == "text").unwrap();
+        let voice = channels.iter().find(|c| c.kind == "voice").unwrap();
+
+        let page = get_json(&app, &format!("/voice/{}", voice.id), None).await;
+        assert_eq!(page.status(), StatusCode::OK);
+        let html = String::from_utf8(
+            to_bytes(page.into_body(), 64 * 1024).await.unwrap().to_vec(),
+        )
+        .unwrap();
+        assert!(html.contains("voice/app.js"));
+        let hidden_page = get_json(&app, &format!("/voice/{}", text.id), None).await;
+        assert_eq!(hidden_page.status(), StatusCode::NOT_FOUND);
+
+        let hidden = get_json(&app, &format!("/api/v1/voice/rooms/{}", text.id), None).await;
+        assert_eq!(hidden.status(), StatusCode::NOT_FOUND);
+        let preview = get_json(&app, &format!("/api/v1/voice/rooms/{}", voice.id), None).await;
+        assert_eq!(preview.status(), StatusCode::OK);
+        let room: chat_protocol::VoiceRoom = json(preview).await;
+        assert_eq!(room.kind, "voice");
+        assert_eq!(room.name, voice.name);
+
+        let guest_res = post_json(
+            &app,
+            &format!("/api/v1/voice/rooms/{}/guest", voice.id),
+            None,
+            r#"{"display_name":"Ada"}"#,
+        )
+        .await;
+        assert_eq!(guest_res.status(), StatusCode::OK);
+        let guest: chat_protocol::VoiceGuestSession = json(guest_res).await;
+        assert_eq!(guest.room.channel_id, voice.id);
+        assert_eq!(guest.join.state.display_name, "Ada");
+
+        let servers = get_json(&app, "/api/v1/servers", Some(&guest.access_token)).await;
+        assert_eq!(servers.status(), StatusCode::FORBIDDEN);
+        let listed = get_json(
+            &app,
+            &format!("/api/v1/servers/{}/channels", server.id),
+            Some(&guest.access_token),
+        )
+        .await;
+        assert_eq!(listed.status(), StatusCode::FORBIDDEN);
+        let messages = get_json(
+            &app,
+            &format!("/api/v1/channels/{}/messages", text.id),
+            Some(&guest.access_token),
+        )
+        .await;
+        assert_eq!(messages.status(), StatusCode::FORBIDDEN);
+        let other_voice = post_json(
+            &app,
+            &format!("/api/v1/channels/{}/voice/join", text.id),
+            Some(&guest.access_token),
+            r#"{}"#,
+        )
+        .await;
+        assert_eq!(other_voice.status(), StatusCode::FORBIDDEN);
+        let states = get_json(
+            &app,
+            &format!("/api/v1/channels/{}/voice-states", voice.id),
+            Some(&guest.access_token),
+        )
+        .await;
+        assert_eq!(states.status(), StatusCode::OK);
+        let states: Vec<VoiceState> = json(states).await;
+        assert!(states.iter().any(|row| row.display_name == "Ada"));
     }
 
     const PNG_1X1: &[u8] = &[
@@ -1285,6 +1598,24 @@ mod tests {
         assert!(cooled_body["retry_after_seconds"].as_u64().unwrap() >= 1);
     }
 
+    async fn delete_json(
+        app: &Router,
+        uri: &str,
+        token: &str,
+    ) -> axum::response::Response {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(uri)
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
     async fn patch_json(
         app: &Router,
         uri: &str,
@@ -1413,6 +1744,31 @@ mod tests {
         assert!(avatar.animated);
         assert_eq!(avatar.mime_type, "image/gif");
         assert!(avatar.thumbnail_url.is_some());
+        assert!(me.banner.is_none());
+
+        let banner_gif = post_file(
+            &app,
+            &alice.access_token,
+            "cover.gif",
+            "image/gif",
+            &animated_gif(),
+        )
+        .await;
+        assert_eq!(banner_gif.status(), StatusCode::OK);
+        let banner_gif: chat_protocol::Attachment = json(banner_gif).await;
+        let set_banner = patch_json(
+            &app,
+            "/api/v1/users/me",
+            &alice.access_token,
+            &format!(r#"{{"banner_id":"{}"}}"#, banner_gif.id),
+        )
+        .await;
+        assert_eq!(set_banner.status(), StatusCode::OK);
+        let me: User = json(set_banner).await;
+        let banner = me.banner.expect("banner");
+        assert!(banner.animated);
+        assert_eq!(banner.mime_type, "image/gif");
+        assert!(me.avatar.is_some());
 
         let notes = post_file(
             &app,

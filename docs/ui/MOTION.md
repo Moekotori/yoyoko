@@ -18,38 +18,52 @@
 
 `MotionHost` 接受一个 Child。进入可见树、从隐藏恢复、Child 替换以及 Trigger 值变化都会触发。相同 Trigger 不重播；需要主动重播时，在 UI 线程调用 `host.Play()`，调用 `host.Stop()` 立即取消并显示最终状态。首次布局不等待动画完成，业务操作也不等待动画。
 
+频道分组与社区菜单折叠使用 `RevealHost`：
+
+```xml
+<motion:RevealHost IsOpen="{Binding TextExpanded}">
+  <ItemsControl ItemsSource="{Binding TextChannels}" />
+</motion:RevealHost>
+```
+
+`IsOpen` 变化时从当前进度接到目标，箭头旋转由 `groupChevron` / `menuChevron` 样式承担。首次进入可见树只对齐开合状态，不播放入场。`Stop()` 立即落到当前 `IsOpen`。减少动效、隐藏或最小化会取消并对齐。
+
 | 参数 | 默认值与含义 |
 | --- | --- |
 | `Preset` | `Enter`：淡入 + 从下方 8px 归位 |
 | `Fade` | 只淡入；频道消息使用轻微透明度变化 |
 | `SlideLeft` / `SlideRight` | 从右 / 左侧 8px 淡入归位；方向由调用方选择 |
+| `SlideUp` / `SlideDown` | 从下 / 上方 8px 淡入归位 |
 | `None` | 立即呈现 |
 | `StartOpacity` | 入场起始透明度，默认 0；频道消息为 0.82，避免切换闪空 |
-| `Duration` | `MotionTokens.Page`，160ms；允许 0–500ms，0 表示立即呈现 |
+| `Duration` | `MotionHost` 默认 `MotionTokens.Page`（160ms）；`RevealHost` 默认 `MotionTokens.Reveal`（220ms）；允许 0–500ms，0 表示立即呈现 |
 | `Motion.ReduceMotion` | 可继承，true 时取消当前与待执行动画；关闭该偏好本身不触发动画 |
 | `IsRunning` | 只读运行状态，供诊断；不是用于绑定的通知属性 |
 
 控件反馈可复用 `MotionTokens.Feedback`（120ms）。`MotionHost` 自己的 Opacity 和 RenderTransform 由模块持有；自定义透明度、缩放、旋转放到 Child，避免两个动画源同时写同一属性。不要给 MotionHost 额外设置这两个属性的样式动画或 Transition。
 
+消息时间线滚轮使用 `SmoothScroll`：在 160ms 内用 CubicEaseOut 接到目标偏移，连续滚轮只改目标、不排队。减少动效、程序跳转和拉历史后的位置恢复立即落点。没有常驻帧循环。
+
 ## 生命周期与开销
 
 - 使用 Avalonia 自带动画时钟和 CubicEaseOut；无自建定时器、后台线程、常驻帧循环、全局对象列表或循环动画。
-- 只插值透明度和渲染位移，不逐帧修改 Width、Height、Margin，不复制页面、不截图缓存旧页、不保留历史视图。
+- 页面切换只插值透明度和渲染位移，不逐帧修改 Width、Height、Margin，不复制页面、不截图缓存旧页、不保留历史视图。
+- `RevealHost` 是折叠专用：子节点保持完整尺寸并用裁剪显隐，宿主通过 Measure 报告插值高度，让下方分组跟着移动。不写 Width/Height 属性，不复制子树。
 - 每个容器最多一个运行中的动画、一个 Dispatcher 待执行请求。同一 UI 轮的请求合并；后续请求从当前可见值接续，取消旧动画，不排队播放。
 - 完成或取消会移除动画属性值，回到透明度 1、位移 0；旧任务的完成回调不能清除新动画的所有权。每次运行的 CancellationTokenSource 在完成时释放。
 - 自身/祖先隐藏、窗口最小化、离开可见树及减少动效会取消动画。卸载时解除祖先属性订阅。最小化恢复不回放过期请求。
-- 只在页面/面板边界使用，避免为每条消息创建动画容器。容器随可见树保留少量状态；没有承诺零分配或 GPU 专用线程执行。
+- 只在页面/面板边界使用 `MotionHost`，避免为每条消息创建动画容器。他人新到达的一行用 `ItemEnter.Play` 做一次 120ms 淡入+上移（起始透明度 0.55、位移 6px），播放后不再占宿主；自己发送、历史加载和频道切换不播。容器随可见树保留少量状态；没有承诺零分配或 GPU 专用线程执行。
 
 当前是有界的入场与切换动效基础。退场等待、旧新页交叉淡化、弹簧/物理动画、跨元素共享过渡、系统级减少动态效果自动检测均 **Not implemented yet**。应用已有减少动效偏好已接入。
 
 ## 当前接入与验证
 
-已接入添加实例、认证、文字/语音频道内容、设置分类和设计预览频道切换；Theme 的按钮反馈使用共用 120ms token。设置控件自身的微交互继续由 UI 样式负责，不与页面 MotionHost 叠加同一组属性。
+已接入添加实例、认证、文字/语音频道内容、设置入场、设计预览频道切换，以及新消息 `ItemEnter`；Theme 的按钮反馈使用共用 120ms token。设置分类切换不再位移或淡入，避免侧栏点选时整页抖动；设置控件自身的微交互继续由 UI 样式负责。文字/语音频道分组与社区菜单分区使用 `RevealHost` 做可中断收展。进入设置时壳层频道列由 `ShellMotion` 做 160ms 收起，设置页用 `SlideLeft` 入场。消息时间线滚轮走 `SmoothScroll`。
 
 2026-09-21：
 
 - Release 桌面构建：0 警告、0 错误；客户端模块边界检查通过。
-- `dotnet run --project tests/motion -c Release`：使用 Avalonia Headless 的实际 Dispatcher/动画时钟，验证中间插值、100 次连续 Trigger、不中断布局/Child transform、减少动效、祖先隐藏、最小化、排队取消、卸载/重新挂载与各预设归位。Headless 只作为测试依赖，不进入桌面产物。
+- `dotnet run --project tests/motion -c Release`：使用 Avalonia Headless 的实际 Dispatcher/动画时钟，验证中间插值、100 次连续 Trigger、不中断布局/Child transform、减少动效、祖先隐藏、最小化、排队取消、卸载/重新挂载与各预设归位；`RevealHost` 另验首次不对齐开合状态、收展中间高度、下方分组跟随、中途反向与减少动效对齐。Headless 只作为测试依赖，不进入桌面产物。
 - 生产 `SettingsView` 的 Skia 离屏渲染：验证中间帧、连续分类切换及真实 ReduceMotion 绑定；已检查 [中间帧](motion/appearance-moving.png) 和 [结束帧](motion/appearance-settled.png)。
 - 已启动隔离缓存的 macOS Release 客户端，但本任务的原生窗口读取超时，因此未验收原生输入及帧节奏；Windows/Linux 未运行。
 

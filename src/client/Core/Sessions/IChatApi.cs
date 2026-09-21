@@ -26,10 +26,14 @@ public interface IChatApi : IDisposable
     Task<ChannelDto> CreateChannelAsync(Guid serverId, CreateChannelRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<ServerDto>> ListServersAsync(CancellationToken cancellationToken);
     Task<IReadOnlyList<ChannelDto>> ListChannelsAsync(Guid serverId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ChannelDto>> ListDirectMessagesAsync(CancellationToken cancellationToken);
+    Task<ChannelDto> OpenDirectAsync(Guid recipientId, CancellationToken cancellationToken);
     Task<ServerDto> JoinAsync(string inviteCode, CancellationToken cancellationToken);
     Task<MessagePageDto> ListMessagesAsync(Guid channelId, Guid? before, int limit, CancellationToken cancellationToken);
     Task<MessageDto> SendMessageAsync(Guid channelId, SendMessageRequest request, string idempotencyKey, CancellationToken cancellationToken);
     Task<MessageDto> EditMessageAsync(Guid channelId, Guid messageId, PatchMessageRequest request, CancellationToken cancellationToken);
+    Task DeleteMessageAsync(Guid channelId, Guid messageId, CancellationToken cancellationToken);
+    Task StartTypingAsync(Guid channelId, CancellationToken cancellationToken);
     Task<AttachmentDto> UploadAsync(PickedFile file, CancellationToken cancellationToken);
     Task<byte[]?> DownloadAsync(Uri url, int maxBytes, CancellationToken cancellationToken);
     Task DownloadToAsync(Uri url, Stream destination, long maxBytes, CancellationToken cancellationToken);

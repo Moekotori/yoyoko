@@ -26,6 +26,7 @@ public readonly record struct WorkspaceInvite(string Address, string? CommunityC
         }
         raw = StripQueryFragment(raw, ref code);
         raw = StripJoinPath(raw, ref code);
+        raw = StripVoicePath(raw);
         return new(WorkspaceAddress.Resolve(raw, defaultAddress), code);
     }
 
@@ -34,6 +35,9 @@ public readonly record struct WorkspaceInvite(string Address, string? CommunityC
         if (!IsCommunityCode(communityCode)) throw new ClientFault(TextKey.InvalidInvite);
         return baseUrl.GetLeftPart(UriPartial.Authority) + "/join/" + NormalizeCode(communityCode);
     }
+
+    public static string VoiceLink(Uri baseUrl, Guid channelId)
+        => baseUrl.GetLeftPart(UriPartial.Authority) + "/voice/" + channelId.ToString("D");
 
     public static string CodeFrom(string invite)
     {
@@ -63,6 +67,15 @@ public readonly record struct WorkspaceInvite(string Address, string? CommunityC
         foreach (var c in code)
             if (!char.IsAsciiLetterOrDigit(c)) return false;
         return true;
+    }
+
+    private static string StripVoicePath(string raw)
+    {
+        var idx = raw.IndexOf("/voice/", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return raw;
+        var after = raw[(idx + 7)..].Trim().Trim('/');
+        if (after.Length == 0 || after.Contains('/') || !Guid.TryParse(after, out _)) return raw;
+        return raw[..idx];
     }
 
     private static string StripJoinPath(string raw, ref string? code)

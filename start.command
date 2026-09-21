@@ -34,6 +34,20 @@ for tool in dotnet; do
   fi
 done
 
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  printf '正在用 Docker 启动服务端…\n'
+  docker compose up -d
+  for _ in $(seq 1 90); do
+    if curl -fsS -m 2 --noproxy '*' http://127.0.0.1:8080/health/ready >/dev/null 2>&1; then
+      printf 'Docker 服务已就绪：http://localhost:8080\n'
+      break
+    fi
+    sleep 1
+  done
+elif command -v node >/dev/null 2>&1; then
+  node ./scripts/up.mjs --no-build || true
+fi
+
 if [[ "$mode" == release ]]; then
   printf '正在构建桌面客户端…\n'
   dotnet build src/client/App/Chat.App.csproj -c Release --nologo

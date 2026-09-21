@@ -172,6 +172,46 @@ pub(crate) fn is_local_dev_host(host: Option<&str>) -> bool {
     }
 }
 
+fn is_loopback_host(host: Option<&str>) -> bool {
+    let Some(host) = host else {
+        return false;
+    };
+    if host.eq_ignore_ascii_case("localhost") {
+        return true;
+    }
+    host.parse::<std::net::IpAddr>()
+        .is_ok_and(|ip| ip.is_loopback())
+}
+
+pub(crate) fn advertised_rtc_url(rtc_public_url: &str, host_header: Option<&str>) -> String {
+    let fallback = rtc_public_url.trim_end_matches('/').to_string();
+    let Ok(rtc) = Url::parse(&fallback) else {
+        return fallback;
+    };
+    if !is_loopback_host(rtc.host_str()) {
+        return fallback;
+    }
+    let Some(request_host) = host_header.map(str::trim).filter(|value| !value.is_empty()) else {
+        return fallback;
+    };
+    if request_host.contains('/') || request_host.contains('@') || request_host.len() > 255 {
+        return fallback;
+    }
+    let Ok(request) = Url::parse(&format!("http://{request_host}")) else {
+        return fallback;
+    };
+    if !is_local_dev_host(request.host_str()) || is_loopback_host(request.host_str()) {
+        return fallback;
+    }
+    let Some(lan_host) = request.host_str() else {
+        return fallback;
+    };
+    match rtc.port_or_known_default() {
+        Some(port) => format!("{}://{lan_host}:{port}", rtc.scheme()),
+        None => format!("{}://{lan_host}", rtc.scheme()),
+    }
+}
+
 pub(crate) fn advertised_origin(public_url: &str, host_header: Option<&str>) -> String {
     let fallback = public_url.trim_end_matches('/').to_string();
     let Some(host) = host_header.map(str::trim).filter(|value| !value.is_empty()) else {
@@ -214,6 +254,22 @@ mod tests {
         assert_eq!(
             advertised_origin("http://localhost:8080", Some("example.com")),
             "http://localhost:8080"
+        );
+    }
+
+    #[test]
+    fn lan_host_rewrites_loopback_rtc() {
+        assert_eq!(
+            advertised_rtc_url("http://localhost:7880", Some("10.19.144.83:8080")),
+            "http://10.19.144.83:7880"
+        );
+        assert_eq!(
+            advertised_rtc_url("http://localhost:7880", Some("127.0.0.1:8080")),
+            "http://localhost:7880"
+        );
+        assert_eq!(
+            advertised_rtc_url("http://livekit.example:7880", Some("10.19.144.83:8080")),
+            "http://livekit.example:7880"
         );
     }
 }

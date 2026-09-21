@@ -1,7 +1,9 @@
 pub mod api;
+pub mod cache;
 pub mod channel;
 pub mod configuration;
 pub mod database;
+pub mod dm;
 pub mod error;
 pub mod gateway;
 pub mod identity;
@@ -15,3 +17,4 @@ pub mod services;
 pub mod state;
 pub mod store;
 pub mod voice;
+pub mod web_voice;

@@ -3,6 +3,7 @@ using Chat.Core.Messaging;
 using Chat.Core.Realtime;
 using Chat.Core.Sessions;
 using Chat.Core.Voice;
+using Chat.Domain.Instances;
 using Chat.Localization;
 
 namespace Chat.Core.Instances;
@@ -22,7 +23,7 @@ public sealed class WorkspaceConnection(InstanceManager instances, IMessageCache
     public WorkspaceInvite Resolve(string input) => WorkspaceInvite.Parse(input, defaultAddress);
 
     public async Task<InstanceContext> ConnectAsync(string address, CancellationToken token,
-        bool allowBootstrapCommunity = true)
+        bool allowBootstrapCommunity = true, string? preferredUsername = null)
     {
         address = ResolveAddress(address);
         await _connection.WaitAsync(token);
@@ -42,10 +43,7 @@ public sealed class WorkspaceConnection(InstanceManager instances, IMessageCache
                     {
                         // Never silently replace an existing identity after an expired session or lost credential.
                         if (existingAccount is not null) throw new ClientFault(TextKey.SessionRecoveryRequired);
-                        var username = "user_" + Guid.NewGuid().ToString("N")[..12];
-                        var password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-                        session = await InstanceSession.SignInAsync(context.Descriptor, api, cache, vault,
-                            gateways, media, username, password, username, true, token);
+                        session = await RegisterAsync(context.Descriptor, api, preferredUsername, token);
                     }
                     session.ApplyDiscovery(discovery);
                     context.AttachSession(session);
@@ -66,6 +64,28 @@ public sealed class WorkspaceConnection(InstanceManager instances, IMessageCache
             return context;
         }
         finally { _connection.Release(); }
+    }
+
+    private async Task<InstanceSession> RegisterAsync(InstanceDescriptor descriptor, IChatApi api,
+        string? preferredUsername, CancellationToken token)
+    {
+        var identity = RegisterIdentity.From(preferredUsername);
+        var password = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+        ChatApiException? taken = null;
+        for (var attempt = 0; attempt < RegisterIdentity.MaxAttempts; attempt++)
+        {
+            try
+            {
+                return await InstanceSession.SignInAsync(descriptor, api, cache, vault, gateways, media,
+                    identity.UsernameAt(attempt), password, identity.DisplayName, true, token);
+            }
+            catch (ChatApiException error) when (!identity.ExplicitUsername && error.Code == "conflict"
+                && attempt < RegisterIdentity.MaxAttempts - 1)
+            {
+                taken = error;
+            }
+        }
+        throw taken ?? new ChatApiException("conflict", "Username already taken.");
     }
 
     public async Task DisconnectAsync(InstanceContext context, CancellationToken token)

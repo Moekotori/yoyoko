@@ -44,6 +44,7 @@ pub struct IssuedToken {
 
 pub fn mint_voice_token(
     rtc: &Rtc,
+    public_url: &str,
     identity: &str,
     name: &str,
     room: &str,
@@ -99,7 +100,7 @@ pub fn mint_voice_token(
     );
     Ok(IssuedToken {
         jwt,
-        url: websocket_url(&rtc.public_url),
+        url: websocket_url(public_url),
         room: room.to_string(),
         expires_at_unix: exp,
     })
@@ -133,6 +134,7 @@ mod tests {
         };
         let token = mint_voice_token(
             &rtc,
+            &rtc.public_url,
             "01950000-0000-7000-8000-000000000030",
             "Ada",
             "voice:room",

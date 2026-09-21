@@ -4,6 +4,7 @@ public sealed class UnavailableVoiceMedia : IVoiceMedia
 {
     public bool Available => false;
     public event Action<string>? Faulted { add { } remove { } }
+    public event Action<IReadOnlyList<string>>? SpeakingChanged { add { } remove { } }
     public Task ConnectAsync(Uri endpoint, string token, bool muted, bool deafened, AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken)
         => Task.FromException(new NotSupportedException("Not implemented yet: LiveKit media worker is not available."));
     public Task LeaveAsync(CancellationToken cancellationToken) => Task.CompletedTask;

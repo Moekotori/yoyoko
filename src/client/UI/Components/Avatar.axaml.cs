@@ -12,6 +12,7 @@ public partial class Avatar : UserControl
     public static readonly StyledProperty<AvatarPlayback?> PlaybackProperty = AvaloniaProperty.Register<Avatar, AvatarPlayback?>(nameof(Playback));
     public static readonly StyledProperty<string> InitialProperty = AvaloniaProperty.Register<Avatar, string>(nameof(Initial), "");
     public static readonly StyledProperty<bool> IsOnlineProperty = AvaloniaProperty.Register<Avatar, bool>(nameof(IsOnline));
+    public static readonly StyledProperty<bool> SpeakingProperty = AvaloniaProperty.Register<Avatar, bool>(nameof(Speaking));
     public static readonly DirectProperty<Avatar, bool> HasImageProperty =
         AvaloniaProperty.RegisterDirect<Avatar, bool>(nameof(HasImage), control => control.HasImage);
     private Window? _window;
@@ -27,6 +28,7 @@ public partial class Avatar : UserControl
     public AvatarPlayback? Playback { get => GetValue(PlaybackProperty); set => SetValue(PlaybackProperty, value); }
     public string Initial { get => GetValue(InitialProperty); set => SetValue(InitialProperty, value); }
     public bool IsOnline { get => GetValue(IsOnlineProperty); set => SetValue(IsOnlineProperty, value); }
+    public bool Speaking { get => GetValue(SpeakingProperty); set => SetValue(SpeakingProperty, value); }
     public bool HasImage
     {
         get => _hasImage;

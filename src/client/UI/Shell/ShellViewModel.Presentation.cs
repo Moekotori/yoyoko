@@ -7,16 +7,18 @@ using Chat.Localization;
 using Chat.UI.Chat;
 using Chat.UI.Components;
 using ChannelItem = Chat.UI.Channels.ChannelItem;
+using VoiceMemberRow = Chat.UI.Channels.VoiceMemberRow;
 
 namespace Chat.UI.Shell;
 
-// Local presentation state; never supplies server membership or online presence.
+// Local presentation state. Presence is not a server feature; extra names are layout fixtures.
 public sealed partial class ShellViewModel
 {
     private bool _searchOpen;
     private bool _participantsOpen = true;
     private bool _textExpanded = true;
     private bool _voiceExpanded = true;
+    private bool _directExpanded = true;
     private bool _refreshQueued;
     private bool _channelsChanged;
     private bool _messagesChanged;
@@ -27,27 +29,36 @@ public sealed partial class ShellViewModel
     public ObservableCollection<ChannelItem> OpenChannels { get; } = [];
     public ObservableCollection<MessageRow> VisibleMessages { get; } = [];
     public ObservableCollection<MemberProfile> Participants { get; } = [];
+    public IReadOnlyList<MemberSection> ParticipantSections { get; private set; } = [];
     public IEnumerable<ChannelItem> TextChannels => Channels.Where(channel => channel.Kind == "text");
     public IEnumerable<ChannelItem> VoiceChannels => Channels.Where(channel => channel.Kind == "voice");
+    public IEnumerable<ChannelItem> DirectChannels => Channels.Where(channel => channel.IsDirect);
+    public bool HasDirectChannels => Channels.Any(channel => channel.IsDirect);
     public ActionCommand SelectOpenChannel { get; private set; } = null!;
     public ActionCommand CloseOpenChannel { get; private set; } = null!;
     public ActionCommand ToggleSearch { get; private set; } = null!;
     public ActionCommand ToggleParticipants { get; private set; } = null!;
     public ActionCommand ToggleTextChannels { get; private set; } = null!;
     public ActionCommand ToggleVoiceChannels { get; private set; } = null!;
+    public ActionCommand ToggleDirectMessages { get; private set; } = null!;
     public ActionCommand DismissPresentation { get; private set; } = null!;
     public bool SearchOpen { get => _searchOpen; private set { _searchOpen = value; Changed(); } }
     public bool ParticipantsOpen { get => _participantsOpen; private set { _participantsOpen = value; Changed(); } }
     public bool TextExpanded { get => _textExpanded; private set { _textExpanded = value; Changed(); } }
     public bool VoiceExpanded { get => _voiceExpanded; private set { _voiceExpanded = value; Changed(); } }
+    public bool DirectExpanded { get => _directExpanded; private set { _directExpanded = value; Changed(); } }
     public string SearchQuery { get => _searchQuery; set { _searchQuery = value; Changed(); RefreshMessagePresentation(); } }
     public string ComposerPlaceholder => OnCooldown
         ? _text.Get(TextKey.CooldownWait, CooldownLeft)
-        : SelectedChannel is null ? _text.Get(TextKey.SelectChannel) : _text.Get(TextKey.MessageToChannel, SelectedChannel.Name);
+        : SelectedChannel is null ? _text.Get(TextKey.SelectChannel)
+        : SelectedChannel.IsDirect ? _text.Get(TextKey.MessageToDirect, SelectedChannel.Name)
+        : _text.Get(TextKey.MessageToChannel, SelectedChannel.Name);
     public string SendTip => OnCooldown
         ? ComposerPlaceholder
         : _text.Get(EnterToSend ? TextKey.EnterToSend : TextKey.CtrlEnterToSend);
-    public string EmptyMessageTitle => SearchQuery.Length > 0 ? _text.Get(TextKey.NoMatchingMessages) : _text.Get(TextKey.StillQuiet);
+    public string EmptyMessageTitle => ChannelForbidden
+        ? _text.Get(TextKey.ChannelForbidden)
+        : SearchQuery.Length > 0 ? _text.Get(TextKey.NoMatchingMessages) : _text.Get(TextKey.StillQuiet);
     public bool EmptyMessages => VisibleMessages.Count == 0 && !IsChannelLoading;
     public int ParticipantCount => Participants.Count;
     public bool HasParticipants => Participants.Count > 0;
@@ -77,11 +88,13 @@ public sealed partial class ShellViewModel
         ToggleParticipants = new(_ => ParticipantsOpen = !ParticipantsOpen);
         ToggleTextChannels = new(_ => { TextExpanded = !TextExpanded; if (!TextExpanded && ChannelEditor is { IsVoice: false } editor) editor.Cancel.Execute(null); });
         ToggleVoiceChannels = new(_ => { VoiceExpanded = !VoiceExpanded; if (!VoiceExpanded && ChannelEditor is { IsVoice: true } editor) editor.Cancel.Execute(null); });
+        ToggleDirectMessages = new(_ => DirectExpanded = !DirectExpanded);
         JumpPresent = new(_ => JumpToPresent());
-        CancelComposerEdit = new(_ => CancelEdit());
+        CancelComposerEdit = new(_ => CancelComposer());
         DismissPresentation = new(_ =>
         {
-            if (IsEditing) CancelEdit();
+            if (MentionOpen) CloseMention();
+            else if (IsEditing) CancelEdit();
             else if (ProfileOpen) ProfileOpen = false;
             else if (SwitcherOpen) CloseJump();
             else if (ChannelEditor is { } editor) editor.Cancel.Execute(null);
@@ -90,9 +103,11 @@ public sealed partial class ShellViewModel
             else Status = "";
         });
         InitializeKeyboard();
+        InitializeMentions();
         PropertyChanged += OnPresentationChanged;
         Channels.CollectionChanged += OnPresentationCollection;
         Messages.CollectionChanged += OnPresentationCollection;
+        SeedLayoutFixtures();
     }
 
     private void OnPresentationChanged(object? sender, PropertyChangedEventArgs args)
@@ -104,7 +119,6 @@ public sealed partial class ShellViewModel
             _draftKey = null;
             Draft = "";
             OpenChannels.Clear();
-            SelectedChannel = null;
             SearchQuery = "";
             CloseJump();
         }
@@ -112,6 +126,8 @@ public sealed partial class ShellViewModel
         {
             FlushDraft();
             if (IsEditing) { _editingId = null; _editBackup = ""; Changed(nameof(IsEditing)); }
+            if (IsReplying) CancelReply();
+            RefreshTyping();
             _newWhileAway = 0;
             _awayFromBottom = false;
             foreach (var item in Channels.Concat(OpenChannels).Distinct()) item.IsSelected = item.Id == SelectedChannel?.Id;
@@ -124,6 +140,7 @@ public sealed partial class ShellViewModel
             _draftKey = account is null || SelectedChannel is null ? null
                 : $"{SelectedInstance!.Context.Descriptor.Id.Value}:{account.Key.Id}:{SelectedChannel.Id}";
             Draft = _draftKey is not null && _channelDrafts.TryGetValue(_draftKey, out var draft) ? draft : "";
+            CloseMention();
             Changed(nameof(ComposerPlaceholder));
             Changed(nameof(SendTip));
             Changed(nameof(ShowChannelEmpty));
@@ -131,7 +148,7 @@ public sealed partial class ShellViewModel
             Changed(nameof(ChannelHasUnread));
             Changed(nameof(InSelectedVoice));
             if (SearchOpen) FocusSearch?.Invoke();
-            else if (!SwitcherOpen && SelectedChannel is { Kind: "text" }) FocusComposer?.Invoke();
+            else if (!SwitcherOpen && SelectedChannel is { CanChat: true }) FocusComposer?.Invoke();
             if (SelectedChannel is { } opened) NoteVisit(opened.Id);
         }
         if (args.PropertyName == nameof(Draft) && _draftKey is not null && !IsEditing)
@@ -171,6 +188,7 @@ public sealed partial class ShellViewModel
                 _channelsChanged = false;
                 RefreshChannelEditor();
                 Changed(nameof(TextChannels)); Changed(nameof(VoiceChannels));
+                Changed(nameof(DirectChannels)); Changed(nameof(HasDirectChannels)); Changed(nameof(ShowChannelNav));
                 for (var index = OpenChannels.Count - 1; index >= 0; index--)
                 {
                     var current = Channels.FirstOrDefault(item => item.Id == OpenChannels[index].Id);
@@ -187,9 +205,12 @@ public sealed partial class ShellViewModel
     private void RefreshMessagePresentation()
     {
         _messagesChanged = false;
-        var matches = Messages.Where(row => string.IsNullOrWhiteSpace(SearchQuery)
-            || row.Content.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)
-            || row.Author.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+        var matches = FixtureRows()
+            .Concat(Messages)
+            .Where(row => string.IsNullOrWhiteSpace(SearchQuery)
+                || row.Content.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)
+                || row.Author.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
+            .ToList();
         // Preserve unchanged containers so incoming messages don't reset selection or scroll.
         for (var i = VisibleMessages.Count - 1; i >= 0; i--)
             if (!matches.Contains(VisibleMessages[i])) VisibleMessages.RemoveAt(i);
@@ -200,10 +221,11 @@ public sealed partial class ShellViewModel
                 if (previousIndex >= 0) VisibleMessages.Move(previousIndex, i); else VisibleMessages.Insert(i, matches[i]);
             }
         RefreshParticipants();
-        foreach (var row in Messages)
+        foreach (var row in matches)
         {
             if (row.IsUnreadDivider) continue;
             row.Profile = ProfileOf(row.Item.Message.AuthorId, row.Author);
+            row.SetMentioned(MentionsMe(row));
         }
         InsertUnreadDivider(matches);
         MessageRow? previous = null;
@@ -215,17 +237,20 @@ public sealed partial class ShellViewModel
             previous = row;
         }
         Changed(nameof(EmptyMessages)); Changed(nameof(EmptyMessageTitle));
+        Changed(nameof(ChannelForbidden));
+        Changed(nameof(CanSend));
         Changed(nameof(ChannelHasUnread));
         Changed(nameof(ShowJumpBar));
     }
 
     private void InsertUnreadDivider(List<MessageRow> matches)
     {
-        if (SearchQuery.Length > 0 || SelectedChannel is not { Kind: "text" } channel) return;
+        if (SearchQuery.Length > 0 || SelectedChannel is not { CanChat: true } channel) return;
         if (!_inbox.TryGetValue(channel.Id, out var inbox) || inbox.LastReadId is not Guid read) return;
         var firstUnread = -1;
         for (var i = 0; i < matches.Count; i++)
-            if (!matches[i].IsPending && MessageMarkup.IdAfter(matches[i].Id, read))
+            if (!matches[i].IsPending && !matches[i].IsFixture && !matches[i].IsOwn
+                && MessageMarkup.IdAfter(matches[i].Id, read))
             {
                 firstUnread = i;
                 break;
@@ -241,7 +266,7 @@ public sealed partial class ShellViewModel
         var next = Messages
             .DistinctBy(row => row.Item.Message.AuthorId)
             .OrderBy(row => row.Author, StringComparer.CurrentCultureIgnoreCase)
-            .Take(50)
+            .Take(45)
             .Select(row =>
             {
                 var id = row.Item.Message.AuthorId;
@@ -250,11 +275,38 @@ public sealed partial class ShellViewModel
                 var username = user?.Username ?? "";
                 var isSelf = me is Guid self && self == id;
                 var existing = Participants.FirstOrDefault(item => item.Id == id);
-                if (existing is null) existing = new MemberProfile(id, name, username, isSelf);
-                else existing.Update(name, username, isSelf);
+                if (existing is null) existing = new MemberProfile(id, name, username, isSelf, isOnline: true);
+                else existing.Update(name, username, isSelf, true);
                 existing.Playback = _playbacks.TryGetValue(id, out var cached) ? cached.Playback : row.Playback;
+                existing.BannerPlayback = _banners.TryGetValue(id, out var banner) ? banner.Playback : existing.BannerPlayback;
                 return existing;
             })
+            .ToList();
+        if (session is not null && me is Guid selfId && next.All(item => item.Id != selfId))
+        {
+            var self = session.Me;
+            var existing = Participants.FirstOrDefault(item => item.Id == selfId)
+                ?? new MemberProfile(selfId, self.DisplayName, self.Username, true, isOnline: true);
+            existing.Update(self.DisplayName, self.Username, true, true);
+            existing.Playback = _playbacks.TryGetValue(selfId, out var selfCached) ? selfCached.Playback : AccountPlayback;
+            existing.BannerPlayback = _banners.TryGetValue(selfId, out var selfBanner) ? selfBanner.Playback : existing.BannerPlayback;
+            next.Add(existing);
+        }
+        foreach (var seed in MemberFixtures.Seeds)
+        {
+            if (next.Any(item => item.Id == seed.Id
+                || item.Username.Equals(seed.Username, StringComparison.OrdinalIgnoreCase)
+                || item.Name.Equals(seed.Name, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            var existing = Participants.FirstOrDefault(item => item.Id == seed.Id)
+                ?? new MemberProfile(seed.Id, seed.Name, seed.Username, false, isOnline: seed.Online, isFixture: true);
+            existing.Update(seed.Name, seed.Username, false, seed.Online);
+            next.Add(existing);
+        }
+        next = next
+            .OrderByDescending(item => item.IsOnline)
+            .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Take(50)
             .ToList();
         for (var i = Participants.Count - 1; i >= 0; i--)
             if (next.All(item => item.Id != Participants[i].Id))
@@ -268,17 +320,73 @@ public sealed partial class ShellViewModel
             if (previous >= 0) Participants.Move(previous, i);
             else Participants.Insert(i, next[i]);
         }
+        var online = Participants.Where(item => item.IsOnline).ToArray();
+        var offline = Participants.Where(item => !item.IsOnline).ToArray();
+        var sections = new List<MemberSection>(2);
+        if (online.Length > 0) sections.Add(new MemberSection(_text.Get(TextKey.OnlineCount, online.Length), online));
+        if (offline.Length > 0) sections.Add(new MemberSection(_text.Get(TextKey.OfflineCount, offline.Length), offline));
+        ParticipantSections = sections;
         Changed(nameof(ParticipantCount));
         Changed(nameof(HasParticipants));
+        Changed(nameof(ParticipantSections));
+    }
+
+    private IEnumerable<MessageRow> FixtureRows() =>
+        IsUltraLightParked || SelectedChannel is not { Kind: "text" }
+            ? []
+            : MessageFixtures.Rows;
+
+    private void SeedLayoutFixtures()
+    {
+        if (IsUltraLightParked || Channels.Any(item => !item.IsFixture)) return;
+        if (Channels.Count == 0)
+        {
+            var server = Guid.Parse("01900000-0000-7000-8000-000000000100");
+            var general = new ChannelItem(Guid.Parse("01900000-0000-7000-8000-000000000101"), server, "日常", "text", null, true);
+            var design = new ChannelItem(Guid.Parse("01900000-0000-7000-8000-000000000102"), server, "设计", "text", null, true);
+            var voice = new ChannelItem(Guid.Parse("01900000-0000-7000-8000-000000000103"), server, "深夜电台", "voice", "studio", true);
+            voice.SyncMembers(
+            [
+                VoiceRow(MemberFixtures.Seeds[0], muted: true, deafened: false),
+                VoiceRow(MemberFixtures.Seeds[1], muted: false, deafened: false),
+                VoiceRow(MemberFixtures.Seeds[2], muted: false, deafened: true),
+            ]);
+            Channels.Add(general);
+            Channels.Add(design);
+            Channels.Add(voice);
+            SelectedChannel = general;
+        }
+        RefreshMessagePresentation();
+        Changed(nameof(ShowChannelNav));
+        Changed(nameof(ShowChat));
+        Changed(nameof(ShowAuth));
+    }
+
+    private static VoiceMemberRow VoiceRow(
+        (Guid Id, string Name, string Username, bool Online) seed, bool muted, bool deafened)
+    {
+        var profile = new MemberProfile(seed.Id, seed.Name, seed.Username, false, isOnline: true, isFixture: true);
+        return new VoiceMemberRow(seed.Id, seed.Name, seed.Username, muted, deafened, false, profile);
     }
 
     public void MentionMember(MemberProfile member)
     {
         var token = member.MentionToken;
         if (string.IsNullOrEmpty(token)) return;
+        CloseMention();
         if (Draft.Length > 0 && !char.IsWhiteSpace(Draft[^1]))
             AppendDraft(" ");
         AppendDraft(token + " ");
+    }
+
+    private bool MentionsMe(MessageRow row)
+    {
+        if (row.IsUnreadDivider || row.IsOwn) return false;
+        var me = SelectedInstance?.Context.Session?.Me;
+        if (me is null) return false;
+        return row.Item.Message.Mentions.Contains(me.Id)
+            || MessageMarkup.MentionsAccount(row.Content, me.Username,
+                row.Item.Message.MentionEveryone, row.Item.Message.MentionHere, me.DisplayName);
     }
 
     private static bool Continues(MessageRow previous, MessageRow current)
@@ -303,6 +411,9 @@ public sealed partial class ShellViewModel
         _presentationDisposed = true;
         if (_draftTimer is not null) _draftTimer.Tick -= OnDraftTick;
         _draftTimer?.Stop();
+        _typingTimer?.Stop();
+        _typingTimer = null;
+        _typing.Clear();
         PropertyChanged -= OnPresentationChanged;
         Channels.CollectionChanged -= OnPresentationCollection;
         Messages.CollectionChanged -= OnPresentationCollection;

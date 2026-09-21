@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Chat.Core.Realtime;
+using Chat.Networking.Http;
 using Chat.Protocol;
 
 namespace Chat.Networking.WebSocket;
@@ -16,7 +17,12 @@ public sealed class WebSocketConnection : IGatewayConnection
     public async Task ConnectAsync(Uri endpoint, CancellationToken cancellationToken)
     {
         State = GatewayState.Connecting;
-        try { await _socket.ConnectAsync(endpoint, cancellationToken); State = GatewayState.Connected; }
+        try
+        {
+            _socket.Options.Proxy = ClientHttp.Proxy;
+            await _socket.ConnectAsync(endpoint, cancellationToken);
+            State = GatewayState.Connected;
+        }
         catch { State = GatewayState.Faulted; throw; }
     }
     public async Task SendAsync(GatewayEnvelope envelope, CancellationToken cancellationToken)

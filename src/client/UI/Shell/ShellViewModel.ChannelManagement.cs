@@ -6,6 +6,7 @@ namespace Chat.UI.Shell;
 public sealed partial class ShellViewModel
 {
     private ChannelEditorViewModel? _channelEditor;
+    private Guid? _enteringChannelId;
     public ChannelEditorViewModel? ChannelEditor
     {
         get => _channelEditor;
@@ -52,8 +53,10 @@ public sealed partial class ShellViewModel
             if (!ReferenceEquals(ChannelEditor, editor)) return;
             ChannelEditor = null;
             if (SelectedInstance?.Context.Session != session) return;
+            if (created is Guid createdId) _enteringChannelId = createdId;
             RefreshCommunity();
-            if (created is Guid id) SelectedChannel = Channels.FirstOrDefault(item => item.Id == id);
+            if (created is Guid selectedId && !voice)
+                SelectedChannel = Channels.FirstOrDefault(item => item.Id == selectedId);
         }, () => ChannelEditor = null, _lifetime);
         if (voice) VoiceExpanded = true; else TextExpanded = true;
         ChannelEditor = editor;

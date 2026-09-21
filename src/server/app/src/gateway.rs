@@ -153,6 +153,9 @@ async fn identify(
         .tokens
         .verify_access(&identify.access_token)
         .ok_or((4401, "Invalid access token"))?;
+    if claims.voice_channel.is_some() {
+        return Err((4401, "Voice-only session"));
+    }
     let session = state
         .store
         .create_gateway_session(
@@ -178,6 +181,9 @@ async fn resume(
         .tokens
         .verify_access(&resume.access_token)
         .ok_or((4401, "Invalid access token"))?;
+    if claims.voice_channel.is_some() {
+        return Err((4401, "Voice-only session"));
+    }
     let session_id: Uuid = resume
         .session_id
         .parse()

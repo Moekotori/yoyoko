@@ -1,4 +1,5 @@
-<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion">
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:chrome="using:Avalonia.Controls.Chrome" xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion">
   <Styles.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
@@ -59,7 +60,21 @@
   <Style Selector="TextBlock.quiet"><Setter Property="Foreground" Value="{DynamicResource QuietTextBrush}" /></Style>
   <Style Selector="TextBlock.section"><Setter Property="FontSize" Value="11" /><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="PathIcon"><Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" /></Style>
+  <Style Selector="PathIcon.groupChevron, PathIcon.menuChevron">
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+    <Setter Property="RenderTransform" Value="rotate(0deg)" />
+  </Style>
+  <Style Selector="PathIcon.groupChevron.collapsed"><Setter Property="RenderTransform" Value="rotate(-90deg)" /></Style>
+  <Style Selector="PathIcon.menuChevron.open"><Setter Property="RenderTransform" Value="rotate(180deg)" /></Style>
+  <Style Selector="Window:not(.reduceMotion) PathIcon.groupChevron, Window:not(.reduceMotion) PathIcon.menuChevron">
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="{x:Static motion:MotionTokens.Reveal}" Easing="{x:Static motion:MotionTokens.RevealEase}" />
+      </Transitions>
+    </Setter>
+  </Style>
   <Style Selector="Button">
+    <Setter Property="chrome:WindowDecorationProperties.ElementRole" Value="User" />
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Background" Value="Transparent" />
@@ -95,6 +110,7 @@
   <Style Selector="Button.tab"><Setter Property="Height" Value="41" /><Setter Property="Padding" Value="16,0,8,0" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="Button.tab.selected"><Setter Property="Foreground" Value="#EEEEEE" /></Style>
   <Style Selector="Button.tab.unread TextBlock"><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="#F2F2F2" /></Style>
+  <Style Selector="Grid.channelTab"><Setter Property="chrome:WindowDecorationProperties.ElementRole" Value="User" /></Style>
   <Style Selector="Grid.channelTab.selected"><Setter Property="Background" Value="{DynamicResource CanvasBrush}" /></Style>
   <Style Selector="Button.tabClose"><Setter Property="Opacity" Value="0" /><Setter Property="Width" Value="22" /><Setter Property="Height" Value="24" /><Setter Property="Padding" Value="5" /></Style>
   <Style Selector="Grid.channelTab:pointerover Button.tabClose"><Setter Property="Opacity" Value="1" /></Style>
@@ -144,6 +160,11 @@
     </Setter>
   </Style>
   <Style Selector="Window.reduceMotion Border">
+    <Setter Property="Transitions">
+      <Transitions />
+    </Setter>
+  </Style>
+  <Style Selector="Window.reduceMotion PathIcon">
     <Setter Property="Transitions">
       <Transitions />
     </Setter>

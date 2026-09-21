@@ -12,7 +12,7 @@
       <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="0,14" Spacing="10">
           <ListBox ItemsSource="{Binding Instances}" SelectedItem="{Binding SelectedInstance}" Margin="8,0"
-            AutomationProperties.Name="{i18n:T Instances}">
+            AutomationProperties.Name="{i18n:T Instances}" PointerPressed="OnInstancePressed">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="items:InstanceItem">
                 <Panel Width="42" Height="42">

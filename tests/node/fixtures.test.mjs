@@ -57,6 +57,43 @@ test("message-update fixture keeps seq encoding and edited_at", () => {
   assert.equal(typeof envelope.data.edited_at, "string");
 });
 
+test("message-delete fixture is id plus channel", () => {
+  const envelope = JSON.parse(readFixture("message-delete.json"));
+  assert.equal(envelope.event, "MESSAGE_DELETE");
+  assert.equal(typeof envelope.seq, "string");
+  assert.match(envelope.data.id, /^[0-9a-f-]{36}$/);
+  assert.match(envelope.data.channel_id, /^[0-9a-f-]{36}$/);
+});
+
+test("typing-start fixture has no resume seq", () => {
+  const envelope = JSON.parse(readFixture("typing-start.json"));
+  assert.equal(envelope.event, "TYPING_START");
+  assert.equal(envelope.seq, null);
+  assert.equal(envelope.data.display_name, "Ada");
+});
+
+test("typing-start fixture is ephemeral and has no seq", () => {
+  const envelope = JSON.parse(readFixture("typing-start.json"));
+  assert.equal(envelope.event, "TYPING_START");
+  assert.equal(envelope.seq, null);
+  assert.equal(envelope.data.display_name, "Ada");
+});
+
+test("voice-room fixture is voice-only preview", () => {
+  const room = JSON.parse(readFixture("voice-room.json"));
+  assert.equal(room.kind, "voice");
+  assert.equal(typeof room.participant_count, "number");
+  assert.match(room.channel_id, /^[0-9a-f-]{36}$/);
+});
+
+test("voice-guest-join fixture is access plus one room", () => {
+  const guest = JSON.parse(readFixture("voice-guest-join.json"));
+  assert.equal(typeof guest.access_token, "string");
+  assert.equal(guest.room.kind, "voice");
+  assert.equal(guest.join.state.display_name, "Ada");
+  assert.equal(guest.user.display_name, "Ada");
+});
+
 test("rtc-token fixture is a closed contract shape", () => {
   const token = JSON.parse(readFixture("rtc-token.json"));
   assert.equal(typeof token.token, "string");

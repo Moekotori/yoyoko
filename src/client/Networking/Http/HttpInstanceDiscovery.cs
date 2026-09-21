@@ -24,8 +24,10 @@ public sealed class HttpInstanceDiscovery(HttpClient client) : IInstanceDiscover
 
     public async Task<InstanceDiscovery> DiscoverAsync(Uri baseUrl, CancellationToken cancellationToken)
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
         using var response = await client.GetAsync(new Uri(baseUrl, ProtocolVersion.DiscoveryPath),
-            HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            HttpCompletionOption.ResponseHeadersRead, timeout.Token);
         response.EnsureSuccessStatusCode();
         // Bounded discovery responses; remote configuration must not allocate without a limit.
         await response.Content.LoadIntoBufferAsync(16 * 1024, cancellationToken);

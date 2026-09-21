@@ -14,4 +14,4 @@ session seq + SQLite 原子提交 cursor + 服务端有限 replay；过期 sessi
 
 ## Consequences
 
-Phase 0 只有握手，恢复语义在协议文档中定义，Phase 1 才实现。维护双语言 DTO，使用共享 fixture 约束漂移，未来扩展更完整 schema。
+客户端已按该决策提交 cursor、忽略重复 seq、缺口后 resume，并在 session 失效时 identify + 当前频道一页同步。维护双语言 DTO，使用共享 fixture 约束漂移，未来扩展更完整 schema。

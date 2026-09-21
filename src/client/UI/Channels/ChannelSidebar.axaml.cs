@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Chat.Core.Instances;
+using Chat.Motion;
 using Chat.UI.Chat;
 using Chat.Localization;
 using Chat.UI.Components;
@@ -17,19 +19,15 @@ public partial class ChannelSidebar : UserControl
 
     private void OnChannelLoaded(object? sender, RoutedEventArgs args)
     {
-        if (sender is Button { ContextMenu: { } menu } button) menu.Tag = button;
+        if (sender is not Button button) return;
+        if (button.ContextMenu is { } menu) menu.Tag = button;
+        if (button.DataContext is ChannelItem item && item.ConsumeEnter())
+            ItemEnter.Play(button);
     }
 
     private void OnCardOpened(object? sender, EventArgs e)
     {
         if (sender is Flyout flyout) MemberGestures.BindCard(flyout);
-    }
-
-    private void OnVoiceDoubleTapped(object? sender, TappedEventArgs args)
-    {
-        if (DataContext is not ShellViewModel shell || sender is not Control { DataContext: ChannelItem channel }) return;
-        shell.JoinVoice.Execute(channel);
-        args.Handled = true;
     }
 
     private void OnChannelMenuOpening(object? sender, CancelEventArgs args)
@@ -72,15 +70,44 @@ public partial class ChannelSidebar : UserControl
             join.Command = shell.JoinVoice;
             join.CommandParameter = channel;
         }
-        var settings = (MenuItem)menu.Items[1]!;
-        settings.Command = shell.SelectOpenChannel;
-        settings.CommandParameter = channel;
+        ((MenuItem)menu.Items[1]!).Command = new ActionCommand(_ => _ = CopyWebVoiceAsync(shell, channel));
+        var settings = (MenuItem)menu.Items[2]!;
+        settings.Command = new ActionCommand(_ =>
+        {
+            if (shell.SelectedChannel?.Id != channel.Id) shell.SelectedChannel = channel;
+            shell.OpenVoiceSettings.Execute(null);
+        });
         var canManage = shell.CanManageChannel(channel);
-        for (var index = 2; index < menu.Items.Count; index++) ((Control)menu.Items[index]!).IsVisible = canManage;
-        ((MenuItem)menu.Items[3]!).Command = new ActionCommand(_ => shell.EditChannel(channel, true, ChannelEditMode.Rename));
-        var create = (MenuItem)menu.Items[4]!;
+        for (var index = 3; index < menu.Items.Count; index++) ((Control)menu.Items[index]!).IsVisible = canManage;
+        ((MenuItem)menu.Items[4]!).Command = new ActionCommand(_ => shell.EditChannel(channel, true, ChannelEditMode.Rename));
+        var create = (MenuItem)menu.Items[5]!;
         create.Header = I18n.Presenter.Get(TextKey.CreateVoiceChannel);
         create.Command = new ActionCommand(_ => shell.EditChannel(channel, true, ChannelEditMode.Create));
-        ((MenuItem)menu.Items[6]!).Command = new ActionCommand(_ => shell.EditChannel(channel, true, ChannelEditMode.Delete));
+        ((MenuItem)menu.Items[7]!).Command = new ActionCommand(_ => shell.EditChannel(channel, true, ChannelEditMode.Delete));
+    }
+
+    private async Task CopyWebVoiceAsync(ShellViewModel shell, ChannelItem channel)
+    {
+        var origin = shell.SelectedInstance?.Context.Descriptor.BaseUrl;
+        if (origin is null || channel.IsFixture || !channel.IsVoice)
+        {
+            shell.Workspace.ShowNotice(I18n.T(TextKey.NeedInstance));
+            return;
+        }
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is null)
+        {
+            shell.Workspace.ShowNotice(I18n.T(TextKey.ClipboardUnavailable));
+            return;
+        }
+        try
+        {
+            await ClipboardExtensions.SetTextAsync(clipboard, WorkspaceInvite.VoiceLink(origin, channel.Id));
+            shell.Workspace.ShowNotice(I18n.T(TextKey.WebVoiceLinkCopied));
+        }
+        catch (Exception)
+        {
+            shell.Workspace.ShowNotice(I18n.T(TextKey.ClipboardFailed));
+        }
     }
 }

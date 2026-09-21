@@ -54,7 +54,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, IAppearancePreference appearance,
         IShortcutPreference shortcuts, WallpaperSession wallpaper, Action close, Func<InstanceSession?> session,
         Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth, ILanguagePacks packs,
-        ISystemTransportPreference transport)
+        ISystemTransportPreference transport, IVoiceQualityHost quality)
     {
         _preference = preference;
         _chrome = chrome;
@@ -63,6 +63,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _text = text;
         _packs = packs;
         _onError = onError;
+        Quality = quality;
         Wallpaper = wallpaper;
         Shortcuts = new(shortcuts, chrome, text);
         Profile = new(session, pickAvatar, onError, text);
@@ -178,6 +179,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public string LoopbackLabel => Devices.LoopbackLabel;
     public ProfileViewModel Profile { get; }
     public VoiceDevicesViewModel Devices { get; }
+    public IVoiceQualityHost Quality { get; }
     public WallpaperSession Wallpaper { get; }
     public ShortcutSettingsViewModel Shortcuts { get; }
     public ObservableCollection<ColorSchemeChoice> ColorSchemes { get; } = [];
@@ -304,6 +306,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         SyncLanguages();
         Changed(nameof(SectionTitle));
         Changed(nameof(SendShortcutChoices));
+        Profile.NotifyText();
         foreach (var option in ColorSchemes)
             option.Name = _text.Get(option.Scheme == ColorScheme.Light ? TextKey.ColorSchemeLight : TextKey.ColorSchemeDark);
         Changed(nameof(SelectedColorScheme));

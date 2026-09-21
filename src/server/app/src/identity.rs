@@ -17,6 +17,7 @@ pub struct TokenService {
 pub struct AccessClaims {
     pub user_id: Uuid,
     pub session_id: Uuid,
+    pub voice_channel: Option<Uuid>,
 }
 
 impl TokenService {
@@ -31,6 +32,13 @@ impl TokenService {
     pub fn issue_access(&self, user_id: Uuid, session_id: Uuid) -> String {
         let exp = Utc::now().timestamp() + self.access_ttl_seconds as i64;
         let payload = format!("v1.{user_id}.{session_id}.{exp}");
+        let mac = sign(&self.secret, payload.as_bytes());
+        format!("{payload}.{}", hex::encode(mac))
+    }
+
+    pub fn issue_voice_access(&self, user_id: Uuid, session_id: Uuid, channel_id: Uuid) -> String {
+        let exp = Utc::now().timestamp() + self.access_ttl_seconds as i64;
+        let payload = format!("v2.{user_id}.{session_id}.{exp}.voice.{channel_id}");
         let mac = sign(&self.secret, payload.as_bytes());
         format!("{payload}.{}", hex::encode(mac))
     }
@@ -50,18 +58,36 @@ impl TokenService {
             return None;
         }
         let mut parts = payload.split('.');
-        if parts.next() != Some("v1") {
-            return None;
-        }
+        let version = parts.next()?;
         let user_id = parts.next()?.parse().ok()?;
         let session_id = parts.next()?.parse().ok()?;
         let exp: i64 = parts.next()?.parse().ok()?;
-        if parts.next().is_some() || exp < Utc::now().timestamp() {
+        if exp < Utc::now().timestamp() {
             return None;
         }
+        let voice_channel = match version {
+            "v1" => {
+                if parts.next().is_some() {
+                    return None;
+                }
+                None
+            }
+            "v2" => {
+                if parts.next() != Some("voice") {
+                    return None;
+                }
+                let channel = parts.next()?.parse().ok()?;
+                if parts.next().is_some() {
+                    return None;
+                }
+                Some(channel)
+            }
+            _ => return None,
+        };
         Some(AccessClaims {
             user_id,
             session_id,
+            voice_channel,
         })
     }
 
@@ -118,6 +144,12 @@ mod tests {
         let claims = tokens.verify_access(&token).unwrap();
         assert_eq!(claims.user_id, user);
         assert_eq!(claims.session_id, session);
+        assert_eq!(claims.voice_channel, None);
         assert!(tokens.verify_access("v1.bad").is_none());
+        let channel = Uuid::now_v7();
+        let scoped = tokens.issue_voice_access(user, session, channel);
+        let voice = tokens.verify_access(&scoped).unwrap();
+        assert_eq!(voice.voice_channel, Some(channel));
+        assert!(tokens.verify_access(&scoped.replace("v2.", "v1.")).is_none());
     }
 }

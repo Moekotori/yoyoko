@@ -1,4 +1,5 @@
 using Chat.Protocol;
+using Chat.UI.Chat;
 using Chat.UI.Components;
 
 namespace Chat.UI.Shell;
@@ -6,12 +7,16 @@ namespace Chat.UI.Shell;
 public sealed partial class ShellViewModel
 {
     private readonly Dictionary<Guid, (Uri Url, AvatarPlayback Playback)> _playbacks = [];
+    private readonly Dictionary<Guid, (Uri Url, AvatarPlayback Playback)> _banners = [];
     private readonly Dictionary<Guid, Uri> _avatarAttempts = [];
+    private readonly Dictionary<Guid, Uri> _bannerAttempts = [];
     private CancellationTokenSource? _avatarScope;
     private int _avatarGeneration;
     private int _avatarLoads;
+    private int _bannerLoads;
     private bool _clearingAvatars;
     private long AvatarBudget => _visualBudget.AvatarBytes;
+    private long BannerBudget => _visualBudget.BannerBytes;
 
     private void RefreshAvatars()
     {
@@ -27,12 +32,15 @@ public sealed partial class ShellViewModel
         }
         foreach (var id in _avatarAttempts.Keys.Where(id => !needed.Contains(id)).ToArray()) _avatarAttempts.Remove(id);
         _ = LoadUserAvatarAsync(session.Me.Id);
+        _ = LoadUserBannerAsync(session.Me.Id);
         foreach (var id in needed)
         {
             if (_avatarLoads >= _visualBudget.Downloads) break;
             _ = LoadUserAvatarAsync(id);
         }
     }
+
+    public void RequestBanner(MemberProfile member) => _ = LoadUserBannerAsync(member.Id);
 
     private async Task LoadUserAvatarAsync(Guid userId)
     {
@@ -112,6 +120,75 @@ public sealed partial class ShellViewModel
             if (member.Id == userId) member.Playback = playback;
     }
 
+    private async Task LoadUserBannerAsync(Guid userId)
+    {
+        if (_visualBudget.Suspended || _presentationDisposed || _lifetime.IsCancellationRequested) return;
+        var session = SelectedInstance?.Context.Session;
+        var user = session?.User(userId);
+        if (user?.Banner is null)
+        {
+            _bannerAttempts.Remove(userId);
+            ApplyBanner(userId, null);
+            if (_banners.Remove(userId, out var stale)) stale.Playback.Dispose();
+            return;
+        }
+        var animated = user.Banner.Animated && _visualBudget.Animate;
+        var url = animated ? user.Banner.DownloadUrl : user.Banner.ThumbnailUrl ?? user.Banner.DownloadUrl;
+        if (_banners.TryGetValue(userId, out var existing) && existing.Url == url)
+        {
+            ApplyBanner(userId, existing.Playback);
+            return;
+        }
+        if (_bannerLoads >= Math.Max(1, _visualBudget.Downloads)
+            || _bannerAttempts.TryGetValue(userId, out var attempted) && attempted == url) return;
+        _bannerAttempts[userId] = url;
+        if (_banners.Values.Sum(item => item.Playback.DecodedBytes) + 360 * 140 * 4 > BannerBudget) return;
+        _bannerLoads++;
+        var generation = _avatarGeneration;
+        _avatarScope ??= CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
+        var token = _avatarScope.Token;
+        var limit = url == user.Banner.DownloadUrl
+            ? (int)Math.Min(Math.Max(user.Banner.Size, 1) + 65_536, ProtocolVersion.MaxAvatarBytes) : 768 * 1024;
+        try
+        {
+            var bytes = await session!.DownloadAsync(url, limit, token);
+            if (bytes is null || bytes.Length == 0 || token.IsCancellationRequested || generation != _avatarGeneration
+                || !ReferenceEquals(session, SelectedInstance?.Context.Session) || _visualBudget.Suspended) return;
+            var current = session.User(userId)?.Banner;
+            if (current is null || current.Id != user.Banner.Id
+                || !_bannerAttempts.TryGetValue(userId, out var requested) || requested != url) return;
+            var retained = _banners.Values.Sum(item => item.Playback.DecodedBytes);
+            if (retained + 360 * 140 * 4 > BannerBudget) return;
+            var playback = AvatarPlayback.Decode(bytes, 360,
+                animated && retained + 16 * 360 * 140 * 4 <= BannerBudget, 16);
+            ApplyBanner(userId, null);
+            if (_banners.Remove(userId, out var previous)) previous.Playback.Dispose();
+            if (session.Me.Id != userId)
+            {
+                foreach (var id in _banners.Keys.Where(id => id != session.Me.Id).ToArray())
+                {
+                    if (_banners.Remove(id, out var extra)) extra.Playback.Dispose();
+                    ApplyBanner(id, null);
+                }
+            }
+            _banners[userId] = (url, playback);
+            ApplyBanner(userId, playback);
+        }
+        catch { /* Leave the color banner; retry on URL or residency change. */ }
+        finally
+        {
+            _bannerLoads--;
+        }
+    }
+
+    private void ApplyBanner(Guid userId, AvatarPlayback? playback)
+    {
+        if (SelectedInstance?.Context.Session?.Me.Id == userId)
+            Settings.Profile.SetBannerPlayback(playback);
+        foreach (var member in Participants)
+            if (member.Id == userId) member.BannerPlayback = playback;
+    }
+
     private void ClearPlaybacks()
     {
         _clearingAvatars = true;
@@ -121,12 +198,17 @@ public sealed partial class ShellViewModel
         _avatarAttempts.Clear();
         foreach (var row in Messages) row.Playback = null;
         foreach (var member in Participants) member.Playback = null;
+        foreach (var member in Participants) member.BannerPlayback = null;
         AccountPlayback = null;
         Changed(nameof(AccountPlayback));
         Changed(nameof(HasAvatar));
         Settings.Profile.SetPlayback(null);
+        Settings.Profile.SetBannerPlayback(null);
         foreach (var item in _playbacks.Values) item.Playback.Dispose();
+        foreach (var item in _banners.Values) item.Playback.Dispose();
         _playbacks.Clear();
+        _banners.Clear();
+        _bannerAttempts.Clear();
         previous?.Cancel();
         previous?.Dispose();
         _clearingAvatars = false;

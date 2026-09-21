@@ -1,13 +1,29 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization" xmlns:chat="using:Chat.UI.Chat"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization" xmlns:chat="using:Chat.UI.Chat" xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion"
   x:Class="Chat.UI.Workspace.ConversationView" x:DataType="vm:WorkspaceViewModel" x:Name="Conversation">
   <UserControl.Styles>
     <Style Selector="ListBoxItem"><Setter Property="Padding" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Focusable" Value="False" /></Style>
     <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
-    <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /><Setter Property="Margin" Value="0,0,0,12" /></Style>
     <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#232323" /></Style>
+    <Style Selector="Grid.messageRow.continued"><Setter Property="Margin" Value="0,0,0,2" /></Style>
+    <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,16,1" /></Style>
+    <Style Selector="Grid.messageRow Panel.avatarSlot"><Setter Property="DockPanel.Dock" Value="Left" /><Setter Property="Margin" Value="0,12,13,0" /></Style>
+    <Style Selector="Grid.messageRow StackPanel.body"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="Margin" Value="0,11,16,9" /></Style>
     <Style Selector="SelectableTextBlock.messageText"><Setter Property="FontSize" Value="16" /><Setter Property="LineHeight" Value="25" /><Setter Property="Foreground" Value="#CCCCCC" /></Style>
-    <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector="Button.mentionChip">
+      <Setter Property="Padding" Value="4,0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Background" Value="#332820" />
+      <Setter Property="Foreground" Value="#D2A88C" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.mentionChip.strong">
+      <Setter Property="Background" Value="#4A3228" />
+      <Setter Property="Foreground" Value="#E8C4A8" />
+    </Style>
+    <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /><Setter Property="HorizontalAlignment" Value="Right" /><Setter Property="Margin" Value="0,0,24,0" /></Style>
     <Style Selector="Grid.messageRow:pointerover Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
     <Style Selector="Grid.messageRow:focus-within Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
   </UserControl.Styles>
@@ -35,23 +51,30 @@
           <TextBlock Text="{Binding EmptyTitle}" HorizontalAlignment="Center" FontSize="15" Foreground="{DynamicResource MutedTextBrush}" />
           <TextBlock Text="{Binding EmptyDetail}" HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource QuietTextBrush}" />
         </StackPanel>
-        <ListBox x:Name="Timeline" ItemsSource="{Binding Messages}" Margin="0,22,0,12" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{i18n:T MessageTimeline}">
+        <ListBox x:Name="Timeline" ItemsSource="{Binding Messages}" Margin="0,22,0,12" SelectionMode="Single" AutoScrollToSelectedItem="False"
+          motion:SmoothScroll.Wheel="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.BringIntoViewOnFocusChange="False"
+          AutomationProperties.Name="{i18n:T MessageTimeline}">
+          <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel CacheLength="1" /></ItemsPanelTemplate></ListBox.ItemsPanel>
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:MessageItem">
-              <Grid Classes="messageRow" ColumnDefinitions="24,36,13,*,24" Margin="0,0,0,12">
+              <Grid Classes="messageRow" Classes.continued="{Binding IsContinuation}">
                 <Grid.ContextMenu><ContextMenu><MenuItem Header="{i18n:T CopyText}" Click="CopyMessage" /></ContextMenu></Grid.ContextMenu>
-                <c:Avatar Grid.Column="1" Width="36" Height="36" VerticalAlignment="Top" Source="{Binding Avatar}" Margin="0,12,0,0" />
-                <StackPanel Grid.Column="3" Spacing="4" Margin="0,11,0,9">
-                  <StackPanel Orientation="Horizontal" Spacing="9">
-                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
-                    <TextBlock Text="{Binding Time}" Foreground="{DynamicResource QuietTextBrush}" FontSize="11" VerticalAlignment="Center" />
+                <DockPanel Margin="24,0">
+                  <Panel Classes="avatarSlot" Width="36" Height="36" VerticalAlignment="Top">
+                    <c:Avatar Width="36" Height="36" Source="{Binding Avatar}" IsVisible="{Binding ShowHeader}" />
+                  </Panel>
+                  <StackPanel Classes="body" Spacing="4">
+                    <StackPanel Classes="header" Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowHeader}">
+                      <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
+                      <TextBlock Text="{Binding Time}" Foreground="{DynamicResource QuietTextBrush}" FontSize="11" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <chat:MessageText Markdown="{Binding Text}" SelfUsername="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).AccountName}" Classes="messageText" TextWrapping="Wrap" />
+                    <Button Classes="reaction" IsVisible="{Binding HasReaction}" Background="#343434" BorderBrush="#505050" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="{i18n:T ReactionUnavailable}">
+                      <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{DynamicResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="#D8D8D8" /></StackPanel>
+                    </Button>
                   </StackPanel>
-                  <chat:MessageText Markdown="{Binding Text}" Classes="messageText" TextWrapping="Wrap" />
-                  <Button IsVisible="{Binding HasReaction}" Background="#343434" BorderBrush="#505050" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" HorizontalAlignment="Left" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="{i18n:T ReactionUnavailable}">
-                    <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{DynamicResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="#D8D8D8" /></StackPanel>
-                  </Button>
-                </StackPanel>
-                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,24,0">
+                </DockPanel>
+                <Border Classes="messageTools" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="2" VerticalAlignment="Top">
                   <Button Classes="icon" Click="CopyMessage" AutomationProperties.Name="{i18n:T CopyMessage}" ToolTip.Tip="{i18n:T CopyText}"><PathIcon Data="{StaticResource IconCopy}" Width="16" Height="16" /></Button>
                 </Border>
               </Grid>
@@ -72,6 +95,8 @@
         </Grid>
       </Border>
     </Grid>
-    <vm:MemberSidebar Grid.Column="1" IsVisible="{Binding MembersVisible}" />
+    <Border Grid.Column="1" Width="300" IsVisible="{Binding MembersVisible}">
+      <vm:MemberSidebar />
+    </Border>
   </Grid>
 </UserControl>

@@ -2,10 +2,10 @@
 
 ## 环境
 
-- .NET SDK 10，global.json 允许同一 major 最新 feature band；依赖固定于 Directory.Packages.props 与 packages.lock.json。
+- .NET SDK 10，global.json 允许同一 major 最新 feature band；依赖固定于 Directory.Packages.props 与 packages.lock.json。Windows 的 `start.cmd` 若找不到 SDK 10，会用官方脚本安装到 `%USERPROFILE%\.dotnet`。
 - Rust stable ≥ 1.90（本机验证 1.98.1），Cargo.lock 固定依赖。
 - CMake ≥ 3.24 + C++20 编译器。
-- Docker Compose v2 仅部署环境需要；桌面和 HTTP discovery 无需 Docker 即可启动。
+- Docker Compose v2：日常跑完整服务端用 `docker compose up -d --build` 或 `npm run up`。没有 Docker 时仍可用 `cargo run -p chat-server`（`local:` 文件库）。
 - Node.js ≥ 22 用于协议 fixtures 与对本机 API/Gateway 的 live 检查；无 npm 依赖。
 
 所有命令从仓库根目录执行。
@@ -13,31 +13,45 @@
 ## 构建与运行
 
 ```sh
+docker compose up -d --build
+# 或 npm run up
+# 局域网：npm run up -- --lan
+
 dotnet restore Chat.sln --locked-mode
 dotnet build Chat.sln -c Release --no-restore
 dotnet run --project src/client/App -c Release --no-build
-cargo run --locked -p chat-server
 cargo build --locked -p chat-media-worker
 ```
 
-`chat-media-worker` 按需启动：枚举设备，并作为 LiveKit 客户端发布/订阅麦克风。未构建该二进制时，设置里只有“系统默认”，进语音会明确失败。要对端听到，先起 LiveKit：
+改 Rust 服务端、不经过容器时：`cargo run --locked -p chat-server`。
+
+`chat-media-worker` 按需启动：枚举设备，并作为 LiveKit 客户端发布/订阅麦克风。未构建该二进制时，设置里只有“系统默认”，进语音会明确失败。Compose 已含 LiveKit。只想本机跑媒体、不用整套堆栈时：
 
 ```sh
 docker compose up -d redis livekit
 cargo build --locked -p chat-media-worker
 ```
 
-`config.toml` 的 `[rtc]` 必须与 `deploy/livekit.yaml` 的 `keys` 一致（默认 `devkey` / `local-development-only-change-me-32`）。本机无 LiveKit 时 join 会报连接失败，频道成员列表仍可用。
+Windows 无 Docker 时，用官方 `livekit-server` 单节点（不强制 Redis；聊天 Backend 当前也不连 Redis）。将 `livekit_1.9.0_windows_amd64.zip` 解出到 `.tools/livekit-server.exe`（该目录已 gitignore），然后：
+
+```sh
+.tools\livekit-server.exe --config deploy/livekit.host.yaml
+```
+
+`start.cmd` 会在 7880 空闲时自动拉起该进程；检测到局域网地址时用 `--node-ip` 宣告该网卡（`deploy/livekit.host.yaml` 已绑 `0.0.0.0`）。LiveKit 1.9 的 YAML 没有顶层 `node_ip`。有 Docker 时执行上面的 Compose 命令。`config.toml` 的 `[rtc]` 必须与 `deploy/livekit.yaml` / `deploy/livekit.host.yaml` 的 `keys` 一致（默认 `devkey` / `local-development-only-change-me-32`）。`rtc.public_url` 可保持 `http://localhost:7880`：发现与 `voice/join` 若看到局域网 `Host`，会把 loopback RTC 改写成该网卡 IP 并保留 7880 端口。本机无 LiveKit 时 join 会报连接失败，频道成员列表仍可用。音频进程退出或 LiveKit 断开后，已在频道内会自动重签 token 并重连，最多 5 次。
+
+网页语音：浏览器打开 `{origin}/voice/{channel_id}`（桌面语音频道右键复制）。页面只显示该房间，没有文字频道。访客令牌不能列频道或读消息。本机可用 `http://localhost:8080/voice/...`；其它设备用局域网地址，LiveKit 需监听 `0.0.0.0`。`npm run lan` 会设置 `CHAT__RTC__PUBLIC_URL`。
 
 客户端默认连接配置的服务器，并恢复或首次注册账号；可在「设置 → 服务器」输入 `http://localhost:8080` 并连接。账号资料在设置修改，首屏不再要求账号密码；不会自动加入语音。开发工程设置 `UseAppHost=false`，由已安装的 dotnet runtime 直接运行；独立安装包的 host/signing 属于后续发布工作。
 
-局域网测试（同一 Wi-Fi 下的另一台电脑或本机第二客户端）不要用默认的 loopback 监听。使用：
+局域网测试（同一 Wi-Fi 下的另一台电脑或本机第二客户端）：
 
 ```sh
-npm run dev
+npm run up -- --lan
+# 无 Docker 时仍可用 npm run dev，会回退到 cargo 并绑 0.0.0.0
 ```
 
-服务会绑到 `0.0.0.0:8080`，并打印本机局域网地址。在客户端输入该地址（可省略 `http://`，内网 IP 会默认走 HTTP）。默认 `cargo run` 仍只监听 `127.0.0.1`，避免无意暴露开发凭据。系统若弹出防火墙/网络权限，选择允许。`CHAT_LAN_PORT` / `CHAT_LAN_HOST` 可覆盖端口和通告地址。
+客户端输入打印出的 `http://192.168.x.x:8080`。默认 Compose 与 `cargo run` 只发布/监听回环。`CHAT_PUBLISH=0.0.0.0` 覆盖 Compose 发布地址；无 Docker 时 `CHAT_LAN_PORT` / `CHAT_LAN_HOST` 覆盖 cargo 局域网模式。
 
 ```sh
 cargo run --locked -p chat-server -- check-config
@@ -49,17 +63,19 @@ cmake --build build/native --config Release
 
 ## 开发热重载
 
-macOS 双击根目录 `dev.command`，或运行：
+Windows 双击根目录 `dev.cmd`，macOS 双击 `dev.command`，或运行：
 
 ```sh
+dev.cmd
 ./dev.command
 # 等价入口
+start.cmd --watch
 ./start.command --watch
 ```
 
-脚本以 Debug 配置运行客户端并连接配置的局域网服务器，不管理服务端进程。普通 `start.command` 仍使用 Release。两种模式共用客户端缓存，切换前先关闭原客户端。
+脚本以 Debug 配置运行客户端并连接配置的局域网服务器，不管理服务端进程。普通 `start.cmd` / `start.command` 仍使用 Release。两种模式共用客户端缓存，切换前先关闭原客户端。
 
-普通启动优先使用「设置 → 服务器」上次连接成功的地址；没有保存选择时读取 `default_instance_url`（当前 `http://10.19.144.83:8080`，可用 `CHAT_DEFAULT_INSTANCE_URL` 覆盖）。Core 的 `WorkspaceConnection` 统一负责启动和设置连接：优先恢复实例账号，只有首次没有账号记录才通过标准注册 API 创建随机独立账号，不保存随机注册密码。已有账号的会话过期、网络失败或凭据丢失不会触发新账号注册；登录/注册入口保留在「设置 → 资料」的未登录状态。内网实例尚无社区时创建一个真实社区及 `general`。账号、会话与缓存仍按实例隔离，同源发现校验保持不变；服务器不可达时可重试或打开设置，不回退到其他服务。
+普通启动优先使用「设置 → 服务器」上次连接成功的地址；没有保存选择时读取 `default_instance_url`（当前 `http://localhost:8080`，可用 `CHAT_DEFAULT_INSTANCE_URL` 覆盖）。Windows 的 `start.cmd` 会先拉起本机服务端再打开客户端。Core 的 `WorkspaceConnection` 统一负责启动和设置连接：优先恢复实例账号，只有首次没有账号记录才通过标准注册 API 创建随机独立账号，不保存随机注册密码。已有账号的会话过期、网络失败或凭据丢失不会触发新账号注册。「设置 → 资料」只编辑当前账号的头像、横幅、显示名和用户名，不再提供登录/注册表单。内网实例尚无社区时创建一个真实社区及 `general`。账号、会话与缓存仍按实例隔离，同源发现校验保持不变；服务器不可达时可重试或打开设置，不回退到其他服务。
 
 `localhost` / `http://localhost` 是客户端的默认服务器快捷地址，由 Core `WorkspaceAddress` 解析到 `default_instance_url`（包含端口，支持环境变量覆盖）。设置连接和原添加实例入口使用同一连接流程；成功后保存实际地址，继续执行同源发现与账号恢复。带端口地址、其他域名与显式 HTTPS 不重定向；不会修改系统 hosts 或启动代理。
 
@@ -138,3 +154,5 @@ gh workflow run ci.yml -f scope=full
 ## 性能
 
 见 [benchmarks/README.md](benchmarks/README.md)。先测 Release 实际进程和窗口，禁止用 Debug 编译器/构建进程内存代替客户端内存。后续引入 worker 时必须合计整棵进程树。
+
+服务端热路径走进程内 `HotCache`（短 TTL、有上限），合并鉴权 SQL、READY 一次拉频道、`@` 一次拉成员用户名。消息正文仍只在 Store（Postgres / `local:`）里，不进 Redis、不做无界缓存。限流表超过 2048 个 key 时淘汰过期项。

@@ -11,6 +11,7 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
     private readonly I18n _text;
     private readonly Func<CancellationToken, Task<int>> _probe;
     private string _address = "";
+    private string _username = "";
     private string _status = "";
     private string _connectedAddress = "";
     private string _serverName = "";
@@ -25,16 +26,18 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
     private bool _isConnected;
     private CancellationTokenSource? _watch;
     public ConnectionSettingsViewModel(Func<Task> connect, Func<Task> disconnect,
-        Func<CancellationToken, Task<int>> probe, Action<Exception> onError, I18n text)
+        Func<CancellationToken, Task<int>> probe, Action cancel, Action<Exception> onError, I18n text)
     {
         _probe = probe;
         _text = text;
         Connect = new(connect, onError);
         Disconnect = new(disconnect, onError);
+        Cancel = new(_ => cancel());
         text.PropertyChanged += OnTextChanged;
     }
     public AsyncCommand Connect { get; }
     public AsyncCommand Disconnect { get; }
+    public ActionCommand Cancel { get; }
     public string Address
     {
         get => _address;
@@ -44,7 +47,18 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
             _address = value;
             Changed();
             Changed(nameof(ShowConnect));
+            Changed(nameof(ShowUsername));
             Changed(nameof(CanConnect));
+        }
+    }
+    public string Username
+    {
+        get => _username;
+        set
+        {
+            if (_username == value) return;
+            _username = value;
+            Changed();
         }
     }
     public string Status
@@ -77,9 +91,12 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
         }
     }
     public bool ShowConnect => !IsConnected || !SameAddress(Address, _connectedAddress);
+    public bool ShowUsername => ShowConnect;
     public bool ShowDisconnect => IsConnected;
     public bool CanConnect => ShowConnect && !IsBusy;
     public bool CanDisconnect => ShowDisconnect && !IsBusy;
+    public bool ShowCancel => IsBusy;
+    public bool CanCancel => IsBusy;
     public string ServerName => _serverName;
     public bool HasName => IsConnected && _serverName.Length > 0;
     public string Host => _host;
@@ -192,9 +209,12 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
     private void NotifyActions()
     {
         Changed(nameof(ShowConnect));
+        Changed(nameof(ShowUsername));
         Changed(nameof(ShowDisconnect));
         Changed(nameof(CanConnect));
         Changed(nameof(CanDisconnect));
+        Changed(nameof(ShowCancel));
+        Changed(nameof(CanCancel));
     }
 
     private void OnTextChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)

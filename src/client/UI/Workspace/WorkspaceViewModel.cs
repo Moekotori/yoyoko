@@ -47,6 +47,7 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     public Bitmap? VoiceAvatar => Members.Skip(1).FirstOrDefault()?.Image as Bitmap;
     public ObservableCollection<ChannelItem> Channels { get; } = [];
     public ObservableCollection<MemberProfile> Members { get; } = [];
+    public IReadOnlyList<MemberSection> MemberSections { get; private set; } = [];
     public ObservableCollection<PreviewServerItem> PreviewServers { get; } = [];
     public ObservableCollection<MessageItem> Messages { get; } = [];
     public ObservableCollection<ChannelItem> OpenTabs { get; } = [];
@@ -81,7 +82,9 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     }
     public string ChannelName => SelectedChannel?.Name ?? _text.Get(TextKey.ChannelFallback);
     public string ComposerPlaceholder => SelectedChannel is null ? _text.Get(TextKey.SelectChannel) : _text.Get(TextKey.MessageToChannel, ChannelName);
-    public string MemberHeading => IsPreview ? _text.Get(TextKey.OnlineCount, 3) : _text.Get(TextKey.NotSignedIn);
+    public string MemberHeading => IsPreview
+        ? _text.Get(TextKey.OnlineCount, Members.Count(item => item.IsOnline))
+        : _text.Get(TextKey.NotSignedIn);
     public bool HasChannel => SelectedChannel is not null;
     public bool CanAttemptSend => HasChannel && !string.IsNullOrWhiteSpace(Draft);
     public string EmptyTitle => Query.Length > 0 ? _text.Get(TextKey.NoMatchingMessages) : HasChannel ? _text.Get(TextKey.StillQuiet) : _text.Get(TextKey.SelectChannel);
@@ -110,6 +113,16 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
         else if (char.IsWhiteSpace(Draft[^1])) Draft += token + " ";
         else Draft += " " + token + " ";
     }
+
+    public MemberProfile? MemberByMention(string token)
+    {
+        if (string.IsNullOrEmpty(token)) return null;
+        var name = token[0] == '@' ? token[1..] : token;
+        if (name.Length == 0) return null;
+        return Members.FirstOrDefault(member =>
+            member.Username.Equals(name, StringComparison.OrdinalIgnoreCase)
+            || member.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
     public bool HasNotice => Notice.Length > 0;
     public bool HasNoMessages => Messages.Count == 0;
     private void RefreshMessages()
@@ -135,18 +148,36 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
         PreviewServers.Add(new("林间", forest, true));
         PreviewServers.Add(new("城市", LoadImage("city"), false));
         PreviewServers.Add(new("绿洲", LoadImage("plant"), false));
-        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000001"), "林", "lin", true, image: forest));
-        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000002"), "Mika", "mika", false, image: mika));
-        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000003"), "陈默", "chenmo", false, image: chen));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000001"), "林", "lin", true, image: forest, isOnline: true));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000002"), "Mika", "mika", false, image: mika, isOnline: true));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000012"), "苏晚", "suwan", false, isOnline: true));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000015"), "Nova", "nova", false, isOnline: true));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000016"), "林栖迟", "linqichi", false, isOnline: true));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000017"), "Alexander Whitfield", "alexander", false, isOnline: true));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000003"), "陈默", "chenmo", false, image: chen, isOnline: false));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000014"), "江河", "jianghe", false, isOnline: false));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000018"), "月见里", "tsukimi", false, isOnline: false));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000019"), "Ryo", "ryo", false, isOnline: false));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-00000000001a"), "阿布杜勒·拉赫曼", "abdurrahman", false, isOnline: false));
+        RefreshMemberSections();
         Channels.Add(new("日常", [
             new("林", "19:20", "下班了，来这里放空一下。", forest),
+            new("林", "19:21", "同一人接着说，应该收成连续行。", forest, IsContinuation: true),
             new("Mika", "19:22", "今天的晚风很舒服。试一下 **粗体**、`代码` 和 $E=mc^2$。", mika, true),
             new("林", "19:23", "我也刚回来。", forest),
+            new("Nova", "19:24", "很长一行用来看折行：侧栏、成员列和输入框都在的时候，正文还得把时间和操作条让开。", mika),
             new("陈默", "19:26", "新的设计整理好了，发在隔壁频道。\n- 间距\n- 对比\n\n$$\\frac{a}{b}$$", chen),
+            new("林栖迟", "19:27", "```\nfn greet(name: &str) {\n    println!(\"{name}\");\n}\n```", forest),
             new("Mika", "19:28", "我去看看！", mika)
         ]));
-        Channels.Add(new("设计", [new("陈默", "19:26", "新的设计整理好了，一起看看。", chen)]));
-        Channels.Add(new("随手分享", []));
+        Channels.Add(new("设计", [
+            new("陈默", "19:26", "新的设计整理好了，一起看看。", chen),
+            new("Alexander Whitfield", "19:31", "标题和成员列的长名字也可以在这里对一下。", forest)
+        ]));
+        Channels.Add(new("随手分享", [
+            new("苏晚", "19:40", "空频道也留两句，方便切过去看空态和有内容的对比。", mika),
+            new("Ryo", "19:41", "第二句。", chen)
+        ]));
         OpenTabs.Add(Channels[0]); OpenTabs.Add(Channels[1]);
         SelectedChannel = Channels[0];
     }
@@ -159,6 +190,18 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
         Changed(nameof(ComposerPlaceholder));
         Changed(nameof(MemberHeading));
         Changed(nameof(EmptyTitle));
+        RefreshMemberSections();
+    }
+
+    private void RefreshMemberSections()
+    {
+        var online = Members.Where(item => item.IsOnline).ToArray();
+        var offline = Members.Where(item => !item.IsOnline).ToArray();
+        var sections = new List<MemberSection>(2);
+        if (online.Length > 0) sections.Add(new MemberSection(_text.Get(TextKey.OnlineCount, online.Length), online));
+        if (offline.Length > 0) sections.Add(new MemberSection(_text.Get(TextKey.OfflineCount, offline.Length), offline));
+        MemberSections = sections;
+        Changed(nameof(MemberSections));
     }
     public void Dispose()
     {
@@ -177,4 +220,7 @@ public sealed class ChannelItem(string name, IReadOnlyList<MessageItem> messages
     public bool IsSelected { get => _selected; set { _selected = value; Changed(); } }
 }
 public sealed record PreviewServerItem(string Name, Bitmap Avatar, bool IsSelected);
-public sealed record MessageItem(string Name, string Time, string Text, Bitmap Avatar, bool HasReaction = false);
+public sealed record MessageItem(string Name, string Time, string Text, Bitmap Avatar, bool HasReaction = false, bool IsContinuation = false)
+{
+    public bool ShowHeader => !IsContinuation;
+}

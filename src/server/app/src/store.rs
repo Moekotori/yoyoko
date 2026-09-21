@@ -129,6 +129,8 @@ pub trait Store: Send + Sync + crate::channel::repository::ChannelManagementStor
         display_name: &str,
         avatar_id: Option<Uuid>,
         avatar_animated: bool,
+        banner_id: Option<Uuid>,
+        banner_animated: bool,
     ) -> Result<User, StoreError>;
     async fn avatar_owner(&self, attachment_id: Uuid) -> Result<Option<Uuid>, StoreError>;
     async fn shares_community(&self, a: Uuid, b: Uuid) -> Result<bool, StoreError>;
@@ -156,6 +158,11 @@ pub trait Store: Send + Sync + crate::channel::repository::ChannelManagementStor
     ) -> Result<NewServer, StoreError>;
     async fn list_servers(&self, user: Uuid) -> Result<Vec<Server>, StoreError>;
     async fn list_channels(&self, server: Uuid) -> Result<Vec<Channel>, StoreError>;
+    async fn list_channels_for_user(&self, user: Uuid) -> Result<Vec<Channel>, StoreError>;
+    async fn list_dms(&self, user: Uuid) -> Result<Vec<Channel>, StoreError>;
+    async fn find_dm(&self, user: Uuid, peer: Uuid) -> Result<Option<Channel>, StoreError>;
+    async fn open_dm(&self, user: Uuid, peer: Uuid) -> Result<(Channel, bool), StoreError>;
+    async fn list_dm_participants(&self, channel: Uuid) -> Result<Vec<Uuid>, StoreError>;
     async fn find_channel(&self, id: Uuid) -> Result<Option<Channel>, StoreError>;
     async fn find_server(&self, id: Uuid) -> Result<Option<Server>, StoreError>;
     async fn update_moderation(
@@ -177,6 +184,10 @@ pub trait Store: Send + Sync + crate::channel::repository::ChannelManagementStor
     ) -> Result<Channel, StoreError>;
     async fn join_invite(&self, user: Uuid, code: &str) -> Result<Server, StoreError>;
     async fn list_members(&self, server: Uuid) -> Result<Vec<Uuid>, StoreError>;
+    async fn list_member_usernames(
+        &self,
+        server: Uuid,
+    ) -> Result<Vec<(Uuid, String, String)>, StoreError>;
     async fn list_visible_users(&self, user: Uuid) -> Result<Vec<User>, StoreError>;
     async fn permissions(
         &self,
@@ -218,6 +229,13 @@ pub trait Store: Send + Sync + crate::channel::repository::ChannelManagementStor
         event: &str,
         payload: Value,
     ) -> Result<(Message, Vec<OutboxEvent>), StoreError>;
+    async fn delete_message(
+        &self,
+        id: Uuid,
+        member_ids: &[Uuid],
+        event: &str,
+        payload: Value,
+    ) -> Result<Vec<OutboxEvent>, StoreError>;
     async fn page_messages(
         &self,
         channel: Uuid,

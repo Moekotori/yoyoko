@@ -20,7 +20,7 @@
                   Command="{Binding #Jump.((vm:ShellViewModel)DataContext).JumpTo}" CommandParameter="{Binding}">
                   <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                     <Panel Width="16" Height="16">
-                      <PathIcon Data="{StaticResource IconPeople}" Width="16" Height="16" Opacity="0.65" IsVisible="{Binding IsPerson}" />
+                      <PathIcon Data="{StaticResource IconPeople}" Width="16" Height="16" Opacity="0.65" IsVisible="{Binding ShowPeopleIcon}" />
                       <PathIcon Data="{StaticResource IconHash}" Width="16" Height="16" Opacity="0.65" IsVisible="{Binding IsText}" />
                       <PathIcon Data="{StaticResource IconSpeaker}" Width="16" Height="16" Opacity="0.65" IsVisible="{Binding IsVoice}" />
                     </Panel>

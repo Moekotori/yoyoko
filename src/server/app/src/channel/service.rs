@@ -1,7 +1,8 @@
 use crate::{
     error::{ApiErr, ApiResult},
     services::{
-        dispatch, parse_quality, publish_voice, require, to_protocol_channel, validate_display,
+        audience, dispatch, parse_quality, publish_voice, require, to_protocol_channel,
+        validate_display,
     },
     state::AppState,
 };
@@ -15,7 +16,7 @@ pub async fn update(
     name: Option<String>,
     audio_quality: Option<String>,
 ) -> ApiResult<chat_protocol::Channel> {
-    let channel = require(&*state.store, user, id, Permissions::MANAGE_CHANNEL).await?;
+    let channel = require(state, user, id, Permissions::MANAGE_CHANNEL).await?;
     let name = name.map(|value| value.trim().to_owned());
     if let Some(value) = &name {
         validate_display(value)?;
@@ -32,12 +33,14 @@ pub async fn update(
         None
     };
     let updated = state.store.update_channel(id, name, quality).await?;
+    state.hot.forget_channel(id).await;
+    state.hot.put_channel(updated.clone()).await;
     if let Some(quality) = quality {
         for voice in state.voice.clamp_channel(id, quality).await {
             publish_voice(state, &voice, false).await?;
         }
     }
-    let members = state.store.list_members(updated.server_id).await?;
+    let members = audience(state, &updated).await?;
     let channel = to_protocol_channel(updated);
     dispatch(
         state,
@@ -50,9 +53,10 @@ pub async fn update(
 }
 
 pub async fn delete(state: &AppState, user: Uuid, id: Uuid) -> ApiResult<()> {
-    let channel = require(&*state.store, user, id, Permissions::MANAGE_CHANNEL).await?;
-    let members = state.store.list_members(channel.server_id).await?;
+    let channel = require(state, user, id, Permissions::MANAGE_CHANNEL).await?;
+    let members = audience(state, &channel).await?;
     state.store.delete_channel(id).await?;
+    state.hot.forget_channel(id).await;
     for voice in state.voice.remove_channel(id).await {
         publish_voice(state, &voice, true).await?;
     }

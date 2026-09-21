@@ -6,7 +6,7 @@
 
 | 表 | 所属业务与约束 |
 | --- | --- |
-| users / sessions | 实例内账号、Argon2id PHC、refresh hash 与过期/撤销时间；`avatar_id` 指向未绑定消息的附件，`avatar_animated` 标记 GIF/动态 WebP/APNG |
+| users / sessions | 实例内账号、Argon2id PHC、refresh hash 与过期/撤销时间；`avatar_id` / `banner_id` 指向未绑定消息的附件，`avatar_animated` / `banner_animated` 标记 GIF/动态 WebP/APNG。`0004_user_profile.sql` 增加头像列，`0007_user_banner.sql` 增加横幅列 |
 | servers / members | 社区与成员；owner、membership 外键；`0005_moderation.sql` 增加 `blocked_words` JSONB 与 `cooldown_seconds`（0–600） |
 | roles / member_roles | u64 permission 使用 NUMERIC(20,0)，server 范围复合外键 |
 | channels | text/voice、server 索引、显示顺序；语音频道 `audio_quality` 上限（standard/high/very_high/studio，默认 studio） |
@@ -21,13 +21,13 @@
 
 临时状态不写 Postgres：presence 使用 Redis TTL，typing 短期 Gateway 事件，voice state 使用 Redis/内存。S3 只存内容，DB 存元数据。上传的 size/MIME/扩展名需在服务端实施，不把文件名作为路径。
 
-`0002_chat.sql` 增加 outbox、gateway_sessions、idempotency、invites，并允许 pending attachment。发送消息时同一事务写入 message + outbox，提交后再推 Gateway。Outbox 保留约 15 分钟或每用户 10,000 条。本机默认 `local:` JSON 存储实现同一语义；Postgres 由 Compose/CI 使用。
+`0002_chat.sql` 增加 outbox、gateway_sessions、idempotency、invites，并允许 pending attachment。发送消息时同一事务写入 message + outbox，提交后再推 Gateway。Outbox 保留约 15 分钟或每用户 10,000 条。本机默认 `local:` JSON 存储实现同一语义；Postgres 由 Compose/CI 使用。`0007_user_banner.sql` 为资料横幅。`0008_hot_path_indexes.sql` 增加 `members(user_id)` 与冷却查询用的 `(channel_id, author_id, id DESC)` 部分索引。`0009_direct_messages.sql` 允许 `kind=dm` 的无社区频道并建 `dm_pairs`。聊天 Backend 不把消息或权限结果写入 Redis。
 
 迁移显式执行 `chat-server migrate`；正常 API 启动不暗中改库。sqlx migration 表记录版本与校验和。发布前备份，禁止修改已经部署的 migration；回退优先 forward fix，不提供破坏性自动 down migration。
 
 ## SQLite：可丢弃缓存
 
-目前实现 `instances / accounts / messages / settings / servers / channels / users / sync_state / channel_inbox` 表。消息主键 `(instance_id, account_id, id)`，查询索引额外包含 channel_id。`channel_inbox` 按实例+账号+频道保存 last_read、last_message、mention、通知档（all/mentions/mute）、草稿和 `visited_at`；未读与最近跳转不进服务端协议。消息 wire payload 有版本协议约束，不是凭据容器。
+目前实现 `instances / accounts / messages / settings / servers / channels / users / sync_state / channel_inbox / pending_sends` 表。消息主键 `(instance_id, account_id, id)`，查询索引额外包含 channel_id。`channel_inbox` 按实例+账号+频道保存 last_read、last_message、mention、通知档（all/mentions/mute）、草稿和 `visited_at`；未读与最近跳转不进服务端协议。`pending_sends` 按实例+账号保存未确认发送（上限 32），可寻址附件落在缓存目录 `outbox/`；不可寻址的在途流只留在内存。消息 wire payload 有版本协议约束，不是凭据容器。
 
 - InstanceStore 持久化和恢复实例，不依赖网络。
 - MessageCache 以 account + instance 分区，参数化 SQL，单页 ≤100，取 limit+1 判断下一页。
@@ -49,4 +49,4 @@ attachments: PK(instance_id, account_id, id), message_id, metadata, thumbnail_ca
 sync_state:  PK(instance_id, account_id), session_id, last_committed_seq
 ```
 
-这些表与对应 sync adapter **Not implemented yet**，不生成无用途空表冒充已支持。Phase 1 必须将事件变更和 `last_committed_seq` 放在同一个事务，并在 UI 通知前提交。缓存不是事实源；权限撤销、注销和服务端删除必须使本地数据失效。
+`sync_state` 与消息 upsert/删除已在同一事务提交后再通知 UI。上表其余角色/成员等扩展仍为 **Not implemented yet**，不生成无用途空表冒充已支持。缓存不是事实源；权限撤销、注销和服务端删除必须使本地数据失效。

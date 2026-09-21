@@ -1,3 +1,4 @@
+using System.IO;
 using Chat.Domain.Instances;
 using Chat.Protocol;
 
@@ -9,6 +10,8 @@ public sealed record CommunitySnapshot(IReadOnlyList<ServerDto> Servers, IReadOn
 public interface IMessageCache
 {
     Task UpsertAsync(CacheScope scope, MessageDto message, CancellationToken cancellationToken);
+    Task RemoveMessageAsync(CacheScope scope, Guid channelId, Guid messageId, CancellationToken cancellationToken);
+    Task ClearChannelAsync(CacheScope scope, Guid channelId, CancellationToken cancellationToken);
     Task<MessagePage> ReadPageAsync(CacheScope scope, Guid channelId, Guid? before, int limit,
         CancellationToken cancellationToken);
     Task PurgeAsync(CacheScope scope, CancellationToken cancellationToken);
@@ -25,11 +28,25 @@ public interface IMessageCache
     Task SaveNotifyAsync(CacheScope scope, Guid channelId, ChannelNotify notify, CancellationToken cancellationToken);
     Task SaveDraftAsync(CacheScope scope, Guid channelId, string? draft, CancellationToken cancellationToken);
     Task SaveVisitAsync(CacheScope scope, Guid channelId, long visitedAt, CancellationToken cancellationToken);
+    Task SaveOutboxAsync(CacheScope scope, OutboxRecord record, CancellationToken cancellationToken);
+    Task RemoveOutboxAsync(CacheScope scope, Guid localId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<OutboxRecord>> LoadOutboxAsync(CacheScope scope, CancellationToken cancellationToken);
+    Task<int> CountOutboxAsync(CacheScope scope, CancellationToken cancellationToken);
+    Task<string> WriteOutboxFileAsync(CacheScope scope, Guid localId, int index, string fileName, Stream content,
+        CancellationToken cancellationToken);
+    Task DeleteOutboxFilesAsync(CacheScope scope, Guid localId, CancellationToken cancellationToken);
+    Task CommitMessageAsync(CacheScope scope, MessageDto message, string? sessionId, long seq,
+        CancellationToken cancellationToken);
+    Task CommitDeleteAsync(CacheScope scope, Guid channelId, Guid messageId, string? sessionId, long seq,
+        CancellationToken cancellationToken);
 }
 public static class MemoryBudget
 {
     public const int TimelineMessages = 300;
     public const int PageSize = 50;
+    public const int PendingSends = 32;
+    public const int ParkedTimelines = 8;
+    public const int OutboundInFlight = 2;
     public const long ThumbnailBytes = 16 * 1024 * 1024;
     public const int VideoFrames = 3;
     public const long CacheDiskBytes = 256 * 1024 * 1024;

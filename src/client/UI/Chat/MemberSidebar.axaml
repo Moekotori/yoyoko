@@ -1,60 +1,70 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
-  x:Class="Chat.UI.Chat.MemberSidebar" x:DataType="vm:ShellViewModel">
+  x:Class="Chat.UI.Chat.MemberSidebar" x:DataType="vm:ShellViewModel" Width="300">
   <UserControl.Styles>
     <Style Selector="Button.memberRow">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="CornerRadius" Value="2" />
-      <Setter Property="Padding" Value="6,5" />
-      <Setter Property="Margin" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="8,8" />
+      <Setter Property="Margin" Value="0,0,0,2" />
+      <Setter Property="Width" Value="280" />
     </Style>
+    <Style Selector="ItemsControl, StackPanel, ContentPresenter">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.memberRow.offline"><Setter Property="Opacity" Value="0.58" /></Style>
     <Style Selector="Button.memberRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#323232" />
+      <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
     </Style>
   </UserControl.Styles>
-  <Border Width="220" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,0,0,0">
-    <Grid RowDefinitions="52,*">
-      <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="16,0">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <TextBlock Text="{i18n:T PageParticipants}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-          <TextBlock Grid.Column="1" Text="{Binding ParticipantCount}" Classes="quiet" FontSize="12" VerticalAlignment="Center" IsVisible="{Binding HasParticipants}" />
-        </Grid>
-      </Border>
-      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-        <ItemsControl ItemsSource="{Binding Participants}" Margin="8,12,8,16" AutomationProperties.Name="{i18n:T PageParticipants}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="chat:MemberProfile">
-              <Button Classes="memberRow" AutomationProperties.Name="{Binding Name}">
-                <Button.Flyout>
-                  <Flyout Placement="LeftEdgeAlignedTop" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
-                    <chat:UserCard DataContext="{Binding}" />
-                  </Flyout>
-                </Button.Flyout>
-                <Button.ContextMenu>
-                  <ContextMenu DataContext="{Binding}" Opening="OnMemberMenuOpening">
-                    <MenuItem Header="{i18n:T MentionMember}" />
-                    <MenuItem Header="{i18n:T CopyUsername}" />
-                    <MenuItem Header="{i18n:T CopyUserId}" />
-                    <MenuItem Header="{i18n:T Profile}" />
-                    <Separator />
-                    <MenuItem Header="{i18n:T KickMember}" Foreground="#E3A09A" />
-                    <MenuItem Header="{i18n:T BanMember}" Foreground="#E3A09A" />
-                  </ContextMenu>
-                </Button.ContextMenu>
-                <Grid ColumnDefinitions="32,*" ColumnSpacing="8">
-                  <c:Avatar Width="32" Height="32" Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" />
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-                    <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="11" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
-                </Grid>
-              </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
-    </Grid>
+  <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,0,0,0">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding ParticipantSections}" Margin="10,12,10,20" AutomationProperties.Name="{i18n:T PageParticipants}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="chat:MemberSection">
+            <StackPanel Margin="0,0,0,12">
+              <TextBlock Text="{Binding Title}" Classes="section" FontSize="12" Margin="8,8,8,8" />
+              <ItemsControl ItemsSource="{Binding People}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="chat:MemberProfile">
+                    <Button Classes="memberRow" Classes.offline="{Binding !IsOnline}" AutomationProperties.Name="{Binding Name}">
+                      <Button.Flyout>
+                        <Flyout Placement="LeftEdgeAlignedTop" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
+                          <chat:UserCard DataContext="{Binding}" />
+                        </Flyout>
+                      </Button.Flyout>
+                      <Button.ContextMenu>
+                        <ContextMenu DataContext="{Binding}" Opening="OnMemberMenuOpening">
+                          <MenuItem Header="{i18n:T MessageUser}" Tag="message" />
+                          <MenuItem Header="{i18n:T MentionMember}" Tag="mention" />
+                          <MenuItem Header="{i18n:T CopyUsername}" Tag="copy-name" />
+                          <MenuItem Header="{i18n:T CopyUserId}" Tag="copy-id" />
+                          <MenuItem Header="{i18n:T Profile}" Tag="profile" />
+                          <Separator />
+                          <MenuItem Header="{i18n:T KickMember}" Tag="kick" Foreground="#E3A09A" />
+                          <MenuItem Header="{i18n:T BanMember}" Tag="ban" Foreground="#E3A09A" />
+                        </ContextMenu>
+                      </Button.ContextMenu>
+                      <DockPanel MinWidth="252">
+                        <c:Avatar DockPanel.Dock="Left" Width="40" Height="40" Margin="0,0,10,0" Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" IsOnline="{Binding IsOnline}" />
+                        <StackPanel VerticalAlignment="Center" Spacing="1" MinWidth="210">
+                          <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{i18n:T You}" Classes="quiet" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsSelf}" />
+                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                          </DockPanel>
+                          <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="12" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                      </DockPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
   </Border>
 </UserControl>

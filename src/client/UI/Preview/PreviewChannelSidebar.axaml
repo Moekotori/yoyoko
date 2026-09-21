@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion"
   x:Class="Chat.UI.Preview.PreviewChannelSidebar" x:DataType="vm:WorkspaceViewModel" x:Name="Sidebar">
   <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -6,11 +7,11 @@
         <Button Command="{Binding ToggleText}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,0,0,5" AutomationProperties.Name="{i18n:T ExpandTextChannels}">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{i18n:T TextChannels}" Classes="section" />
-            <PathIcon Grid.Column="1" Data="{StaticResource IconChevronUp}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" IsVisible="{Binding TextExpanded}" />
-            <PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" IsVisible="{Binding !TextExpanded}" />
+            <PathIcon Grid.Column="1" Classes="groupChevron" Classes.collapsed="{Binding !TextExpanded}" Data="{StaticResource IconChevronDown}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" />
           </Grid>
         </Button>
-        <ItemsControl ItemsSource="{Binding Channels}" IsVisible="{Binding TextExpanded}">
+        <motion:RevealHost IsOpen="{Binding TextExpanded}">
+        <ItemsControl ItemsSource="{Binding Channels}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ChannelItem">
               <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:WorkspaceViewModel)DataContext).SelectChannel}" CommandParameter="{Binding}" Margin="0,0,0,3">
@@ -19,14 +20,15 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+        </motion:RevealHost>
         <Button Command="{Binding ToggleVoice}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,23,0,5" AutomationProperties.Name="{i18n:T ExpandVoiceChannels}">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{i18n:T VoiceChannels}" Classes="section" />
-            <PathIcon Grid.Column="1" Data="{StaticResource IconChevronUp}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" IsVisible="{Binding VoiceExpanded}" />
-            <PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" IsVisible="{Binding !VoiceExpanded}" />
+            <PathIcon Grid.Column="1" Classes="groupChevron" Classes.collapsed="{Binding !VoiceExpanded}" Data="{StaticResource IconChevronDown}" Width="12" Height="12" Foreground="{DynamicResource QuietTextBrush}" />
           </Grid>
         </Button>
-        <StackPanel IsVisible="{Binding VoiceExpanded}">
+        <motion:RevealHost IsOpen="{Binding VoiceExpanded}">
+        <StackPanel>
           <StackPanel IsVisible="{Binding IsPreview}">
             <Button Classes="channel" Command="{Binding Unavailable}" AutomationProperties.Name="深夜电台（尚未实现）">
               <StackPanel Orientation="Horizontal" Spacing="10"><PathIcon Data="{StaticResource IconSpeaker}" Width="17" Height="17" Opacity="0.65" /><TextBlock Text="深夜电台" FontSize="14" /></StackPanel>
@@ -34,6 +36,7 @@
             <StackPanel Orientation="Horizontal" Spacing="9" Margin="38,6,0,0"><c:Avatar Width="22" Height="22" Source="{Binding VoiceAvatar}" Initial="M" /><TextBlock Text="Mika" Classes="muted" VerticalAlignment="Center" FontSize="12" /></StackPanel>
           </StackPanel>
         </StackPanel>
+        </motion:RevealHost>
       </StackPanel>
     </ScrollViewer>
   </Border>

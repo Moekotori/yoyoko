@@ -28,7 +28,9 @@ public sealed class JumpItem : ObservableObject
     public bool IsSection => SectionTitle.Length > 0;
     public bool IsPerson => Person is not null;
     public bool IsVoice => Channel?.IsVoice == true;
-    public bool IsText => Channel is { IsVoice: false };
+    public bool IsDirect => Channel?.IsDirect == true;
+    public bool IsText => Channel is { IsVoice: false, IsDirect: false };
+    public bool ShowPeopleIcon => IsPerson || IsDirect;
     public bool IsRecent { get; }
     public string Name => IsSection ? SectionTitle : Person?.Name ?? Channel?.Name ?? "";
     public string Handle => Person?.Handle ?? "";

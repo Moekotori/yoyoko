@@ -62,6 +62,10 @@ impl Hub {
             .is_some_and(|clients| !clients.is_empty())
     }
 
+    pub async fn connected_ids(&self) -> Vec<Uuid> {
+        self.inner.lock().await.keys().copied().collect()
+    }
+
     pub async fn send(&self, user: Uuid, envelope: GatewayEnvelope) {
         let payload = Arc::new(envelope);
         let mut dead = false;

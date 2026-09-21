@@ -3,6 +3,7 @@ namespace Chat.UI.Resources;
 public sealed record VisualResourceBudget(long ThumbnailBytes, int Downloads, bool Animate, bool Suspended)
 {
     public long AvatarBytes => Suspended ? 0 : Animate ? 8 * 1024 * 1024 : 1024 * 1024;
+    public long BannerBytes => Suspended ? 0 : Animate ? 6 * 1024 * 1024 : 768 * 1024;
     public static readonly VisualResourceBudget Active = new(16 * 1024 * 1024, 4, true, false);
     public static readonly VisualResourceBudget Idle = new(4 * 1024 * 1024, 1, false, false);
     public static readonly VisualResourceBudget Pressure = new(2 * 1024 * 1024, 1, false, false);

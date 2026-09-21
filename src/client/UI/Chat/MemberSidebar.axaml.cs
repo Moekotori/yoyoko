@@ -27,6 +27,7 @@ public partial class MemberSidebar : UserControl
         MemberGestures.PrepareMenu(menu, member, shell.CanModerate,
             text => _ = MemberGestures.CopyAsync(this, text),
             shell.MentionMember,
+            shell.MessageMember,
             member?.IsSelf == true ? () => shell.OpenProfile.Execute(null) : null,
             () => shell.Workspace.ShowNotice(I18n.T(TextKey.NotImplemented)),
             args);

@@ -12,6 +12,8 @@ public static class TextKey
     public const string ChannelNameInvalid = "ChannelNameInvalid";
     public const string OpenChannel = "OpenChannel";
     public const string JoinVoiceChannel = "JoinVoiceChannel";
+    public const string CopyWebVoiceLink = "CopyWebVoiceLink";
+    public const string WebVoiceLinkCopied = "WebVoiceLinkCopied";
     public const string VoiceAudioOff = "VoiceAudioOff";
     public const string ChannelSave = "ChannelSave";
     public const string ChannelCancel = "ChannelCancel";
@@ -22,6 +24,7 @@ public static class TextKey
     public const string ServerConnection = "ServerConnection";
     public const string ConnectServer = "ConnectServer";
     public const string ConnectingServer = "ConnectingServer";
+    public const string CancelConnection = "CancelConnection";
     public const string ConnectedServer = "ConnectedServer";
     public const string DisconnectServer = "DisconnectServer";
     public const string DisconnectingServer = "DisconnectingServer";
@@ -54,6 +57,8 @@ public static class TextKey
     public const string SignIn = "SignIn";
     public const string Register = "Register";
     public const string Username = "Username";
+    public const string DefaultUsername = "DefaultUsername";
+    public const string JoinUsernameHint = "JoinUsernameHint";
     public const string DisplayName = "DisplayName";
     public const string DisplayNameField = "DisplayNameField";
     public const string Password = "Password";
@@ -77,6 +82,8 @@ public static class TextKey
     public const string Sending = "Sending";
     public const string SendFailed = "SendFailed";
     public const string RetrySend = "RetrySend";
+    public const string CancelSend = "CancelSend";
+    public const string OutboxFull = "OutboxFull";
     public const string Image = "Image";
     public const string SendMessage = "SendMessage";
     public const string Send = "Send";
@@ -90,6 +97,7 @@ public static class TextKey
     public const string VoiceConnected = "VoiceConnected";
     public const string VoiceJoinHint = "VoiceJoinHint";
     public const string VoiceMediaError = "VoiceMediaError";
+    public const string VoiceReconnecting = "VoiceReconnecting";
     public const string AudioQuality = "AudioQuality";
     public const string ChannelQualityCap = "ChannelQualityCap";
     public const string QualityStandard = "QualityStandard";
@@ -137,6 +145,7 @@ public static class TextKey
     public const string NotSignedIn = "NotSignedIn";
     public const string Online = "Online";
     public const string OnlineCount = "OnlineCount";
+    public const string OfflineCount = "OfflineCount";
     public const string ClipboardUnavailable = "ClipboardUnavailable";
     public const string ClipboardFailed = "ClipboardFailed";
     public const string WindowTitlePreview = "WindowTitlePreview";
@@ -196,11 +205,15 @@ public static class TextKey
     public const string ProfileImage = "ProfileImage";
     public const string ChangeAvatar = "ChangeAvatar";
     public const string RemoveAvatar = "RemoveAvatar";
+    public const string ChangeBanner = "ChangeBanner";
+    public const string RemoveBanner = "RemoveBanner";
     public const string SaveProfile = "SaveProfile";
     public const string ProfileSaved = "ProfileSaved";
     public const string PickAvatar = "PickAvatar";
+    public const string PickBanner = "PickBanner";
     public const string InviteCopied = "InviteCopied";
     public const string InvalidAvatar = "InvalidAvatar";
+    public const string InvalidBanner = "InvalidBanner";
     public const string BlockedWord = "BlockedWord";
     public const string CooldownWait = "CooldownWait";
     public const string InvalidCooldown = "InvalidCooldown";
@@ -246,6 +259,13 @@ public static class TextKey
     public const string CopyUserId = "CopyUserId";
     public const string CopyUsername = "CopyUsername";
     public const string MentionMember = "MentionMember";
+    public const string MessageUser = "MessageUser";
+    public const string DirectMessages = "DirectMessages";
+    public const string MessageToDirect = "MessageToDirect";
+    public const string DirectUnavailable = "DirectUnavailable";
+    public const string MentionEveryone = "MentionEveryone";
+    public const string MentionHere = "MentionHere";
+    public const string MentionPicker = "MentionPicker";
     public const string KickMember = "KickMember";
     public const string BanMember = "BanMember";
     public const string Copied = "Copied";
@@ -261,6 +281,16 @@ public static class TextKey
     public const string CancelEdit = "CancelEdit";
     public const string EditMessage = "EditMessage";
     public const string Edited = "Edited";
+    public const string DeleteMessage = "DeleteMessage";
+    public const string Reply = "Reply";
+    public const string CancelReply = "CancelReply";
+    public const string ReplyingTo = "ReplyingTo";
+    public const string ReplyQuote = "ReplyQuote";
+    public const string ReplyMissing = "ReplyMissing";
+    public const string TypingOne = "TypingOne";
+    public const string TypingTwo = "TypingTwo";
+    public const string TypingMany = "TypingMany";
+    public const string ChannelForbidden = "ChannelForbidden";
     public const string LanguagePacks = "LanguagePacks";
     public const string ImportLanguagePack = "ImportLanguagePack";
     public const string ExportLanguageTemplate = "ExportLanguageTemplate";

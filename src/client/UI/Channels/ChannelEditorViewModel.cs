@@ -44,7 +44,7 @@ public sealed class ChannelEditorViewModel : ObservableObject
                 else if (mode == ChannelEditMode.Rename)
                     await session.RenameChannelAsync(channel!.Id, Name, lifetime);
                 else await session.DeleteChannelAsync(channel!.Id, lifetime);
-                completed(voice ? null : created);
+                completed(created);
             }
             finally { IsBusy = false; }
         }, exception => Error = text.Error(exception));

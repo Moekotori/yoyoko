@@ -1,36 +1,93 @@
-<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Style Selector="Border.profileGroup">
-    <Setter Property="Background" Value="#242424" />
-    <Setter Property="CornerRadius" Value="10" />
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion">
+  <Style Selector="Border.bannerPreview">
+    <Setter Property="Height" Value="120" />
+    <Setter Property="Margin" Value="0,0,0,0" />
+    <Setter Property="CornerRadius" Value="10,10,0,0" />
   </Style>
-  <Style Selector="Grid.profileRow">
-    <Setter Property="MinHeight" Value="80" />
-    <Setter Property="Margin" Value="20,12" />
+  <Style Selector="Button.bannerPick">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
   </Style>
-  <Style Selector="Border.profileSeparator">
-    <Setter Property="Height" Value="1" />
-    <Setter Property="Background" Value="#303030" />
+  <Style Selector="Button.bannerPick:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.bannerPick Border.bannerScrim">
+    <Setter Property="Background" Value="#66000000" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="{x:Static motion:MotionTokens.Feedback}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.bannerPick:pointerover Border.bannerScrim">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Grid.profileHero">
+    <Setter Property="MinHeight" Value="120" />
+    <Setter Property="Margin" Value="20,18,20,16" />
+  </Style>
+  <Style Selector="Border.avatarRing">
+    <Setter Property="Width" Value="96" />
+    <Setter Property="Height" Value="96" />
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="CornerRadius" Value="48" />
+    <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Grid.profileFooter">
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Margin" Value="16,8,16,12" />
   </Style>
   <Style Selector="TextBox.settingsField.profileField">
-    <Setter Property="Height" Value="40" />
-    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Background" Value="#292929" />
-    <Setter Property="BorderBrush" Value="#424242" />
   </Style>
   <Style Selector="Button.settingsSecondary.profileAction">
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Margin" Value="0,4,8,4" />
     <Setter Property="Padding" Value="12,6" />
-    <Setter Property="MinHeight" Value="34" />
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="#454545" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="CornerRadius" Value="8" />
   </Style>
   <Style Selector="Button.settingsPrimary.profileSave">
-    <Setter Property="MinWidth" Value="88" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="MinWidth" Value="96" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Button.avatarPick">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="44" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.avatarPick:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.avatarPick:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.avatarPick Border.avatarScrim">
+    <Setter Property="Background" Value="#99000000" />
+    <Setter Property="CornerRadius" Value="44" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="{x:Static motion:MotionTokens.Feedback}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.avatarPick:pointerover Border.avatarScrim">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.avatarPick:disabled Border.avatarScrim">
+    <Setter Property="Opacity" Value="0" />
   </Style>
 </Styles>

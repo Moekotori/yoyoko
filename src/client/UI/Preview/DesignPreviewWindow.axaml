@@ -1,8 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:preview="using:Chat.UI.Preview" xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:preview="using:Chat.UI.Preview" xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization" xmlns:chrome="using:Avalonia.Controls.Chrome"
  x:Class="Chat.UI.Preview.DesignPreviewWindow" x:DataType="vm:WorkspaceViewModel" Width="1200" Height="854" MinWidth="980" MinHeight="640" ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="42">
   <Window.KeyBindings><KeyBinding Gesture="Meta+F" Command="{Binding ToggleSearch}" /><KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearch}" /><KeyBinding Gesture="Escape" Command="{Binding Escape}" /></Window.KeyBindings>
-  <Grid ColumnDefinitions="72,220,*" RowDefinitions="42,*,66">
-    <Border Grid.ColumnSpan="2" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
+  <Grid ColumnDefinitions="72,260,*" RowDefinitions="42,*,66">
+    <Border Grid.ColumnSpan="2" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0"
+      chrome:WindowDecorationProperties.ElementRole="TitleBar">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Command="{Binding Unavailable}"><StackPanel Orientation="Horizontal" Spacing="10"><TextBlock Text="林间" FontSize="13" FontWeight="Medium" /><PathIcon Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></StackPanel></Button>
     </Border>
     <vm:ChannelTabs Grid.Column="2" />

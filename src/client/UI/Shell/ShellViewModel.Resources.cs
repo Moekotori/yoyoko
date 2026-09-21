@@ -19,11 +19,17 @@ public sealed partial class ShellViewModel
             // The Core timeline (including uploads), session and voice survive this projection trim.
             CloseJump();
             Settings.Shortcuts.CancelCapture();
+            _typingTimer?.Stop();
             Messages.Clear();
             VisibleMessages.Clear();
             Participants.Clear();
         }
-        else ApplyVisualBudget(_visualBudget);
+        else
+        {
+            ApplyVisualBudget(_visualBudget);
+            RefreshTyping();
+            if (_typing.Count > 0) EnsureTypingTimer();
+        }
     }
 
     public void ApplyVisualBudget(VisualResourceBudget budget)

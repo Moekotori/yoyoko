@@ -7,7 +7,9 @@ using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Chat.Core.Messaging;
 using Chat.Localization;
+using Chat.UI.Chat;
 
 namespace Chat.UI.Workspace;
 
@@ -22,6 +24,7 @@ public partial class ConversationView : UserControl
         AttachedToVisualTree += (_, _) => Subscribe();
         DetachedFromVisualTree += (_, _) => Unsubscribe();
         DataContextChanged += (_, _) => { if (VisualRoot is not null) Subscribe(); };
+        AddHandler(Button.ClickEvent, OnMentionChip, RoutingStrategies.Bubble);
     }
 
     private void Subscribe()
@@ -68,6 +71,16 @@ public partial class ConversationView : UserControl
         };
         try { await animation.RunAsync(TimelineSurface, cancellationToken); }
         catch (OperationCanceledException) { }
+    }
+
+    private void OnMentionChip(object? sender, RoutedEventArgs e)
+    {
+        if (e.Source is not Button button || !button.Classes.Contains("mentionChip")) return;
+        if (button.Tag is not string token || MessageMarkup.IsReserved(token)) return;
+        var person = _subscribed?.MemberByMention(token);
+        if (person is null) return;
+        MemberGestures.ShowCard(button, person);
+        e.Handled = true;
     }
 
     private async void CopyMessage(object? sender, RoutedEventArgs args)

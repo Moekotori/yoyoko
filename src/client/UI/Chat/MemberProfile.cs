@@ -18,18 +18,23 @@ public sealed class MemberProfile : ObservableObject
     private string _name;
     private string _username;
     private bool _isSelf;
+    private bool _isOnline;
     private AvatarPlayback? _playback;
+    private AvatarPlayback? _bannerPlayback;
     private IImage? _image;
 
     public MemberProfile(Guid id, string name, string username, bool isSelf,
-        AvatarPlayback? playback = null, IImage? image = null)
+        AvatarPlayback? playback = null, IImage? image = null, bool isOnline = false, bool isFixture = false)
     {
         Id = id;
         _name = name;
         _username = username;
         _isSelf = isSelf;
+        _isOnline = isOnline;
+        IsFixture = isFixture;
         _playback = playback;
         _image = image;
+        Accent = Banner.AccentFrom(id);
     }
 
     public Guid Id { get; }
@@ -63,6 +68,12 @@ public sealed class MemberProfile : ObservableObject
         get => _isSelf;
         private set { if (_isSelf == value) return; _isSelf = value; Changed(); }
     }
+    public bool IsOnline
+    {
+        get => _isOnline;
+        set { if (_isOnline == value) return; _isOnline = value; Changed(); }
+    }
+    public bool IsFixture { get; }
     public AvatarPlayback? Playback
     {
         get => _playback;
@@ -73,44 +84,77 @@ public sealed class MemberProfile : ObservableObject
         get => _image;
         set { if (ReferenceEquals(_image, value)) return; _image = value; Changed(); }
     }
+    public AvatarPlayback? BannerPlayback
+    {
+        get => _bannerPlayback;
+        set
+        {
+            if (ReferenceEquals(_bannerPlayback, value)) return;
+            _bannerPlayback = value;
+            Changed();
+            Changed(nameof(HasBanner));
+        }
+    }
+    public bool HasBanner => BannerPlayback is not null;
     public string Handle => Username.Length == 0 ? "" : "@" + Username;
     public bool HasHandle => Username.Length > 0;
     public string IdText => Id.ToString("D");
     public string Initial => Avatar.FromName(Name);
     public string MentionToken => HasHandle ? Handle : Name;
+    public IBrush Accent { get; }
 
-    public void Update(string name, string username, bool isSelf)
+    public void Update(string name, string username, bool isSelf, bool isOnline)
     {
         Name = name;
         Username = username;
         IsSelf = isSelf;
+        IsOnline = isOnline;
     }
 }
+
+public sealed record MemberSection(string Title, IReadOnlyList<MemberProfile> People);
 
 internal static class MemberGestures
 {
     public static void PrepareMenu(ContextMenu menu, MemberProfile? member, bool canModerate,
-        Action<string> copy, Action<MemberProfile> mention, Action? profile, Action? moderate,
+        Action<string> copy, Action<MemberProfile> mention, Action<MemberProfile>? message, Action? profile, Action? moderate,
         CancelEventArgs args)
     {
         if (member is null) { args.Cancel = true; return; }
-        ((MenuItem)menu.Items[0]!).Command = new ActionCommand(_ => mention(member));
-        var copyName = (MenuItem)menu.Items[1]!;
-        copyName.IsVisible = member.HasHandle;
-        copyName.Command = new ActionCommand(_ => copy(member.Username));
-        ((MenuItem)menu.Items[2]!).Command = new ActionCommand(_ => copy(member.IdText));
-        var edit = (MenuItem)menu.Items[3]!;
-        edit.IsVisible = member.IsSelf && profile is not null;
-        edit.Command = profile is null ? Disabled : new ActionCommand(_ => profile());
-        var showMod = canModerate && !member.IsSelf && moderate is not null;
-        ((Control)menu.Items[4]!).IsVisible = showMod;
-        var kick = (MenuItem)menu.Items[5]!;
-        var ban = (MenuItem)menu.Items[6]!;
-        kick.IsVisible = showMod;
-        ban.IsVisible = showMod;
-        ICommand command = moderate is null ? Disabled : new ActionCommand(_ => moderate());
-        kick.Command = command;
-        ban.Command = command;
+        foreach (var item in menu.Items)
+        {
+            if (item is not MenuItem row || row.Tag is not string tag) continue;
+            switch (tag)
+            {
+                case "message":
+                    row.IsVisible = !member.IsSelf && message is not null;
+                    row.Command = message is null ? Disabled : new ActionCommand(_ => message(member));
+                    break;
+                case "mention":
+                    row.Command = new ActionCommand(_ => mention(member));
+                    break;
+                case "copy-name":
+                    row.IsVisible = member.HasHandle;
+                    row.Command = new ActionCommand(_ => copy(member.Username));
+                    break;
+                case "copy-id":
+                    row.Command = new ActionCommand(_ => copy(member.IdText));
+                    break;
+                case "profile":
+                    row.IsVisible = member.IsSelf && profile is not null;
+                    row.Command = profile is null ? Disabled : new ActionCommand(_ => profile());
+                    break;
+                case "kick":
+                case "ban":
+                    var showMod = canModerate && !member.IsSelf && moderate is not null;
+                    row.IsVisible = showMod;
+                    row.Command = moderate is null ? Disabled : new ActionCommand(_ => moderate());
+                    break;
+            }
+        }
+        foreach (var item in menu.Items)
+            if (item is Separator separator)
+                separator.IsVisible = canModerate && !member.IsSelf && moderate is not null;
     }
 
     public static void BindCard(Flyout flyout)
@@ -123,6 +167,17 @@ internal static class MemberGestures
             MemberProfile member => member,
             _ => target.DataContext
         };
+    }
+
+    public static void ShowCard(Control target, MemberProfile person)
+    {
+        var flyout = new Flyout
+        {
+            Content = new UserCard { DataContext = person },
+            Placement = PlacementMode.Top
+        };
+        flyout.FlyoutPresenterClasses.Add("userCardFlyout");
+        flyout.ShowAt(target);
     }
 
     public static MemberProfile? Target(ContextMenu menu) =>

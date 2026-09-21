@@ -5,10 +5,7 @@
     <Setter Property="Transitions"><Transitions><BrushTransition Property="Foreground" Duration="0:0:0.12" /><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
   </Style>
   <Style Selector=".settingsRoot.motion Button.settingsNav /template/ Border#NavSurface">
-    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
-  </Style>
-  <Style Selector=".settingsRoot.motion Button.settingsNav /template/ Border#ActiveLine">
-    <Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.14" /><DoubleTransition Property="Height" Duration="0:0:0.14" Easing="CubicEaseOut" /></Transitions></Setter>
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.1" /></Transitions></Setter>
   </Style>
   <Style Selector=".settingsRoot.motion Button /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /><BrushTransition Property="Foreground" Duration="0:0:0.12" /></Transitions></Setter>

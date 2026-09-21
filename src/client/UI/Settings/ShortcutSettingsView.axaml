@@ -5,11 +5,13 @@
     <Button Classes="settingsSecondary" HorizontalAlignment="Right" Content="{i18n:T ShortcutResetAll}"
       Command="{Binding ResetAll}" IsVisible="{Binding CanResetAll}" AutomationProperties.Name="{i18n:T ShortcutResetAll}" />
     <Border Classes="settingsGroup">
-      <Grid Classes="settingsRow" ColumnDefinitions="*,280" ColumnSpacing="24" Margin="16,8">
-        <TextBlock Text="{i18n:T SendShortcut}" Classes="settingsLabel" />
-        <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding SendShortcutChoices}"
-          SelectedIndex="{Binding SendMode}" AutomationProperties.Name="{i18n:T SendShortcut}" />
-      </Grid>
+      <Border Classes="settingsPad">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+          <TextBlock Text="{i18n:T SendShortcut}" Classes="settingsLabel" />
+          <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding SendShortcutChoices}"
+            SelectedIndex="{Binding SendMode}" AutomationProperties.Name="{i18n:T SendShortcut}" />
+        </Grid>
+      </Border>
     </Border>
     <ItemsControl ItemsSource="{Binding Groups}">
       <ItemsControl.ItemsPanel>

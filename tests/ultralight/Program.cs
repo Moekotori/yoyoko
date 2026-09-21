@@ -57,6 +57,8 @@ var api = Proxy<IChatApi>((method, _) => method.Name switch
 });
 var media = Proxy<IVoiceMedia>((method, _) =>
 {
+    if (method.Name is "add_Faulted" or "remove_Faulted" or "add_SpeakingChanged" or "remove_SpeakingChanged")
+        return null;
     if (method.Name == "ConnectAsync") connects++;
     else if (method.Name == "LeaveAsync") leaves++;
     else throw new InvalidOperationException("Unexpected media call: " + method.Name);

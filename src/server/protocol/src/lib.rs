@@ -73,6 +73,8 @@ pub struct User {
     pub display_name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub avatar: Option<Avatar>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub banner: Option<Avatar>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,6 +95,9 @@ pub struct PatchMeRequest {
     pub avatar_id: Option<Uuid>,
     #[serde(default)]
     pub clear_avatar: bool,
+    pub banner_id: Option<Uuid>,
+    #[serde(default)]
+    pub clear_banner: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -144,11 +149,19 @@ pub struct PatchModerationRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Channel {
     pub id: Uuid,
-    pub server_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server_id: Option<Uuid>,
     pub name: String,
     pub kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audio_quality: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub participants: Option<Vec<Uuid>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OpenDmRequest {
+    pub recipient_id: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -211,10 +224,27 @@ pub struct Message {
     pub edited_at: Option<String>,
     pub reply_to: Option<Uuid>,
     pub mentions: Vec<Uuid>,
+    #[serde(default)]
+    pub mention_everyone: bool,
+    #[serde(default)]
+    pub mention_here: bool,
     pub attachments: Vec<Attachment>,
     pub embeds: Vec<Value>,
     pub reactions: Vec<Value>,
     pub encrypted_payload: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageDelete {
+    pub id: Uuid,
+    pub channel_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Typing {
+    pub user_id: Uuid,
+    pub channel_id: Uuid,
+    pub display_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -272,6 +302,34 @@ pub struct VoiceJoin {
     pub max_audio_quality: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceRoom {
+    pub channel_id: Uuid,
+    pub server_id: Uuid,
+    pub name: String,
+    pub server_name: String,
+    pub kind: String,
+    pub participant_count: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct VoiceGuestRequest {
+    pub display_name: String,
+    #[serde(default)]
+    pub self_mute: bool,
+    #[serde(default)]
+    pub self_deaf: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VoiceGuestSession {
+    pub access_token: String,
+    pub expires_in: u64,
+    pub user: User,
+    pub room: VoiceRoom,
+    pub join: VoiceJoin,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Ready {
     pub session_id: String,
@@ -318,6 +376,18 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(rtc.room, "voice:01950000-0000-7000-8000-000000000040");
+        let room: VoiceRoom = serde_json::from_str(include_str!(
+            "../../../../docs/protocol/fixtures/voice-room.json"
+        ))
+        .unwrap();
+        assert_eq!(room.kind, "voice");
+        assert_eq!(room.participant_count, 2);
+        let guest: VoiceGuestSession = serde_json::from_str(include_str!(
+            "../../../../docs/protocol/fixtures/voice-guest-join.json"
+        ))
+        .unwrap();
+        assert_eq!(guest.room.channel_id, room.channel_id);
+        assert_eq!(guest.join.state.display_name, "Ada");
         let user_event: GatewayEnvelope = serde_json::from_str(include_str!(
             "../../../../docs/protocol/fixtures/user-update.json"
         ))
@@ -326,5 +396,30 @@ mod tests {
         let user: User = serde_json::from_value(user_event.data).unwrap();
         assert_eq!(user.username, "ada");
         assert_eq!(user.avatar.as_ref().map(|a| a.animated), Some(true));
+        assert!(user.banner.is_none());
+        let deleted: GatewayEnvelope = serde_json::from_str(include_str!(
+            "../../../../docs/protocol/fixtures/message-delete.json"
+        ))
+        .unwrap();
+        assert_eq!(deleted.event.as_deref(), Some("MESSAGE_DELETE"));
+        let gone: MessageDelete = serde_json::from_value(deleted.data).unwrap();
+        assert_eq!(gone.id.to_string(), "01950000-0000-7000-8000-000000000010");
+        let typing: GatewayEnvelope = serde_json::from_str(include_str!(
+            "../../../../docs/protocol/fixtures/typing-start.json"
+        ))
+        .unwrap();
+        assert_eq!(typing.event.as_deref(), Some("TYPING_START"));
+        assert!(typing.seq.is_none());
+        let start: Typing = serde_json::from_value(typing.data).unwrap();
+        assert_eq!(start.display_name, "Ada");
+        let dm: GatewayEnvelope = serde_json::from_str(include_str!(
+            "../../../../docs/protocol/fixtures/dm-open.json"
+        ))
+        .unwrap();
+        assert_eq!(dm.event.as_deref(), Some("CHANNEL_CREATE"));
+        let channel: Channel = serde_json::from_value(dm.data).unwrap();
+        assert_eq!(channel.kind, "dm");
+        assert!(channel.server_id.is_none());
+        assert_eq!(channel.participants.as_ref().map(Vec::len), Some(2));
     }
 }

@@ -15,7 +15,7 @@ public sealed class ChatApiFactory : IChatApiFactory
 
 public sealed class ChatApiClient : IChatApi
 {
-    private readonly HttpClient _http = new(new HttpClientHandler { AllowAutoRedirect = false })
+    private readonly HttpClient _http = new(ClientHttp.CreateHandler())
     {
         Timeout = TimeSpan.FromSeconds(120)
     };
@@ -49,6 +49,10 @@ public sealed class ChatApiClient : IChatApi
         => await Send(HttpMethod.Get, "servers", (object?)null, null, ProtocolJson.Default.ServerDtoArray, cancellationToken) ?? [];
     public async Task<IReadOnlyList<ChannelDto>> ListChannelsAsync(Guid serverId, CancellationToken cancellationToken)
         => await Send(HttpMethod.Get, $"servers/{serverId}/channels", (object?)null, null, ProtocolJson.Default.ChannelDtoArray, cancellationToken) ?? [];
+    public async Task<IReadOnlyList<ChannelDto>> ListDirectMessagesAsync(CancellationToken cancellationToken)
+        => await Send(HttpMethod.Get, "dms", (object?)null, null, ProtocolJson.Default.ChannelDtoArray, cancellationToken) ?? [];
+    public Task<ChannelDto> OpenDirectAsync(Guid recipientId, CancellationToken cancellationToken)
+        => Send(HttpMethod.Post, "dms", new OpenDmRequest(recipientId), ProtocolJson.Default.OpenDmRequest, ProtocolJson.Default.ChannelDto, cancellationToken)!;
     public Task<ServerDto> JoinAsync(string inviteCode, CancellationToken cancellationToken)
         => Send(HttpMethod.Post, "servers/join", new JoinRequest(inviteCode), ProtocolJson.Default.JoinRequest, ProtocolJson.Default.ServerDto, cancellationToken)!;
     public Task<MessagePageDto> ListMessagesAsync(Guid channelId, Guid? before, int limit, CancellationToken cancellationToken)
@@ -58,6 +62,10 @@ public sealed class ChatApiClient : IChatApi
         => Send(HttpMethod.Post, $"channels/{channelId}/messages", request, ProtocolJson.Default.SendMessageRequest, ProtocolJson.Default.MessageDto, cancellationToken, idempotencyKey)!;
     public Task<MessageDto> EditMessageAsync(Guid channelId, Guid messageId, PatchMessageRequest request, CancellationToken cancellationToken)
         => Send(HttpMethod.Patch, $"channels/{channelId}/messages/{messageId}", request, ProtocolJson.Default.PatchMessageRequest, ProtocolJson.Default.MessageDto, cancellationToken)!;
+    public Task DeleteMessageAsync(Guid channelId, Guid messageId, CancellationToken cancellationToken)
+        => Send<object, object>(HttpMethod.Delete, $"channels/{channelId}/messages/{messageId}", null, null, null, cancellationToken);
+    public Task StartTypingAsync(Guid channelId, CancellationToken cancellationToken)
+        => Send<object, object>(HttpMethod.Post, $"channels/{channelId}/typing", null, null, null, cancellationToken);
     public Task<VoiceJoinDto> JoinVoiceAsync(Guid channelId, bool mute, bool deaf, string? quality, CancellationToken cancellationToken)
         => Send(HttpMethod.Post, $"channels/{channelId}/voice/join", new VoiceFlags(mute, deaf, quality), ProtocolJson.Default.VoiceFlags, ProtocolJson.Default.VoiceJoinDto, cancellationToken)!;
     public Task LeaveVoiceAsync(CancellationToken cancellationToken)

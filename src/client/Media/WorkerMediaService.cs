@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using Chat.Core.Voice;
@@ -8,6 +9,7 @@ public sealed class WorkerMediaService : IMediaService
 {
     private readonly string _path;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly ConcurrentDictionary<int, TaskCompletionSource<JsonDocument>> _pending = [];
     private Process? _process;
     private int _nextId = 1;
     private bool _session;
@@ -16,6 +18,7 @@ public sealed class WorkerMediaService : IMediaService
     public MediaCapabilities Capabilities => MediaCapabilities.Voice;
     public bool Available => true;
     public event Action<string>? Faulted;
+    public event Action<IReadOnlyList<string>>? SpeakingChanged;
 
     public static IMediaService Create()
     {
@@ -148,7 +151,11 @@ public sealed class WorkerMediaService : IMediaService
         };
         if (!process.Start()) throw new InvalidOperationException("Failed to start media worker.");
         _process = process;
-        process.Exited += (_, _) => Faulted?.Invoke("Media worker exited.");
+        process.Exited += (_, _) =>
+        {
+            if (_session) Faulted?.Invoke("Media worker exited.");
+        };
+        _ = ReadAsync(process, cancellationToken);
         _ = DrainAsync(process, cancellationToken);
         return true;
     }
@@ -157,6 +164,9 @@ public sealed class WorkerMediaService : IMediaService
     {
         var process = _process;
         _process = null;
+        foreach (var pending in _pending)
+            pending.Value.TrySetCanceled();
+        _pending.Clear();
         if (process is null) return;
         try
         {
@@ -186,30 +196,77 @@ public sealed class WorkerMediaService : IMediaService
         try
         {
             var process = _process ?? throw new InvalidOperationException("Media worker is not running.");
-            var json = JsonSerializer.Serialize(payload);
-            await process.StandardInput.WriteLineAsync(json.AsMemory(), cancellationToken);
+            var id = payload["id"] is int value ? value : _nextId++;
+            payload["id"] = id;
+            var tcs = new TaskCompletionSource<JsonDocument>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pending[id] = tcs;
+            await process.StandardInput.WriteLineAsync(JsonSerializer.Serialize(payload).AsMemory(), cancellationToken);
             await process.StandardInput.FlushAsync(cancellationToken);
-            while (true)
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            linked.CancelAfter(TimeSpan.FromSeconds(20));
+            try { return await tcs.Task.WaitAsync(linked.Token); }
+            catch
             {
-                var line = await process.StandardOutput.ReadLineAsync(cancellationToken)
-                    ?? throw new InvalidOperationException("Media worker closed.");
-                var doc = JsonDocument.Parse(line);
-                if (doc.RootElement.TryGetProperty("event", out _))
-                {
-                    doc.Dispose();
-                    continue;
-                }
-                if (doc.RootElement.TryGetProperty("ok", out var ok) && !ok.GetBoolean())
-                {
-                    var message = doc.RootElement.TryGetProperty("error", out var error)
-                        ? error.GetString() ?? "Media worker failed." : "Media worker failed.";
-                    doc.Dispose();
-                    throw new InvalidOperationException(message);
-                }
-                return doc;
+                _pending.TryRemove(id, out _);
+                throw;
             }
         }
         finally { _gate.Release(); }
+    }
+
+    private async Task ReadAsync(Process process, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var line = await process.StandardOutput.ReadLineAsync(cancellationToken);
+                if (line is null) break;
+                JsonDocument doc;
+                try { doc = JsonDocument.Parse(line); }
+                catch (JsonException) { continue; }
+                if (doc.RootElement.TryGetProperty("event", out var ev))
+                {
+                    HandleEvent(ev.GetString(), doc);
+                    doc.Dispose();
+                    continue;
+                }
+                if (doc.RootElement.TryGetProperty("id", out var idEl) && idEl.TryGetInt32(out var id)
+                    && _pending.TryRemove(id, out var pending))
+                {
+                    if (doc.RootElement.TryGetProperty("ok", out var ok) && !ok.GetBoolean())
+                    {
+                        var message = doc.RootElement.TryGetProperty("error", out var error)
+                            ? error.GetString() ?? "Media worker failed." : "Media worker failed.";
+                        doc.Dispose();
+                        pending.TrySetException(new InvalidOperationException(message));
+                    }
+                    else pending.TrySetResult(doc);
+                    continue;
+                }
+                doc.Dispose();
+            }
+        }
+        catch (Exception) { }
+    }
+
+    private void HandleEvent(string? name, JsonDocument doc)
+    {
+        if (name == "speaking")
+        {
+            var ids = new List<string>();
+            if (doc.RootElement.TryGetProperty("ids", out var array) && array.ValueKind == JsonValueKind.Array)
+                foreach (var item in array.EnumerateArray())
+                    if (item.GetString() is { Length: > 0 } id) ids.Add(id);
+            SpeakingChanged?.Invoke(ids);
+            return;
+        }
+        if (name == "fault" && _session)
+        {
+            var message = doc.RootElement.TryGetProperty("error", out var error)
+                ? error.GetString() ?? "LiveKit disconnected." : "LiveKit disconnected.";
+            Faulted?.Invoke(message);
+        }
     }
 
     private static AudioDevice[] ReadDevices(JsonElement root, string name)

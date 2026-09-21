@@ -11,7 +11,7 @@ public interface IGatewayConnection : IAsyncDisposable
     IAsyncEnumerable<GatewayEnvelope> ReadAllAsync(CancellationToken cancellationToken);
 }
 
-// Transport is implemented; authenticated resume/replay orchestration belongs to Phase 1.
+// Transport plus client resume: ignore seq ≤ cursor, reconnect on a gap, identify after invalid_session.
 public sealed record ResumeCursor(string SessionId, long LastCommittedSequence);
 public static class ReconnectPolicy
 {

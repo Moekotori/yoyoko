@@ -30,25 +30,50 @@
     <Style Selector="Button.avatarHit">
       <Setter Property="Padding" Value="0" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="CornerRadius" Value="34" />
+      <Setter Property="CornerRadius" Value="40" />
+    </Style>
+    <Style Selector="Button.bannerHit">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.bannerHit:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.bannerHit Border.bannerScrim">
+      <Setter Property="Background" Value="#66000000" />
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Button.bannerHit:pointerover Border.bannerScrim">
+      <Setter Property="Opacity" Value="1" />
     </Style>
   </UserControl.Styles>
   <Panel>
     <Border Background="Transparent" PointerPressed="OnBackdrop" />
-    <Border x:Name="DrawerSurface" Width="300" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+    <Border x:Name="DrawerSurface" Width="360" HorizontalAlignment="Left" VerticalAlignment="Bottom"
       Margin="80,0,0,78" Background="#242424" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="12"
       ClipToBounds="True" IsEnabled="{Binding ProfileOpen}" KeyboardNavigation.TabNavigation="Cycle">
       <StackPanel>
-        <Panel Height="104">
-          <Border Height="68" VerticalAlignment="Top" Background="#1A1A1A" />
+        <Panel Height="168">
+          <c:Banner Height="120" VerticalAlignment="Top" Fallback="{Binding Settings.Profile.Accent}"
+            Playback="{Binding Settings.Profile.BannerPlayback}" />
+          <Button Classes="bannerHit" Height="120" VerticalAlignment="Top" Command="{Binding Settings.Profile.ChangeBanner}"
+            ToolTip.Tip="{i18n:T ChangeBanner}" AutomationProperties.Name="{i18n:T ChangeBanner}">
+            <Border Classes="bannerScrim">
+              <PathIcon Data="{StaticResource IconCamera}" Width="18" Height="18" Foreground="#F2F2F2"
+                HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+          </Button>
           <Button Classes="icon" Width="28" Height="28" Margin="0,8,8,0" HorizontalAlignment="Right" VerticalAlignment="Top"
             Command="{Binding CloseProfile}" ToolTip.Tip="{i18n:T CloseProfile}" AutomationProperties.Name="{i18n:T CloseProfile}">
             <PathIcon Data="{StaticResource IconClose}" Width="12" Height="12" />
           </Button>
-          <Border Width="80" Height="80" CornerRadius="40" Background="#242424" Margin="14,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Button Classes="avatarHit" Width="68" Height="68" HorizontalAlignment="Center" VerticalAlignment="Center"
+          <Border Width="92" Height="92" CornerRadius="46" Background="#242424" Margin="16,72,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Button Classes="avatarHit" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center"
               Command="{Binding Settings.Profile.ChangeAvatar}" ToolTip.Tip="{i18n:T ChangeAvatar}" AutomationProperties.Name="{i18n:T ChangeAvatar}">
-              <c:Avatar Width="68" Height="68" Playback="{Binding Settings.Profile.Playback}" Initial="{Binding Settings.Profile.Initial}" />
+              <c:Avatar Width="80" Height="80" Playback="{Binding Settings.Profile.Playback}" Initial="{Binding Settings.Profile.Initial}" />
             </Button>
           </Border>
         </Panel>
@@ -71,15 +96,19 @@
             </StackPanel>
             <StackPanel Spacing="4">
               <TextBlock Text="{i18n:T DisplayNameField}" Classes="section" />
-              <TextBox x:Name="DisplayNameField" Classes="cardField" Text="{Binding Settings.Profile.DisplayName}" MaxLength="64" AutomationProperties.Name="{i18n:T DisplayNameField}" />
+              <TextBox x:Name="DisplayNameField" Classes="cardField" Text="{Binding Settings.Profile.DisplayName}" MaxLength="100" AutomationProperties.Name="{i18n:T DisplayNameField}" />
             </StackPanel>
             <StackPanel Spacing="4">
               <TextBlock Text="{i18n:T Username}" Classes="section" />
-              <TextBox Classes="cardField" Text="{Binding Settings.Profile.Username}" MaxLength="32" AutomationProperties.Name="{i18n:T Username}" />
+              <TextBox Classes="cardField" Text="{Binding Settings.Profile.Username}" MaxLength="64" AutomationProperties.Name="{i18n:T Username}" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="6">
               <Button Classes="cardAction" Content="{i18n:T ChangeAvatar}" Command="{Binding Settings.Profile.ChangeAvatar}" />
               <Button Classes="cardAction" Content="{i18n:T RemoveAvatar}" Command="{Binding Settings.Profile.RemoveAvatar}" IsVisible="{Binding Settings.Profile.HasAvatar}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Classes="cardAction" Content="{i18n:T ChangeBanner}" Command="{Binding Settings.Profile.ChangeBanner}" />
+              <Button Classes="cardAction" Content="{i18n:T RemoveBanner}" Command="{Binding Settings.Profile.RemoveBanner}" IsVisible="{Binding Settings.Profile.HasBanner}" />
             </StackPanel>
             <TextBlock Text="{Binding Settings.Profile.Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding Settings.Profile.HasStatus}" />
             <Button Classes="primary cardSave" Content="{i18n:T SaveProfile}" Command="{Binding Settings.Profile.Save}" />

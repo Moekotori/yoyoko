@@ -8,4 +8,6 @@ pub struct User {
     pub display_name: String,
     pub avatar: Option<Attachment>,
     pub avatar_animated: bool,
+    pub banner: Option<Attachment>,
+    pub banner_animated: bool,
 }

@@ -96,25 +96,27 @@
         <Button Classes="menuAction" Tag="CreateCommunityPanel" Click="ToggleSection">
           <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
             <TextBlock Text="{i18n:T CreateCommunity}" VerticalAlignment="Center" />
-            <PathIcon x:Name="CreateCommunityPanelDown" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronDown}" />
-            <PathIcon x:Name="CreateCommunityPanelUp" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronUp}" IsVisible="False" />
+            <PathIcon x:Name="CreateCommunityPanelChevron" Grid.Column="1" Width="12" Height="12" Classes="menuChevron" Data="{StaticResource IconChevronDown}" />
           </Grid>
         </Button>
-        <StackPanel x:Name="CreateCommunityPanel" Classes="menuForm" IsVisible="False">
-          <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" AutomationProperties.Name="{i18n:T NewCommunity}" Tag="create" KeyDown="OnSubmitKeyDown" />
-          <Button Classes="primary" Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
-        </StackPanel>
+        <motion:RevealHost x:Name="CreateCommunityPanel" IsOpen="False">
+          <StackPanel Classes="menuForm">
+            <TextBox Text="{Binding CommunityName}" PlaceholderText="{i18n:T NewCommunity}" AutomationProperties.Name="{i18n:T NewCommunity}" Tag="create" KeyDown="OnSubmitKeyDown" />
+            <Button Classes="primary" Content="{i18n:T CreateCommunity}" Command="{Binding CreateServer}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </motion:RevealHost>
         <Button Classes="menuAction" Tag="JoinCommunityPanel" Click="ToggleSection">
           <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
             <TextBlock Text="{i18n:T JoinCommunity}" VerticalAlignment="Center" />
-            <PathIcon x:Name="JoinCommunityPanelDown" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronDown}" />
-            <PathIcon x:Name="JoinCommunityPanelUp" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronUp}" IsVisible="False" />
+            <PathIcon x:Name="JoinCommunityPanelChevron" Grid.Column="1" Width="12" Height="12" Classes="menuChevron" Data="{StaticResource IconChevronDown}" />
           </Grid>
         </Button>
-        <StackPanel x:Name="JoinCommunityPanel" Classes="menuForm" IsVisible="False">
-          <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" AutomationProperties.Name="{i18n:T InviteCode}" Tag="join" KeyDown="OnSubmitKeyDown" />
-          <Button Classes="primary" Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
-        </StackPanel>
+        <motion:RevealHost x:Name="JoinCommunityPanel" IsOpen="False">
+          <StackPanel Classes="menuForm">
+            <TextBox Text="{Binding InviteInput}" PlaceholderText="{i18n:T InviteCode}" AutomationProperties.Name="{i18n:T InviteCode}" Tag="join" KeyDown="OnSubmitKeyDown" />
+            <Button Classes="primary" Content="{i18n:T JoinCommunity}" Command="{Binding JoinServer}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </motion:RevealHost>
         <Button Classes="menuAction" Command="{Binding AddTextChannel}" Click="CloseForChannelEdit" IsVisible="{Binding CanModerate}">
           <TextBlock Text="{i18n:T CreateTextChannel}" VerticalAlignment="Center" />
         </Button>
@@ -124,17 +126,18 @@
         <Button Classes="menuAction" Tag="ModerationPanel" Click="ToggleSection" IsVisible="{Binding CanModerate}">
           <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
             <TextBlock Text="{i18n:T Moderation}" VerticalAlignment="Center" />
-            <PathIcon x:Name="ModerationPanelDown" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronDown}" />
-            <PathIcon x:Name="ModerationPanelUp" Grid.Column="1" Width="12" Height="12" Data="{StaticResource IconChevronUp}" IsVisible="False" />
+            <PathIcon x:Name="ModerationPanelChevron" Grid.Column="1" Width="12" Height="12" Classes="menuChevron" Data="{StaticResource IconChevronDown}" />
           </Grid>
         </Button>
-        <StackPanel x:Name="ModerationPanel" Classes="menuForm" IsVisible="False">
-          <TextBlock Text="{i18n:T BlockedWordsHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
-          <TextBox Text="{Binding ModerationWords}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="96" AutomationProperties.Name="{i18n:T BlockedWordsHint}" />
-          <TextBlock Text="{i18n:T CooldownSeconds}" Classes="muted" FontSize="12" />
-          <TextBox Text="{Binding CooldownInput}" AutomationProperties.Name="{i18n:T CooldownSeconds}" Tag="cooldown" KeyDown="OnSubmitKeyDown" />
-          <Button Classes="primary" Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch" />
-        </StackPanel>
+        <motion:RevealHost x:Name="ModerationPanel" IsOpen="False">
+          <StackPanel Classes="menuForm">
+            <TextBlock Text="{i18n:T BlockedWordsHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+            <TextBox Text="{Binding ModerationWords}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="96" AutomationProperties.Name="{i18n:T BlockedWordsHint}" />
+            <TextBlock Text="{i18n:T CooldownSeconds}" Classes="muted" FontSize="12" />
+            <TextBox Text="{Binding CooldownInput}" AutomationProperties.Name="{i18n:T CooldownSeconds}" Tag="cooldown" KeyDown="OnSubmitKeyDown" />
+            <Button Classes="primary" Content="{i18n:T SaveModeration}" Command="{Binding SaveModeration}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </motion:RevealHost>
         <Border Classes="menuDivider" />
         <Button Classes="menuAction menuDanger" Click="SignOutClick">
           <TextBlock Text="{i18n:T SignOut}" Foreground="#DDA49C" VerticalAlignment="Center" />

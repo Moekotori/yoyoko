@@ -9,7 +9,9 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Chat.Core.Messaging;
 using Chat.Localization;
+using Chat.Motion;
 using Chat.UI.Localization;
 using Chat.UI.Shell;
 using FileKinds = global::Chat.Core.Messaging.FileKinds;
@@ -33,6 +35,8 @@ public partial class ChatView : UserControl
         InitializeComponent();
         // Tunnel so Enter is seen before TextBox.AcceptsReturn inserts a newline.
         Composer.AddHandler(InputElement.KeyDownEvent, OnComposerKeyDown, RoutingStrategies.Tunnel);
+        Composer.AddHandler(InputElement.PointerReleasedEvent, OnComposerCaretMoved, RoutingStrategies.Bubble);
+        Composer.TextChanged += OnComposerTextChanged;
         AttachedToVisualTree += (_, _) => Subscribe();
         DetachedFromVisualTree += (_, _) => Unsubscribe();
         DragDrop.SetAllowDrop(this, true);
@@ -40,6 +44,7 @@ public partial class ChatView : UserControl
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
         AddHandler(DragDrop.DropEvent, OnDrop);
+        AddHandler(Button.ClickEvent, OnMentionChip, RoutingStrategies.Bubble);
     }
 
     public bool DropActive
@@ -58,6 +63,7 @@ public partial class ChatView : UserControl
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        Messages.ContainerPrepared += OnMessagePrepared;
         AttachScroll();
         if (_scroll is null)
             Messages.LayoutUpdated += OnMessagesLayout;
@@ -67,6 +73,7 @@ public partial class ChatView : UserControl
     {
         SaveViewport();
         Messages.LayoutUpdated -= OnMessagesLayout;
+        Messages.ContainerPrepared -= OnMessagePrepared;
         if (_scroll is not null)
             _scroll.ScrollChanged -= OnScrollChanged;
         _scroll = null;
@@ -82,6 +89,7 @@ public partial class ChatView : UserControl
         _subscribed.ScrollToUnread = ScrollToUnread;
         _subscribed.IsNearBottom = NearBottom;
         _subscribed.FocusComposer = FocusComposer;
+        _subscribed.PlaceComposerCaret = PlaceComposerCaret;
         _subscribed.FocusSearch = FocusSearch;
         _subscribed.PropertyChanged += OnShellChanged;
         if (IsLoaded) AttachScroll();
@@ -99,6 +107,7 @@ public partial class ChatView : UserControl
             if (_subscribed.ScrollToUnread == ScrollToUnread) _subscribed.ScrollToUnread = null;
             if (_subscribed.IsNearBottom == NearBottom) _subscribed.IsNearBottom = null;
             if (_subscribed.FocusComposer == FocusComposer) _subscribed.FocusComposer = null;
+            if (_subscribed.PlaceComposerCaret == PlaceComposerCaret) _subscribed.PlaceComposerCaret = null;
             if (_subscribed.FocusSearch == FocusSearch) _subscribed.FocusSearch = null;
         }
         if (_scroll is not null) _scroll.ScrollChanged -= OnScrollChanged;
@@ -106,11 +115,14 @@ public partial class ChatView : UserControl
         _subscribed = null;
     }
 
-    private void FocusComposer() => Dispatcher.UIThread.Post(() =>
+    private void FocusComposer() => PlaceComposerCaret(Composer.Text?.Length ?? 0);
+
+    private void PlaceComposerCaret(int caret) => Dispatcher.UIThread.Post(() =>
     {
         if (!Composer.IsVisible) return;
         Composer.Focus();
-        Composer.CaretIndex = Composer.Text?.Length ?? 0;
+        var length = Composer.Text?.Length ?? 0;
+        Composer.CaretIndex = caret < 0 ? 0 : caret > length ? length : caret;
     });
 
     private void FocusSearch() => Dispatcher.UIThread.Post(() =>
@@ -151,8 +163,8 @@ public partial class ChatView : UserControl
             Dispatcher.UIThread.Post(() =>
             {
                 if (_subscribed != shell || _scroll is null || shell.SelectedChannel?.Id != viewport.Channel) return;
-                if (viewport.AtBottom) _scroll.ScrollToEnd();
-                else _scroll.Offset = new Vector(0, viewport.Offset);
+                if (viewport.AtBottom) JumpEnd();
+                else SmoothScroll.Jump(_scroll, viewport.Offset);
             }, DispatcherPriority.Loaded);
         }
     }
@@ -177,29 +189,41 @@ public partial class ChatView : UserControl
         {
             if (!IsEffectivelyVisible || divider != _subscribed?.VisibleMessages.FirstOrDefault(row => row.IsUnreadDivider))
                 return;
+            if (_scroll is not null) SmoothScroll.Cancel(_scroll);
             Messages.ScrollIntoView(divider);
+            if (_scroll is not null) SmoothScroll.Sync(_scroll);
         }, DispatcherPriority.Loaded);
     }
 
     private void ScrollToEnd()
     {
-        if (_pendingScroll is not null) return;
+        AttachScroll();
+        JumpEnd();
         var shell = _subscribed;
         var channel = shell?.SelectedChannel;
+        _pendingScroll?.Abort();
         _pendingScroll = Dispatcher.UIThread.InvokeAsync(() =>
         {
             _pendingScroll = null;
             if (!IsEffectivelyVisible || shell != _subscribed ||
                 !ReferenceEquals(channel, shell?.SelectedChannel) || Messages.ItemCount == 0) return;
-            // Collection and virtualization layout must settle before using the extent.
             AttachScroll();
-            _scroll?.ScrollToEnd();
+            JumpEnd();
         }, DispatcherPriority.Loaded);
+    }
+
+    private void JumpEnd()
+    {
+        if (_scroll is null) return;
+        SmoothScroll.Cancel(_scroll);
+        _scroll.ScrollToEnd();
+        SmoothScroll.Sync(_scroll);
     }
 
     private async void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
         if (_scroll is null || DataContext is not ShellViewModel shell) return;
+        if (!SmoothScroll.IsRunning(_scroll)) SmoothScroll.Sync(_scroll);
         shell.OnTimelineScroll(NearBottom());
         if (_loadingOlder) return;
         if (_scroll.Offset.Y > 36)
@@ -209,16 +233,20 @@ public partial class ChatView : UserControl
         }
         if (_olderExhausted || shell.IsChannelLoading || !shell.HasOlder) return;
         var channel = shell.SelectedChannel;
-        var anchor = shell.VisibleMessages.FirstOrDefault() ?? shell.Messages.FirstOrDefault();
+        var extent = _scroll.Extent.Height;
+        var offset = _scroll.Offset.Y;
         var count = shell.Messages.Count;
         _loadingOlder = true;
         try
         {
             await shell.LoadOlderAsync();
-            if (!ReferenceEquals(channel, shell.SelectedChannel)) return;
+            if (!ReferenceEquals(channel, shell.SelectedChannel) || _scroll is null) return;
             if (shell.Messages.Count == count) _olderExhausted = true;
-            if (anchor is not null)
-                Messages.ScrollIntoView(anchor);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_scroll is null || !ReferenceEquals(channel, shell.SelectedChannel)) return;
+                SmoothScroll.RestoreAfterPrepend(_scroll, extent, offset);
+            }, DispatcherPriority.Loaded);
         }
         finally { _loadingOlder = false; }
     }
@@ -232,9 +260,35 @@ public partial class ChatView : UserControl
             if (await TryPasteFilesAsync(shell)) e.Handled = true;
             return;
         }
-        if (e.Key == Key.Escape && shell.IsEditing)
+        if (shell.MentionOpen)
         {
-            shell.CancelEdit();
+            if (e.Key == Key.Escape)
+            {
+                shell.CloseMention();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key is Key.Up or Key.Down && e.KeyModifiers == KeyModifiers.None)
+            {
+                shell.MoveMention(e.Key == Key.Down ? 1 : -1);
+                e.Handled = true;
+                return;
+            }
+            if ((e.Key == Key.Tab || IsComposerEnter(e)) && !IsComposerComposing())
+            {
+                var mentionText = Composer.Text ?? "";
+                if (shell.TryInsertMention(mentionText, Composer.CaretIndex, null))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+        if (e.Key is Key.Left or Key.Right or Key.Home or Key.End)
+            Dispatcher.UIThread.Post(SyncMention);
+        if (e.Key == Key.Escape && shell.HasComposerBanner)
+        {
+            shell.CancelComposer();
             e.Handled = true;
             return;
         }
@@ -257,6 +311,8 @@ public partial class ChatView : UserControl
         e.Handled = true;
         if (shell.CanSend && shell.Send.CanExecute(null))
             shell.Send.Execute(null);
+        if (string.IsNullOrEmpty(shell.Draft) && Composer.Text?.Length > 0)
+            Composer.Text = "";
     }
 
     private static bool IsComposerEnter(KeyEventArgs e) =>
@@ -315,6 +371,32 @@ public partial class ChatView : UserControl
         args.Handled = true;
     }
 
+    private void OnComposerTextChanged(object? sender, TextChangedEventArgs args)
+    {
+        if (!Composer.IsFocused) return;
+        _subscribed?.NoteComposerActivity();
+        SyncMention();
+    }
+
+    private void OnComposerCaretMoved(object? sender, PointerReleasedEventArgs args) => SyncMention();
+
+    private void SyncMention()
+    {
+        if (_subscribed is null) return;
+        var live = Composer.Text ?? "";
+        if (!string.Equals(live, _subscribed.Draft, StringComparison.Ordinal))
+            _subscribed.Draft = live;
+        _subscribed.RefreshMention(live, Composer.CaretIndex);
+    }
+
+    private void OnMessagePrepared(object? sender, ContainerPreparedEventArgs args)
+    {
+        if (args.Container.DataContext is not MessageRow row || !row.ConsumeEnter()) return;
+        var target = args.Container.GetVisualDescendants().OfType<Grid>()
+            .FirstOrDefault(grid => grid.Classes.Contains("messageRow")) ?? (Visual)args.Container;
+        ItemEnter.Play(target);
+    }
+
     private void EditMessage(object? sender, RoutedEventArgs args)
     {
         if (sender is not Control { DataContext: MessageRow row }) return;
@@ -322,9 +404,33 @@ public partial class ChatView : UserControl
         args.Handled = true;
     }
 
+    private void ReplyMessage(object? sender, RoutedEventArgs args)
+    {
+        if (sender is not Control { DataContext: MessageRow row }) return;
+        _subscribed?.BeginReply(row);
+        args.Handled = true;
+    }
+
+    private void DeleteMessage(object? sender, RoutedEventArgs args)
+    {
+        if (sender is not Control { DataContext: MessageRow row }) return;
+        _subscribed?.DeleteMessage(row);
+        args.Handled = true;
+    }
+
     private void OnCardOpened(object? sender, EventArgs e)
     {
         if (sender is Flyout flyout) MemberGestures.BindCard(flyout);
+    }
+
+    private void OnMentionChip(object? sender, RoutedEventArgs e)
+    {
+        if (e.Source is not Button button || !button.Classes.Contains("mentionChip")) return;
+        if (button.Tag is not string token || MessageMarkup.IsReserved(token)) return;
+        var person = _subscribed?.MemberByMention(token);
+        if (person is null) return;
+        MemberGestures.ShowCard(button, person);
+        e.Handled = true;
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)

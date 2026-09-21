@@ -35,9 +35,9 @@
 
 ## 尚未验证 / 尚未实现
 
-- 当前开发机无 Docker、PostgreSQL 服务；Compose 启动、镜像构建和 migration 实际执行未在本机验证。
+- 2026-09-20 开发机无 Docker。2026-09-21 Windows 10 已用 Docker Desktop 29.8 / Compose v5.5.1 执行 `docker compose up -d --build`：镜像 `chat-api:local` 构建成功，migrate 退出 0，api/postgres/redis/livekit 健康；`/health/ready`、`/.well-known/lightchat`、5 项 Node live、`POST /auth/register` 与 `POST /servers` 通过。附件仍在 API 本地卷；MinIO 不在默认堆栈（Docker Hub 社区镜像已下架，业务未接入）。公网 TLS / 远端部署未测。
 - GitHub Actions 已配置，尚未运行远程工作流；不能声称 Windows/Linux 构建或 GUI 验收已通过。
-- MinIO/Redis/LiveKit 只提供配置和部署基础，未接入应用业务。
-- Auth、消息 API、resume/replay、完整同步、RTC、屏幕共享、系统凭据库、AOT、安装包分发：Not implemented yet。
+- Redis 目前只给 Compose 里的 LiveKit 用；聊天进程未连 Redis。鉴权/频道/@ 用户名用进程内有界 TTL 缓存，消息仍以 Store 为事实源。MinIO 为可选 profile，附件仍写本地卷。
+- 屏幕共享、系统凭据库、AOT、安装包分发：Not implemented yet。Auth / 消息 / Gateway resume 已在 Phase 1 接通，见正文与协议文档。
 - 原生仅验证控制 ABI，无真实设备、音频、GPU 捕获或硬件编解码结果。
 - 本次无 SSH、无公网部署、无外部服务改动。

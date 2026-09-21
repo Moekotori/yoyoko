@@ -62,7 +62,7 @@ internal static class LiveChatChecks
         Require(after.SessionId == cursor.SessionId && after.Seq > cursor.Seq, "existing gateway session advances while parked");
 
         upload.Release();
-        Until(() => shell.Send.CanExecute(null), "pending send completed while parked");
+        Until(() => upload.Disposed, "pending send completed while parked");
         var remote = Await(peer.ListMessagesAsync(channel, null, 50, default));
         var sent = remote.Items.Single(item => item.Content == "upload_" + nonce);
         Require(sent.Attachments.Length == 1 && upload.Disposed, "upload finishes and is released only after send completion");

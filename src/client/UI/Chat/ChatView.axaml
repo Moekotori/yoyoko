@@ -8,15 +8,48 @@
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /><Setter Property="Margin" Value="0,0,0,12" /></Style>
     <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#232323" /></Style>
+    <Style Selector="Grid.messageRow.mentioned"><Setter Property="Background" Value="#2A221F" /></Style>
+    <Style Selector="Grid.messageRow.mentioned:pointerover"><Setter Property="Background" Value="#322824" /></Style>
+    <Style Selector="Button.mentionPick"><Setter Property="Height" Value="36" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /></Style>
+    <Style Selector="Button.mentionPick.selected"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /></Style>
+    <Style Selector="Button.mentionChip">
+      <Setter Property="Padding" Value="4,0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Background" Value="#332820" />
+      <Setter Property="Foreground" Value="#D2A88C" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.mentionChip.strong">
+      <Setter Property="Background" Value="#4A3228" />
+      <Setter Property="Foreground" Value="#E8C4A8" />
+    </Style>
+    <Style Selector="Button.mentionChip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#403028" />
+    </Style>
     <Style Selector="UserControl.compact Grid.messageRow"><Setter Property="Margin" Value="0,0,0,2" /></Style>
     <Style Selector="Grid.messageRow.continued"><Setter Property="Margin" Value="0,0,0,2" /></Style>
     <Style Selector="UserControl.compact Grid.messageRow.continued"><Setter Property="Margin" Value="0" /></Style>
-    <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,0,1" /></Style>
-    <Style Selector="SelectableTextBlock.messageText"><Setter Property="FontSize" Value="16" /><Setter Property="LineHeight" Value="25" /><Setter Property="Foreground" Value="#CCCCCC" /></Style>
+    <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,16,1" /></Style>
+    <Style Selector="Grid.messageRow Panel.avatarSlot"><Setter Property="DockPanel.Dock" Value="Left" /><Setter Property="Margin" Value="0,12,13,0" /></Style>
+    <Style Selector="Grid.messageRow StackPanel.body"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="Margin" Value="0,11,16,9" /></Style>
+    <Style Selector="SelectableTextBlock.messageText">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="LineHeight" Value="25" />
+      <Setter Property="Foreground" Value="#CCCCCC" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
     <Style Selector="UserControl.compact SelectableTextBlock.messageText"><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="22" /></Style>
-    <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector="Grid.messageRow.pending SelectableTextBlock.messageText"><Setter Property="Opacity" Value="0.7" /></Style>
+    <Style Selector="UserControl.reduceMotion SelectableTextBlock.messageText"><Setter Property="Transitions"><Transitions /></Setter></Style>
+    <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /><Setter Property="HorizontalAlignment" Value="Right" /><Setter Property="Margin" Value="0,4,16,0" /></Style>
     <Style Selector="Grid.messageRow:pointerover Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
     <Style Selector="Grid.messageRow:focus-within Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
+    <Style Selector="Grid.messageRow.pending Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
     <Style Selector="Button.authorName"><Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Cursor" Value="Hand" /></Style>
     <Style Selector="Button.authorName:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="Button.avatarPick"><Setter Property="Cursor" Value="Hand" /></Style>
@@ -31,8 +64,10 @@
       <motion:MotionHost Grid.Row="1" Trigger="{Binding ChannelContentVersion}" Preset="Fade" Duration="0:0:0.12" StartOpacity="0.82">
       <Panel x:Name="TimelineSurface">
         <TextBlock Text="{Binding EmptyMessageTitle}" Classes="muted" FontSize="14" IsVisible="{Binding EmptyMessages}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        <ListBox x:Name="Messages" ItemsSource="{Binding VisibleMessages}" Margin="0,22,0,12" AutomationProperties.Name="{i18n:T Messages}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-          <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+        <ListBox x:Name="Messages" ItemsSource="{Binding VisibleMessages}" Margin="0,22,0,12" AutomationProperties.Name="{i18n:T Messages}"
+          AutoScrollToSelectedItem="False" motion:SmoothScroll.Wheel="True"
+          ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.BringIntoViewOnFocusChange="False">
+          <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel CacheLength="1" /></ItemsPanelTemplate></ListBox.ItemsPanel>
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="chat:MessageRow">
               <Panel>
@@ -41,58 +76,67 @@
                 <TextBlock Grid.Column="1" Text="{i18n:T NewMessagesDivider}" Margin="8,0" />
                 <Border Grid.Column="2" Height="1" Background="#5C3A38" VerticalAlignment="Center" />
               </Grid>
-              <Grid Classes="messageRow" Classes.continued="{Binding IsContinuation}" ColumnDefinitions="24,36,13,*,24" IsVisible="{Binding !IsUnreadDivider}">
+              <Grid Classes="messageRow" Classes.continued="{Binding IsContinuation}" Classes.pending="{Binding IsPending}" Classes.mentioned="{Binding IsMentioned}" IsVisible="{Binding !IsUnreadDivider}">
                 <Grid.ContextMenu><ContextMenu>
                   <MenuItem Header="{i18n:T CopyText}" Click="CopyMessage" />
+                  <MenuItem Header="{i18n:T Reply}" Click="ReplyMessage" IsVisible="{Binding CanReply}" />
                   <MenuItem Header="{i18n:T MarkAsUnread}" Click="MarkUnreadFrom" />
                   <MenuItem Header="{i18n:T EditMessage}" Click="EditMessage" IsVisible="{Binding CanEdit}" />
+                  <MenuItem Header="{i18n:T DeleteMessage}" Click="DeleteMessage" IsVisible="{Binding CanDelete}" />
                 </ContextMenu></Grid.ContextMenu>
-                <Button Grid.Column="1" Classes="avatarPick" Width="36" Height="36" Padding="0" VerticalAlignment="Top" Margin="0,12,0,0" IsVisible="{Binding ShowHeader}" AutomationProperties.Name="{Binding Author}">
-                  <Button.Flyout>
-                    <Flyout Placement="RightEdgeAlignedTop" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
-                      <chat:UserCard />
-                    </Flyout>
-                  </Button.Flyout>
-                  <c:Avatar Width="36" Height="36" Playback="{Binding Playback}" Initial="{Binding Initial}" />
-                </Button>
-                <StackPanel Grid.Column="3" Classes="body" Spacing="4" Margin="0,11,0,9">
-                  <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowHeader}">
-                    <Button Classes="authorName" Padding="0" Background="Transparent" HorizontalAlignment="Left" AutomationProperties.Name="{Binding Author}">
+                <DockPanel Margin="24,0">
+                  <Panel Classes="avatarSlot" Width="36" Height="36" VerticalAlignment="Top">
+                    <Button Classes="avatarPick" Width="36" Height="36" Padding="0" IsVisible="{Binding ShowHeader}" AutomationProperties.Name="{Binding Author}">
                       <Button.Flyout>
-                        <Flyout Placement="BottomEdgeAlignedLeft" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
+                        <Flyout Placement="{Binding CardPlacement}" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
                           <chat:UserCard />
                         </Flyout>
                       </Button.Flyout>
-                      <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
+                      <c:Avatar Width="36" Height="36" Playback="{Binding Playback}" Initial="{Binding Initial}" />
                     </Button>
-                    <TextBlock Text="{Binding Time}" Classes="quiet" FontSize="11" VerticalAlignment="Center" />
-                    <TextBlock Text="{i18n:T Edited}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsEdited}" />
+                  </Panel>
+                  <StackPanel Classes="body" Spacing="4">
+                    <StackPanel Classes="header" Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowHeader}">
+                      <Button Classes="authorName" Padding="0" Background="Transparent" AutomationProperties.Name="{Binding Author}">
+                        <Button.Flyout>
+                          <Flyout Placement="{Binding NamePlacement}" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
+                            <chat:UserCard />
+                          </Flyout>
+                        </Button.Flyout>
+                        <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
+                      </Button>
+                      <TextBlock Text="{Binding Time}" Classes="quiet" FontSize="11" VerticalAlignment="Center" />
+                      <TextBlock Text="{i18n:T Edited}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsEdited}" />
+                    </StackPanel>
+                    <StackPanel Classes="sendState" Orientation="Horizontal" Spacing="9" IsVisible="{Binding IsFailed}">
+                      <Button Padding="8,2" Command="{Binding Retry}"
+                        ToolTip.Tip="{i18n:T RetrySend}" AutomationProperties.Name="{i18n:T RetrySend}">
+                        <TextBlock Text="{i18n:T SendFailed}" Foreground="#D98980" FontSize="11" />
+                      </Button>
+                    </StackPanel>
+                    <TextBlock Text="{Binding ReplyLabel}" Classes="quiet" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="400" IsVisible="{Binding HasReply}" />
+                    <chat:MessageText Markdown="{Binding Content}" SelfUsername="{Binding #ChatRoot.((vm:ShellViewModel)DataContext).SelfUsername}" SelfDisplayName="{Binding #ChatRoot.((vm:ShellViewModel)DataContext).SelfDisplayName}" Classes="messageText" TextWrapping="Wrap" IsVisible="{Binding HasText}" />
+                    <ItemsControl Classes="files" ItemsSource="{Binding Files}" IsVisible="{Binding HasFiles}">
+                      <ItemsControl.ItemTemplate><DataTemplate x:DataType="chat:AttachmentRow">
+                        <StackPanel Spacing="4" Margin="0,6,0,0">
+                          <Button Padding="0" Background="Transparent" Command="{Binding Save}" IsVisible="{Binding HasPreview}" ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
+                            <Image Source="{Binding Preview}" MaxWidth="280" MaxHeight="200" Stretch="Uniform" />
+                          </Button>
+                          <Button Padding="10,6" Background="{DynamicResource RaisedBrush}" Command="{Binding Save}" IsVisible="{Binding ShowChip}" ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
+                            <Panel><TextBlock Text="{Binding Label}" FontSize="13" IsVisible="{Binding !IsSaving}" /><TextBlock Text="{i18n:T Downloading}" FontSize="13" IsVisible="{Binding IsSaving}" /></Panel>
+                          </Button>
+                        </StackPanel>
+                      </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
                   </StackPanel>
-                  <StackPanel Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowSendState}">
-                    <TextBlock Text="{i18n:T Sending}" Classes="muted" FontSize="11" IsVisible="{Binding IsPending}" />
-                    <Button Padding="8,2" Command="{Binding Retry}" IsVisible="{Binding IsFailed}"
-                      ToolTip.Tip="{i18n:T RetrySend}" AutomationProperties.Name="{i18n:T RetrySend}">
-                      <TextBlock Text="{i18n:T SendFailed}" Foreground="#D98980" FontSize="11" />
-                    </Button>
-                  </StackPanel>
-                  <chat:MessageText Markdown="{Binding Content}" Classes="messageText" TextWrapping="Wrap" IsVisible="{Binding HasText}" />
-                  <ItemsControl ItemsSource="{Binding Files}" IsVisible="{Binding HasFiles}">
-                    <ItemsControl.ItemTemplate><DataTemplate x:DataType="chat:AttachmentRow">
-                      <StackPanel Spacing="4" Margin="0,6,0,0">
-                        <Button HorizontalAlignment="Left" Padding="0" Background="Transparent" Command="{Binding Save}" IsVisible="{Binding HasPreview}" ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
-                          <Image Source="{Binding Preview}" MaxWidth="280" MaxHeight="200" Stretch="Uniform" />
-                        </Button>
-                        <Button HorizontalAlignment="Left" Padding="10,6" Background="{DynamicResource RaisedBrush}" Command="{Binding Save}" IsVisible="{Binding ShowChip}" ToolTip.Tip="{i18n:T DownloadLocal}" AutomationProperties.Name="{i18n:T DownloadFile}">
-                          <Panel><TextBlock Text="{Binding Label}" FontSize="13" IsVisible="{Binding !IsSaving}" /><TextBlock Text="{i18n:T Downloading}" FontSize="13" IsVisible="{Binding IsSaving}" /></Panel>
-                        </Button>
-                      </StackPanel>
-                    </DataTemplate></ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
-                <Border Grid.ColumnSpan="5" Classes="messageTools" Background="#2A2A2A" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,16,0">
+                </DockPanel>
+                <Border Classes="messageTools" Background="#2A2A2A" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" VerticalAlignment="Top">
                   <StackPanel Orientation="Horizontal">
                     <Button Classes="icon" Width="26" Height="26" Click="CopyMessage" AutomationProperties.Name="{i18n:T CopyMessage}" ToolTip.Tip="{i18n:T CopyText}"><PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" /></Button>
+                    <Button Classes="icon" Width="26" Height="26" Command="{Binding Cancel}" IsVisible="{Binding CanCancel}" AutomationProperties.Name="{i18n:T CancelSend}" ToolTip.Tip="{i18n:T CancelSend}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button>
+                    <Button Classes="icon" Width="26" Height="26" Click="ReplyMessage" IsVisible="{Binding CanReply}" AutomationProperties.Name="{i18n:T Reply}" ToolTip.Tip="{i18n:T Reply}"><PathIcon Data="{StaticResource IconReply}" Width="14" Height="14" /></Button>
                     <Button Classes="icon" Width="26" Height="26" Click="EditMessage" IsVisible="{Binding CanEdit}" AutomationProperties.Name="{i18n:T EditMessage}" ToolTip.Tip="{i18n:T EditMessage}"><PathIcon Data="{StaticResource IconEdit}" Width="14" Height="14" /></Button>
+                    <Button Classes="icon" Width="26" Height="26" Click="DeleteMessage" IsVisible="{Binding CanDelete}" AutomationProperties.Name="{i18n:T DeleteMessage}" ToolTip.Tip="{i18n:T DeleteMessage}"><PathIcon Data="{StaticResource IconDelete}" Width="14" Height="14" /></Button>
                   </StackPanel>
                 </Border>
               </Grid>
@@ -116,22 +160,47 @@
             </Border>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Border Classes="composerFrame" Classes.editing="{Binding IsEditing}" Background="{DynamicResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="8,8,8,10">
+        <TextBlock Text="{Binding TypingLabel}" Classes="muted" FontSize="12" IsVisible="{Binding HasTyping}" />
+        <Border Classes="composerFrame" Classes.editing="{Binding HasComposerBanner}" Background="{DynamicResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="8,8,8,10" IsEnabled="{Binding !ChannelForbidden}">
           <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <DockPanel>
-            <Grid DockPanel.Dock="Top" Height="24" Margin="4,0,4,4" IsVisible="{Binding IsEditing}">
-              <TextBlock Text="{Binding ComposerEditHint}" FontSize="12" Foreground="#C4B4B2" VerticalAlignment="Center" />
-              <Button Classes="icon" Width="22" Height="22" HorizontalAlignment="Right" Command="{Binding CancelComposerEdit}" ToolTip.Tip="{i18n:T CancelEdit}" AutomationProperties.Name="{i18n:T CancelEdit}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button>
+            <Grid DockPanel.Dock="Top" Height="24" Margin="4,0,4,4" IsVisible="{Binding HasComposerBanner}">
+              <TextBlock Text="{Binding ComposerBannerText}" FontSize="12" Foreground="#C4B4B2" VerticalAlignment="Center" />
+              <Button Classes="icon" Width="22" Height="22" HorizontalAlignment="Right" Command="{Binding CancelComposerEdit}" ToolTip.Tip="{Binding ComposerCancelTip}" AutomationProperties.Name="{Binding ComposerCancelTip}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button>
             </Grid>
             <Grid ColumnDefinitions="30,*,30" ColumnSpacing="9">
               <Button Classes="icon" Command="{Binding AttachFile}" IsEnabled="{Binding !IsEditing}" ToolTip.Tip="{Binding AttachTip}" AutomationProperties.Name="{i18n:T AddFile}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
-              <TextBox x:Name="Composer" Grid.Column="1" Classes="composer" Text="{Binding Draft}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" AutomationProperties.Name="{i18n:T MessageInput}" KeyDown="OnComposerKeyDown" />
+              <Panel Grid.Column="1">
+                <TextBox x:Name="Composer" Classes="composer" Text="{Binding Draft, Mode=TwoWay}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" AutomationProperties.Name="{i18n:T MessageInput}" KeyDown="OnComposerKeyDown" />
+                <Popup IsOpen="{Binding MentionOpen, Mode=TwoWay}" PlacementTarget="{Binding #Composer}" Placement="TopEdgeAlignedLeft" IsLightDismissEnabled="True">
+                  <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="2" Padding="4" MinWidth="220" MaxWidth="320">
+                    <ItemsControl ItemsSource="{Binding MentionMatches}" AutomationProperties.Name="{i18n:T MentionPicker}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="chat:MentionItem">
+                          <Button Classes="mentionPick" Classes.selected="{Binding IsActive}" Margin="0,0,0,1"
+                            Command="{Binding #ChatRoot.((vm:ShellViewModel)DataContext).PickMention}" CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                              <PathIcon Data="{StaticResource IconPeople}" Width="16" Height="16" Opacity="0.65" />
+                              <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="11" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Border>
+                </Popup>
+              </Panel>
               <Button Grid.Column="2" Classes="icon send" Command="{Binding Send}" IsEnabled="{Binding CanSend}" ToolTip.Tip="{Binding SendTip}" AutomationProperties.Name="{i18n:T Send}"><PathIcon Data="{StaticResource IconSendFilled}" Width="18" Height="18" /></Button>
             </Grid>
           </DockPanel>
         </Border>
       </StackPanel>
     </Grid>
-    <chat:MemberSidebar Grid.Column="1" IsVisible="{Binding ParticipantsOpen}" />
+    <Border Grid.Column="1" Width="300" IsVisible="{Binding ParticipantsOpen}">
+      <chat:MemberSidebar />
+    </Border>
   </Grid>
 </UserControl>

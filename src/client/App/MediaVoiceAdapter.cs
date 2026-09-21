@@ -11,6 +11,11 @@ internal sealed class MediaVoiceAdapter(IMediaService media) : IVoiceMedia
         add => media.Faulted += value;
         remove => media.Faulted -= value;
     }
+    public event Action<IReadOnlyList<string>>? SpeakingChanged
+    {
+        add => media.SpeakingChanged += value;
+        remove => media.SpeakingChanged -= value;
+    }
     public Task ConnectAsync(Uri endpoint, string token, bool muted, bool deafened, AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken)
         => media.ConnectAsync(endpoint, token, muted, deafened, audio, route, cancellationToken);
     public Task LeaveAsync(CancellationToken cancellationToken) => media.LeaveAsync(cancellationToken);

@@ -6,11 +6,20 @@ using Chat.UI.Components;
 
 namespace Chat.UI.Channels;
 
-public sealed class ChannelItem(Guid id, Guid serverId, string name, string kind, string? audioQuality) : ObservableObject
+public sealed class ChannelItem(Guid id, Guid serverId, string name, string kind, string? audioQuality, bool isFixture = false, Guid[]? participants = null) : ObservableObject
 {
+    public bool IsFixture { get; } = isFixture;
     private ChannelEditorViewModel? _editor;
     public ChannelEditorViewModel? Editor { get => _editor; set { if (ReferenceEquals(_editor, value)) return; _editor = value; Changed(); Changed(nameof(IsEditing)); } }
     public bool IsEditing => Editor is not null;
+    private bool _enter;
+    public void RequestEnter() => _enter = true;
+    public bool ConsumeEnter()
+    {
+        if (!_enter) return false;
+        _enter = false;
+        return true;
+    }
     private bool _isSelected;
     public bool IsSelected { get => _isSelected; set { if (_isSelected == value) return; _isSelected = value; Changed(); } }
     private bool _isConnected;
@@ -22,20 +31,23 @@ public sealed class ChannelItem(Guid id, Guid serverId, string name, string kind
     private bool _isMuted;
     public bool IsMuted { get => _isMuted; private set { if (_isMuted == value) return; _isMuted = value; Changed(); } }
     public bool IsVoice => Kind == "voice";
+    public bool IsDirect => Kind == "dm";
+    public bool CanChat => Kind is "text" or "voice" or "dm";
     public Guid Id { get; } = id;
     public Guid ServerId { get; } = serverId;
+    public Guid[] Participants { get; } = participants ?? [];
     private string _name = name;
     public string Name { get => _name; set { if (_name == value) return; _name = value; Changed(); Changed(nameof(Label)); } }
     public string Kind { get; } = kind;
     public string AudioQuality { get; set; } = audioQuality ?? "studio";
-    public string Label => Kind == "voice" ? Name + " · " + global::Chat.UI.Localization.I18n.T(TextKey.Voice) : "# " + Name;
+    public string Label => IsDirect ? Name : Kind == "voice" ? Name + " · " + global::Chat.UI.Localization.I18n.T(TextKey.Voice) : "# " + Name;
     public ObservableCollection<VoiceMemberRow> VoiceMembers { get; } = [];
     public bool HasVoiceMembers => VoiceMembers.Count > 0;
     public void Refresh() => Changed(nameof(Label));
     public void ApplyInbox(ChannelInbox inbox, Guid selfId)
     {
-        HasUnread = !IsVoice && inbox.ShowUnread(selfId);
-        HasMention = !IsVoice && inbox.ShowMention;
+        HasUnread = inbox.ShowUnread(selfId);
+        HasMention = inbox.ShowMention;
         IsMuted = inbox.IsMuted;
     }
     public void ClearInbox()
@@ -81,10 +93,11 @@ public sealed class VoiceMemberRow : ObservableObject
     private bool _muted;
     private bool _deafened;
     private bool _isSelf;
+    private bool _speaking;
     private AvatarPlayback? _playback;
     private MemberProfile? _profile;
     public VoiceMemberRow(Guid userId, string name, string username, bool muted, bool deafened, bool isSelf,
-        MemberProfile? profile = null, AvatarPlayback? playback = null)
+        MemberProfile? profile = null, AvatarPlayback? playback = null, bool speaking = false)
     {
         UserId = userId;
         _name = name;
@@ -94,6 +107,7 @@ public sealed class VoiceMemberRow : ObservableObject
         _isSelf = isSelf;
         _profile = profile;
         _playback = playback;
+        _speaking = speaking;
     }
     public Guid UserId { get; }
     public string Name
@@ -109,6 +123,7 @@ public sealed class VoiceMemberRow : ObservableObject
     public bool Muted { get => _muted; private set { if (_muted == value) return; _muted = value; Changed(); } }
     public bool Deafened { get => _deafened; private set { if (_deafened == value) return; _deafened = value; Changed(); } }
     public bool IsSelf { get => _isSelf; private set { if (_isSelf == value) return; _isSelf = value; Changed(); } }
+    public bool Speaking { get => _speaking; private set { if (_speaking == value) return; _speaking = value; Changed(); } }
     public bool ShowMute => Muted && !Deafened;
     public AvatarPlayback? Playback
     {
@@ -128,6 +143,7 @@ public sealed class VoiceMemberRow : ObservableObject
         Muted = source.Muted;
         Deafened = source.Deafened;
         IsSelf = source.IsSelf;
+        Speaking = source.Speaking;
         if (source.Playback is not null) Playback = source.Playback;
         if (source.Profile is not null) Profile = source.Profile;
         Changed(nameof(ShowMute));

@@ -60,7 +60,12 @@ public sealed class MotionHost : Decorator
                 MotionPreset.SlideRight => -MotionTokens.Distance,
                 _ => 0
             };
-            var y = interrupted ? _translation.Y : Preset == MotionPreset.Enter ? MotionTokens.Distance : 0;
+            var y = interrupted ? _translation.Y : Preset switch
+            {
+                MotionPreset.Enter or MotionPreset.SlideUp => MotionTokens.Distance,
+                MotionPreset.SlideDown => -MotionTokens.Distance,
+                _ => 0
+            };
             Stop();
             var lifetime = new CancellationTokenSource();
             _running = lifetime;
@@ -129,9 +134,11 @@ public sealed class MotionHost : Decorator
             if (IsVisible) Play();
             else Stop();
         }
-        else if (change.Property == Motion.ReduceMotionProperty || change.Property == PresetProperty ||
+        else if (change.Property == Motion.ReduceMotionProperty ||
                  change.Property == DurationProperty || change.Property == StartOpacityProperty)
             Stop(); // A preference change never introduces motion by itself.
+        else if (change.Property == PresetProperty && _pending is null)
+            Stop(); // A pending Trigger play in this turn should pick up the new preset.
     }
 
     private void OnAncestorChanged(object? sender, AvaloniaPropertyChangedEventArgs e)

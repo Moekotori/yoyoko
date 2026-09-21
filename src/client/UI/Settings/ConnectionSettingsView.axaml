@@ -1,18 +1,32 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.ConnectionSettingsView" x:DataType="vm:ConnectionSettingsViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding Cancel}" />
+  </UserControl.KeyBindings>
   <StackPanel Spacing="24">
     <Border Classes="settingsGroup">
       <StackPanel>
-        <StackPanel Spacing="10" Margin="20,16,20,8">
+        <StackPanel Spacing="10" Margin="16,16,16,8">
           <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
           <TextBox Classes="settingsField" Text="{Binding Address}" IsEnabled="{Binding !IsBusy}"
             PlaceholderText="{i18n:T ServerAddressOrInvite}"
             AutomationProperties.Name="{i18n:T InstanceAddress}" />
+          <StackPanel Spacing="10" IsVisible="{Binding ShowUsername}">
+            <TextBlock Text="{i18n:T Username}" FontSize="14" />
+            <TextBox Classes="settingsField" Text="{Binding Username}" IsEnabled="{Binding !IsBusy}"
+              MaxLength="64" PlaceholderText="{i18n:T DefaultUsername}"
+              AutomationProperties.Name="{i18n:T Username}">
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding Connect}" />
+              </TextBox.KeyBindings>
+            </TextBox>
+            <TextBlock Text="{i18n:T JoinUsernameHint}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+          </StackPanel>
         </StackPanel>
         <StackPanel IsVisible="{Binding IsConnected}">
-          <Border Classes="settingsRowDivider" Margin="0,16" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24">
+          <Border Classes="settingsRowDivider" Margin="16,16" />
+          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16">
             <TextBlock Text="{i18n:T ConnectionState}" Classes="settingsLabel" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
               <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
@@ -20,37 +34,37 @@
             </StackPanel>
           </Grid>
           <Border Classes="settingsRowDivider" IsVisible="{Binding HasName}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasName}">
+          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasName}">
             <TextBlock Text="{i18n:T ServerName}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding ServerName}" FontSize="14" TextTrimming="CharacterEllipsis"
               VerticalAlignment="Center" />
           </Grid>
           <Border Classes="settingsRowDivider" IsVisible="{Binding HasHost}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasHost}">
+          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasHost}">
             <TextBlock Text="{i18n:T ServerHost}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding Host}" FontSize="14" TextTrimming="CharacterEllipsis"
               VerticalAlignment="Center" />
           </Grid>
           <Border Classes="settingsRowDivider" IsVisible="{Binding HasCommunity}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasCommunity}">
+          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasCommunity}">
             <TextBlock Text="{i18n:T Community}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding CommunityName}" FontSize="14" TextTrimming="CharacterEllipsis"
               VerticalAlignment="Center" />
           </Grid>
           <Border Classes="settingsRowDivider" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24">
+          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16">
             <TextBlock Text="{i18n:T ServerLatency}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding LatencyText}" FontSize="14" VerticalAlignment="Center"
               Classes="muted" />
           </Grid>
           <Border Classes="settingsRowDivider" IsVisible="{Binding HasProtocol}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasProtocol}">
+          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasProtocol}">
             <TextBlock Text="{i18n:T ServerProtocol}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding ProtocolText}" FontSize="14" VerticalAlignment="Center"
               Classes="muted" />
           </Grid>
           <Border Classes="settingsRowDivider" IsVisible="{Binding HasInvite}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,280" ColumnSpacing="24" IsVisible="{Binding HasInvite}">
+          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasInvite}">
             <TextBlock Text="{i18n:T InviteCode}" Classes="settingsLabel" />
             <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <TextBlock Text="{Binding InviteCode}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"
@@ -71,6 +85,9 @@
       <Button Classes="settingsSecondary" Content="{i18n:T DisconnectServer}" Command="{Binding Disconnect}"
         IsVisible="{Binding ShowDisconnect}" IsEnabled="{Binding CanDisconnect}" MinWidth="104" Height="38"
         AutomationProperties.Name="{i18n:T DisconnectServer}" />
+      <Button Classes="settingsSecondary" Content="{i18n:T CancelConnection}" Command="{Binding Cancel}"
+        IsVisible="{Binding ShowCancel}" IsEnabled="{Binding CanCancel}" MinWidth="104" Height="38"
+        AutomationProperties.Name="{i18n:T CancelConnection}" />
     </StackPanel>
     <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" IsVisible="{Binding HasStatus}" />
   </StackPanel>

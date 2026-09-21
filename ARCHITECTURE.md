@@ -12,13 +12,13 @@
 | HTTP / WebSocket 有界传输、Gateway 恢复 | 已实现 |
 | 消息分页缓存、账号/实例隔离、注销清理端口 | 已实现并有聚焦检查 |
 | Rust 健康检查、发现、认证业务 API | 已实现 |
-| Domain / Service / Repository | 已实现；VIEW_CHANNEL / SEND_MESSAGE 服务端检查 |
+| Domain / Service / Repository | 已实现；VIEW_CHANNEL / SEND_MESSAGE 服务端检查；进程内有界 TTL 缓存频道/社区/鉴权/@ 用户名 |
 | PostgreSQL 初始 migration | 已编写；运行状态见验证记录 |
 | Native C ABI 与句柄生命周期 | 已实现；能力位为 0 |
 | 账号、聊天、同步 | 已开始；以当前服务端 Store / Gateway 为准 |
 | 附件 | 已实现：multipart 流式上传、可配置 `storage.max_bytes`、签名或登录下载、图片 256px 缩略图；S3/MinIO 仍为后续 |
-| 语音控制面 | 已实现：CONNECT_VOICE/SPEAK、加入/离开、mute/deafen、频道音质上限与用户自选档位（最高 510 kbps Opus）、Gateway `VOICE_STATE_UPDATE`、LiveKit JWT（metadata 带编码参数）。桌面双击加入，右键设置打开设备页，加入不切走文字频道。可选系统媒体会话仅在已加入语音且用户打开「耳机媒体键」时出现，离开即清除；不进入 native 音频回调 |
-| 语音媒体 | 按需 `chat-media-worker` 链接 LiveKit Rust SDK（PlatformAudio 采集/播放、AEC/NS/AGC）；会话内复用进程；设备选择按名称对到 ADM。LiveKit SFU 未运行时 join 明确失败，频道成员仍可见 |
+| 语音控制面 | 已实现：CONNECT_VOICE/SPEAK、加入/离开、mute/deafen、频道音质上限与用户自选档位（最高 510 kbps Opus）、Gateway `VOICE_STATE_UPDATE`、LiveKit JWT（metadata 带编码参数）。桌面单击加入并打开该语音频道的文字聊天，右键设置打开设置中的设备/音质页。可选系统媒体会话仅在已加入语音且用户打开「耳机媒体键」时出现，离开即清除；不进入 native 音频回调。网页 `{origin}/voice/{channel_id}` 签发语音范围令牌，只进该房 |
+| 语音媒体 | 按需 `chat-media-worker` 链接 LiveKit Rust SDK（PlatformAudio 采集/播放、AEC/NS/AGC）；会话内复用进程；设备选择按名称对到 ADM。局域网 `Host` 改写 loopback RTC；断开后有界重连；说话光圈跟 LiveKit 活跃说话人。LiveKit SFU 未运行时 join 明确失败，频道成员仍可见 |
 | 屏幕共享 | **Not implemented yet** |
 
 ## Monorepo
@@ -55,6 +55,7 @@ src/
       channel/       service + repository port
       database/      PostgreSQL adapter + migration runner
       configuration.rs
+      web_voice/     网页语音访客页与 scoped token
 native-media-core/
   ffi/               C ABI 与 C++ 生命周期
 src/media-worker/    按需 RTC 进程，JSON 行控制协议
@@ -62,7 +63,7 @@ src/media-worker/    按需 RTC 进程，JSON 行控制协议
   tests/             C 语言 ABI consumer
 protocol fixtures → docs/protocol/fixtures/
 database/migrations/ PostgreSQL schema
-compose.yaml / deploy/ Docker 基础环境
+compose.yaml / deploy/ 一键 Docker 堆栈（API + Postgres + Redis + LiveKit；MinIO 为可选 profile）
 .github/workflows/   三平台编译、Node 协议检查、格式、边界与服务端检查
 scripts/             本地 CI 入口、边界检查与进程采样
 tests/node/          共享 fixture 的 JS 解码与 live HTTP/Gateway 检查
@@ -107,6 +108,8 @@ Rust + Tokio + Axum 模块化单体。一个 API/Gateway 进程；PostgreSQL、R
 
 Phase 1 将按 Auth、Server、Channel、Message、Permission 分模块，保留 service 端口；不提前创建无实现的万能服务。所有权限在服务端检查，客户端 PermissionResolver 只用于 UI。权限顺序：base → server roles → everyone channel override → aggregated role overrides → member override；administrator bypass。Postgres NUMERIC 保存 u64，协议用十进制字符串。
 
+热路径：鉴权一次 SQL；READY 一次拉齐用户可见频道；@ 一次拉成员用户名。进程内 `HotCache` 短 TTL（8–30 秒）、有上限（鉴权 2048、频道 512、社区 256、用户名表 128），写频道/社区/资料时失效。不是第二事实源，不缓存消息正文，不接 Redis。Postgres 有 `members(user_id)` 与冷却用的 `(channel_id, author_id, id DESC)` 索引。
+
 服务端异步日志使用最多 1024 行有损队列，默认 Info。容器 stdout 按 10 MiB × 3 滚动；裸进程由宿主 journald / 日志收集器设置等价限制。永不记录 token / password / 完整私密消息。Gateway 包最大 64 KiB、握手 5 秒超时；业务认证、rate limiting、membership、refresh rotation 是 Phase 1 上线前置条件。
 
 ## Native media
@@ -128,6 +131,7 @@ Capture → GPU-native handle → encoder；Windows D3D11、macOS IOSurface、Li
 | 缓存总磁盘 | 256 MiB 目标 | 全局字节淘汰 **Not implemented yet** |
 | SQLite 页面缓存 | 单连接 2 MiB、短连接、WAL | 已实现，无常驻连接池 |
 | 图片内存 | 16 MiB 目标，128/256/512 缩略图优先 | 图片 pipeline **Not implemented yet** |
+| 服务端热读 | 进程内 TTL：鉴权 2048/8s、频道 512/30s、社区 256/15s、@ 名表 128/15s | 已实现；写路径失效；不缓存消息，不接 Redis |
 | 网络 | 有界收包、背压消费、串行发送 | 已实现传输层，无后台轮询 |
 | 视频 | 2–3 帧 | 尚无媒体分配 |
 

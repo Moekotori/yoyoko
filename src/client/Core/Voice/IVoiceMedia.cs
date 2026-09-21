@@ -13,4 +13,5 @@ public interface IVoiceMedia : IAsyncDisposable
     Task StartLoopbackAsync(AudioCaptureOptions audio, AudioRoute route, CancellationToken cancellationToken);
     Task StopLoopbackAsync(CancellationToken cancellationToken);
     event Action<string>? Faulted;
+    event Action<IReadOnlyList<string>>? SpeakingChanged;
 }

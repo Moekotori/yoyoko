@@ -5,6 +5,6 @@
     "channel_id":"01950000-0000-7000-8000-000000000020",
     "author_id":"01950000-0000-7000-8000-000000000030",
     "kind":"text", "content":"Hello, edited", "created_at":"2026-09-20T10:00:00Z",
-    "edited_at":"2026-09-21T10:00:00Z", "reply_to":null, "mentions":[], "attachments":[], "embeds":[], "reactions":[], "encrypted_payload":null
+    "edited_at":"2026-09-21T10:00:00Z", "reply_to":null, "mentions":[], "mention_everyone":false, "mention_here":false, "attachments":[], "embeds":[], "reactions":[], "encrypted_payload":null
   }
 }

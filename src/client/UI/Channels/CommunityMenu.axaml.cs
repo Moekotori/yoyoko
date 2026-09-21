@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Chat.Core.Instances;
 using Chat.Localization;
+using Chat.Motion;
 using Chat.UI.Localization;
 using Chat.UI.Shell;
 
@@ -23,10 +24,10 @@ public partial class CommunityMenu : UserControl
         if (sender is not Control { Tag: string name }) return;
         foreach (var id in Sections)
         {
-            var open = id == name && this.FindControl<Control>(id) is { IsVisible: false };
-            if (this.FindControl<Control>(id) is { } panel) panel.IsVisible = open;
-            if (this.FindControl<Control>(id + "Down") is { } down) down.IsVisible = !open;
-            if (this.FindControl<Control>(id + "Up") is { } up) up.IsVisible = open;
+            var open = id == name && this.FindControl<RevealHost>(id) is { IsOpen: false };
+            if (this.FindControl<RevealHost>(id) is { } panel) panel.IsOpen = open;
+            if (this.FindControl<Control>(id + "Chevron") is { } chevron)
+                chevron.Classes.Set("open", open);
         }
     }
 

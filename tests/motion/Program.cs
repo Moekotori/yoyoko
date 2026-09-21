@@ -11,7 +11,7 @@ var host = new MotionHost { Child = new Border { Width = 100, Height = 40, Rende
 var parent = new Border { Child = host };
 var window = new Window { Content = parent, Width = 320, Height = 240 };
 window.Show();
-Pump(260);
+Pump(400);
 Settled("initial entry");
 var layout = host.Bounds;
 host.Play();
@@ -68,16 +68,28 @@ Settled("detach cancels active animation");
 parent.Child = host;
 Pump(260);
 Settled("reattach");
-foreach (var preset in new[] { MotionPreset.None, MotionPreset.Fade, MotionPreset.SlideLeft, MotionPreset.SlideRight })
+foreach (var preset in new[] { MotionPreset.None, MotionPreset.Fade, MotionPreset.SlideLeft, MotionPreset.SlideRight, MotionPreset.SlideUp, MotionPreset.SlideDown })
 {
     host.Preset = preset;
     host.Play();
     Pump(30);
     if (preset == MotionPreset.SlideLeft) Check(((TranslateTransform)host.RenderTransform!).X > 0, "left direction");
     if (preset == MotionPreset.SlideRight) Check(((TranslateTransform)host.RenderTransform!).X < 0, "right direction");
+    if (preset == MotionPreset.SlideUp) Check(((TranslateTransform)host.RenderTransform!).Y > 0, "up direction");
+    if (preset == MotionPreset.SlideDown) Check(((TranslateTransform)host.RenderTransform!).Y < 0, "down direction");
     Pump(240);
     Settled(preset.ToString());
 }
+host.Preset = MotionPreset.Fade;
+host.Trigger = "same-turn-a";
+Pump(260);
+host.Preset = MotionPreset.SlideUp;
+host.Trigger = "same-turn-b";
+Dispatcher.UIThread.RunJobs();
+Pump(30);
+Check(((TranslateTransform)host.RenderTransform!).Y > 0 && host.IsRunning, "same-turn preset is used by the pending trigger");
+Pump(240);
+Settled("same-turn preset and trigger");
 host.Preset = MotionPreset.Fade;
 host.StartOpacity = 0.82;
 host.Duration = TimeSpan.FromMilliseconds(120);
@@ -95,7 +107,50 @@ host.Play();
 Pump(20);
 Settled("zero duration");
 window.Close();
-Console.WriteLine("Motion checks passed: real clock interpolation, interruption, layout, policy, visibility, minimize, detach and presets.");
+
+var reveal = new RevealHost { IsOpen = true, Child = new Border { Width = 120, Height = 80 } };
+var below = new Border { Width = 120, Height = 16 };
+var column = new StackPanel();
+column.Children.Add(reveal);
+column.Children.Add(below);
+var revealWindow = new Window { Content = column, Width = 240, Height = 200 };
+revealWindow.Show();
+Pump(240);
+Check(!reveal.IsRunning && Math.Abs(reveal.Progress - 1) < 0.001 && reveal.Bounds.Height > 70, "reveal starts open without motion");
+var openBelow = below.Bounds.Y;
+reveal.IsOpen = false;
+Pump(40);
+Check(reveal.IsRunning && reveal.Progress > 0 && reveal.Progress < 1 && reveal.Bounds.Height > 0 && reveal.Bounds.Height < 80, "reveal collapse interpolates height");
+Check(below.Bounds.Y < openBelow, "reveal height change moves siblings");
+var mid = reveal.Progress;
+reveal.IsOpen = true;
+Dispatcher.UIThread.RunJobs();
+Pump(30);
+Check(reveal.Progress >= mid - 0.02, "reveal reverse continues from current height");
+Pump(280);
+Check(!reveal.IsRunning && Math.Abs(reveal.Progress - 1) < 0.001 && reveal.Bounds.Height > 70, "reveal reopened");
+reveal.IsOpen = false;
+Pump(30);
+Motion.SetReduceMotion(revealWindow, true);
+Dispatcher.UIThread.RunJobs();
+Check(!reveal.IsRunning && reveal.Progress < 0.001 && reveal.Bounds.Height < 1, "reveal reduced motion snaps closed");
+Motion.SetReduceMotion(revealWindow, false);
+
+var closed = new RevealHost { IsOpen = false, Child = new Border { Width = 100, Height = 80 } };
+var closedColumn = new StackPanel();
+closedColumn.Children.Add(closed);
+var closedWindow = new Window { Content = closedColumn, Width = 200, Height = 160 };
+closedWindow.Show();
+Pump(200);
+Check(!closed.IsRunning && closed.Progress < 0.001 && closed.Bounds.Height < 1, "closed reveal starts at zero height");
+closed.IsOpen = true;
+Pump(40);
+Check(closed.IsRunning && closed.Progress > 0 && closed.Progress < 1 && closed.Bounds.Height > 0, "reveal expand interpolates height");
+Pump(280);
+Check(!closed.IsRunning && Math.Abs(closed.Progress - 1) < 0.001, "reveal expand settled");
+closedWindow.Close();
+revealWindow.Close();
+Console.WriteLine("Motion checks passed: real clock interpolation, interruption, layout, policy, visibility, minimize, detach, presets and reveal.");
 
 void Settled(string context)
 {

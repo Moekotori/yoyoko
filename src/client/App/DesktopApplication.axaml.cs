@@ -39,7 +39,7 @@ public partial class DesktopApplication : Application
                 base.OnFrameworkInitializationCompleted();
                 return;
             }
-            _http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
+            _http = new(ClientHttp.CreateHandler()) { Timeout = TimeSpan.FromSeconds(10) };
             var cache = new SqliteCache(settings.CachePath);
             var vault = new FileCredentialVault(Path.GetDirectoryName(settings.CachePath)!);
             _instances = new(cache, new HttpInstanceDiscovery(_http));

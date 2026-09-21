@@ -1,6 +1,7 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:channel="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Shell" xmlns:channel="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization" xmlns:chrome="using:Avalonia.Controls.Chrome"
   x:Class="Chat.UI.Channels.LiveChannelTabs" x:DataType="vm:ShellViewModel" x:Name="Tabs">
-  <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+  <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1"
+    chrome:WindowDecorationProperties.ElementRole="TitleBar">
     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
       <ItemsControl ItemsSource="{Binding OpenChannels}" HorizontalAlignment="Left">
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
