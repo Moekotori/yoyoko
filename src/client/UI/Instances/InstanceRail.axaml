@@ -15,7 +15,13 @@
             AutomationProperties.Name="{i18n:T Instances}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="items:InstanceItem">
-                <c:Avatar Classes="railAvatar" Width="42" Height="42" Playback="{Binding Playback}" Initial="{Binding Initial}" ToolTip.Tip="{Binding Host}" />
+                <Panel Width="42" Height="42">
+                  <c:Avatar Classes="railAvatar" Width="42" Height="42" Playback="{Binding Playback}" Initial="{Binding Initial}" ToolTip.Tip="{Binding Host}" />
+                  <Border Width="10" Height="10" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-1,-1"
+                    Background="#C45C56" IsVisible="{Binding HasMention}" />
+                  <Border Width="10" Height="10" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-1,-1"
+                    Background="#E8E8E8" IsVisible="{Binding HasUnread}" />
+                </Panel>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>

@@ -5,6 +5,7 @@
   xmlns:appearance="using:Chat.UI.Appearance" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Shell.ShellSurface" x:DataType="vm:ShellViewModel"
 >
+  <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Shell/ShellMotion.axaml" /></UserControl.Styles>
   <Panel>
   <appearance:WallpaperView DataContext="{Binding Wallpaper}" />
   <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsHitTestVisible="{Binding !ProfileOpen}">
@@ -27,7 +28,9 @@
       </StackPanel>
     </Grid>
     <instances:InstanceRail Grid.Row="1" Grid.RowSpan="2" />
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Classes="channelSlot">
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Classes="channelSlot"
+      Classes.collapsed="{Binding ShowSettings}" Classes.motion="{Binding !ReduceMotion}"
+      ClipToBounds="True" IsHitTestVisible="{Binding !ShowSettings}" IsEnabled="{Binding !ShowSettings}">
       <Grid Width="220" HorizontalAlignment="Left" RowDefinitions="*,Auto">
         <channels:ChannelSidebar />
         <StackPanel Grid.Row="1">

@@ -1,8 +1,8 @@
 namespace Chat.Core.Messaging;
 
-public enum MarkupKind { Text, Bold, Italic, Code, Fence, Spoiler, Mention, Link }
+public enum MarkupKind { Text, Bold, Italic, Code, Fence, Spoiler, Mention, Link, Strike, Math, DisplayMath }
 
-public readonly record struct MarkupSpan(MarkupKind Kind, string Text);
+public readonly record struct MarkupSpan(MarkupKind Kind, string Text, string? Extra = null);
 
 public static class MessageMarkup
 {
@@ -26,11 +26,17 @@ public static class MessageMarkup
         while (i < content.Length)
         {
             if (TryWrapped(content, ref i, "```", "```", MarkupKind.Fence, spans)) continue;
+            if (TryMath(content, ref i, display: true, spans)) continue;
             if (TryWrapped(content, ref i, "**", "**", MarkupKind.Bold, spans)) continue;
+            if (TryWrapped(content, ref i, "__", "__", MarkupKind.Bold, spans)) continue;
+            if (TryWrapped(content, ref i, "~~", "~~", MarkupKind.Strike, spans)) continue;
             if (TryWrapped(content, ref i, "||", "||", MarkupKind.Spoiler, spans)) continue;
             if (TryWrapped(content, ref i, "`", "`", MarkupKind.Code, spans)) continue;
+            if (TryMath(content, ref i, display: false, spans)) continue;
             if (TryWrapped(content, ref i, "*", "*", MarkupKind.Italic, spans)) continue;
+            if (TryUnderscoreItalic(content, ref i, spans)) continue;
             if (TryMention(content, ref i, spans)) continue;
+            if (TryMarkdownLink(content, ref i, spans)) continue;
             if (TryLink(content, ref i, spans)) continue;
             var start = i++;
             while (i < content.Length && !LooksSpecial(content, i)) i++;
@@ -45,9 +51,56 @@ public static class MessageMarkup
         if (i + open.Length + close.Length > text.Length || !text.AsSpan(i).StartsWith(open)) return false;
         var inner = i + open.Length;
         var end = text.IndexOf(close, inner, StringComparison.Ordinal);
-        if (end < 0) return false;
+        if (end <= inner) return false;
         spans.Add(new(kind, text[inner..end]));
         i = end + close.Length;
+        return true;
+    }
+
+    private static bool TryMath(string text, ref int i, bool display, List<MarkupSpan> spans)
+    {
+        var open = display ? "$$" : "$";
+        if (i + open.Length * 2 > text.Length || !text.AsSpan(i).StartsWith(open)) return false;
+        var inner = i + open.Length;
+        if (!display && char.IsWhiteSpace(text[inner])) return false;
+        var end = text.IndexOf(open, inner, StringComparison.Ordinal);
+        if (end <= inner || end - inner > MathMarkup.MaxChars) return false;
+        if (!display && (text.AsSpan(inner, end - inner).Contains('\n') || char.IsWhiteSpace(text[end - 1])))
+            return false;
+        spans.Add(new(display ? MarkupKind.DisplayMath : MarkupKind.Math, text[inner..end].Trim()));
+        i = end + open.Length;
+        return true;
+    }
+
+    private static bool TryUnderscoreItalic(string text, ref int i, List<MarkupSpan> spans)
+    {
+        if (text[i] != '_') return false;
+        if (i > 0 && char.IsLetterOrDigit(text[i - 1])) return false;
+        var inner = i + 1;
+        var end = text.IndexOf('_', inner);
+        if (end <= inner) return false;
+        if (end + 1 < text.Length && char.IsLetterOrDigit(text[end + 1])) return false;
+        if (char.IsWhiteSpace(text[inner]) || char.IsWhiteSpace(text[end - 1])) return false;
+        spans.Add(new(MarkupKind.Italic, text[inner..end]));
+        i = end + 1;
+        return true;
+    }
+
+    private static bool TryMarkdownLink(string text, ref int i, List<MarkupSpan> spans)
+    {
+        if (text[i] != '[') return false;
+        var close = text.IndexOf(']', i + 1);
+        if (close < 0 || close + 2 >= text.Length || text[close + 1] != '(') return false;
+        var hrefEnd = text.IndexOf(')', close + 2);
+        if (hrefEnd < 0) return false;
+        var href = text[(close + 2)..hrefEnd];
+        if (href.Length is < 8 or > 512) return false;
+        if (!href.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            && !href.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            return false;
+        var label = text[(i + 1)..close];
+        spans.Add(new(MarkupKind.Link, label.Length == 0 ? href : label, href));
+        i = hrefEnd + 1;
         return true;
     }
 
@@ -85,7 +138,7 @@ public static class MessageMarkup
     }
 
     private static bool LooksSpecial(string text, int i) =>
-        text[i] is '*' or '`' or '|' or '@'
+        text[i] is '*' or '`' or '|' or '@' or '$' or '~' or '_' or '['
         || StartsUrl(text, i, out _);
 
     private static bool IsNameChar(char value) =>

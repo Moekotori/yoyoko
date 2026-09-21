@@ -58,7 +58,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public ShellViewModel(InstanceManager instances, IMessageCache cache, ICredentialVault vault,
         IInstanceDiscovery discovery, IChatApiFactory apis, Func<IGatewayConnection> gateways,
         IVoiceMedia media, ILocalePreference locale, IChatChrome chrome, IVoiceDevicePreference devices,
-        IAppearancePreference appearance, IShortcutPreference shortcuts, I18n text, string productName, CancellationToken lifetime, WorkspaceConnection connection)
+        IAppearancePreference appearance, IShortcutPreference shortcuts, I18n text, ILanguagePacks packs, string productName, CancellationToken lifetime, WorkspaceConnection connection)
     {
         _connection = connection;
         _instances = instances;
@@ -78,7 +78,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         AuthForm = new(AuthenticateAsync, error => { AuthForm!.Status = _text.Error(error); OnError(error); });
         Connection = new(ConnectWorkspaceAsync, DisconnectWorkspaceAsync, ProbeLatencyAsync, OnError, text);
         Wallpaper = new(appearance, chrome, text);
-        Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm);
+        Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm, packs);
         chrome.Changed += OnChromeChanged;
         shortcuts.Changed += OnShortcutsChanged;
         OpenAddInstance = new(_ =>

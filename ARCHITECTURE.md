@@ -17,7 +17,7 @@
 | Native C ABI 与句柄生命周期 | 已实现；能力位为 0 |
 | 账号、聊天、同步 | 已开始；以当前服务端 Store / Gateway 为准 |
 | 附件 | 已实现：multipart 流式上传、可配置 `storage.max_bytes`、签名或登录下载、图片 256px 缩略图；S3/MinIO 仍为后续 |
-| 语音控制面 | 已实现：CONNECT_VOICE/SPEAK、加入/离开、mute/deafen、频道音质上限与用户自选档位（最高 510 kbps Opus）、Gateway `VOICE_STATE_UPDATE`、LiveKit JWT（metadata 带编码参数） |
+| 语音控制面 | 已实现：CONNECT_VOICE/SPEAK、加入/离开、mute/deafen、频道音质上限与用户自选档位（最高 510 kbps Opus）、Gateway `VOICE_STATE_UPDATE`、LiveKit JWT（metadata 带编码参数）。桌面双击加入，右键设置打开设备页，加入不切走文字频道 |
 | 语音媒体 | 按需 `chat-media-worker`；会话内复用进程；20 ms / 3 帧抖动缓冲；可枚举并选择输入/输出设备；本机设备检查为回环试听；默认未链接 LiveKit，加入媒体失败时频道成员仍可见，不伪装接通 |
 | 屏幕共享 | **Not implemented yet** |
 

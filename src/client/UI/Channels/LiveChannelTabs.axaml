@@ -6,10 +6,11 @@
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate><DataTemplate x:DataType="channel:ChannelItem">
           <Grid Classes="channelTab" Classes.selected="{Binding IsSelected}" ColumnDefinitions="*,28" MinWidth="126" MaxWidth="190" PointerPressed="OnTabPointerPressed">
-            <Button Classes="tab" Classes.selected="{Binding IsSelected}" Command="{Binding #Tabs.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}">
+            <Button Classes="tab" Classes.selected="{Binding IsSelected}" Classes.unread="{Binding HasUnread}" Command="{Binding #Tabs.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <Panel Width="15" Height="15"><PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" Opacity="0.65" IsVisible="{Binding !IsVoice}" /><PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" Opacity="0.65" IsVisible="{Binding IsVoice}" /></Panel>
                 <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                <Border Width="7" Height="7" CornerRadius="4" Background="#C45C56" IsVisible="{Binding HasMention}" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
             <Button Grid.Column="1" Classes="icon tabClose" Command="{Binding #Tabs.((vm:ShellViewModel)DataContext).CloseOpenChannel}" CommandParameter="{Binding}" AutomationProperties.Name="{i18n:T CloseChannelTab}" ToolTip.Tip="{Binding #Tabs.((vm:ShellViewModel)DataContext).CloseTabShortcutTip}"><PathIcon Data="{StaticResource IconClose}" Width="12" Height="12" /></Button>

@@ -171,10 +171,7 @@ public sealed partial class ShellViewModel
             ApplyInbox();
             return;
         }
-        if (lastReadId is Guid id)
-            await _cache.SaveReadAsync(session.Scope, channelId, id, _lifetime);
-        else
-            await _cache.SaveReadAsync(session.Scope, channelId, Guid.Empty, _lifetime);
+        await _cache.SaveReadAsync(session.Scope, channelId, lastReadId, _lifetime);
         var current = _inbox.GetValueOrDefault(channelId)
             ?? new ChannelInbox(channelId, null, null, null, null, ChannelNotify.All, null);
         _inbox[channelId] = current with { LastReadId = lastReadId is Guid value && value != Guid.Empty ? value : null };
@@ -230,7 +227,7 @@ public sealed partial class ShellViewModel
         if (SelectedInstance is { } instance)
         {
             instance.HasMention = Channels.Any(channel => channel.HasMention);
-            instance.HasUnread = Channels.Any(channel => channel.HasUnread || channel.HasMention);
+            instance.HasUnread = !instance.HasMention && Channels.Any(channel => channel.HasUnread);
         }
         Changed(nameof(ChannelHasUnread));
         Changed(nameof(ShowJumpBar));

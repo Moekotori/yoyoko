@@ -48,14 +48,14 @@ internal sealed class FileLocalePreference : ILocalePreference, IChatChrome, IVo
         locale.ApplyCulture();
     }
 
-    public static FileLocalePreference Load(string path)
+    public static FileLocalePreference Load(string path, IReadOnlyList<Locale>? extras = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         var stored = Read(path) ?? new PreferenceFile();
         var env = Environment.GetEnvironmentVariable("CHAT_LOCALE");
-        var locale = stored.Locale is { Length: > 0 } ? Locale.Parse(stored.Locale)
-            : env is { Length: > 0 } ? Locale.Parse(env)
-            : Locale.FromSystem();
+        var locale = stored.Locale is { Length: > 0 } ? Locale.Parse(stored.Locale, extras)
+            : env is { Length: > 0 } ? Locale.Parse(env, extras)
+            : Locale.FromSystem(extras);
         return new(path, stored, locale);
     }
 

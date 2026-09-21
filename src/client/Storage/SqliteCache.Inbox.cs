@@ -90,7 +90,7 @@ public sealed partial class SqliteCache
             command.ExecuteNonQuery();
         }, cancellationToken);
 
-    public Task SaveReadAsync(CacheScope scope, Guid channelId, Guid lastReadId, CancellationToken cancellationToken) =>
+    public Task SaveReadAsync(CacheScope scope, Guid channelId, Guid? lastReadId, CancellationToken cancellationToken) =>
         UpsertInbox(scope, channelId, cancellationToken, command =>
         {
             command.CommandText =
@@ -99,7 +99,7 @@ public sealed partial class SqliteCache
                 VALUES ($instance,$account,$channel,$read,'all')
                 ON CONFLICT(instance_id,account_id,channel_id) DO UPDATE SET last_read_id=$read
                 """;
-            command.Parameters.AddWithValue("$read", lastReadId.ToString("D"));
+            command.Parameters.AddWithValue("$read", lastReadId is Guid id && id != Guid.Empty ? id.ToString("D") : DBNull.Value);
         });
 
     public Task SaveNotifyAsync(CacheScope scope, Guid channelId, ChannelNotify notify, CancellationToken cancellationToken) =>

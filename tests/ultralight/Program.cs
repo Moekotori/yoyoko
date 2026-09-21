@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Headless;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Chat.App;
 using Chat.Core.Instances;
 using Chat.Core.Messaging;
@@ -62,6 +63,9 @@ shell.Draft = "preserved draft";
 using var file = new MemoryStream([1, 2, 3]);
 shell.QueueFilesAsync([new PickedFile("test.txt", "text/plain", file, 3)]).GetAwaiter().GetResult();
 shell.Settings.UltraLightEnabled = true;
+shell.OpenSettings.Execute(null);
+Pump(280);
+CheckSettingsLayout(window);
 using (var stored = JsonDocument.Parse(File.ReadAllText(Path.Combine(cacheDirectory, "preferences.json"))))
     Check(stored.RootElement.GetProperty("ultra_light_enabled").GetBoolean(), "preference persisted");
 
@@ -76,8 +80,9 @@ Check(ReferenceEquals(shell.SelectedInstance!.Context.Session, session) && sessi
     && session.Voice.ChannelId == channel && connects == 1 && leaves == 0, "voice remains joined without reconnect or leave");
 Check(shell.Draft == "preserved draft" && shell.PendingFiles.Count == 1 && file.CanRead, "draft and attachment stream retained");
 window.WindowState = WindowState.Normal;
-Pump(180);
+Pump(280);
 Check(window.Content is ShellSurface && !shell.IsUltraLightParked, "restore rebuilds actual view");
+CheckSettingsLayout(window);
 Check(ReferenceEquals(window.DataContext, shell) && connects == 1 && leaves == 0, "restore preserves session owner");
 window.Hide();
 Check(window.Content is null, "hide also unloads");
@@ -92,7 +97,7 @@ Check(connects == 1 && leaves == 0 && !session.Voice.SelfMute && !session.Voice.
 if (args is ["--screenshot", var screenshot])
 {
     window.WindowState = WindowState.Normal;
-    shell.OpenSettings.Execute(null);
+    if (!shell.ShowSettings) shell.OpenSettings.Execute(null);
     shell.Settings.UltraLightEnabled = true;
     Pump(250);
     using var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No settings frame");
@@ -106,6 +111,12 @@ static T Proxy<T>(Func<MethodInfo, object?[]?, object?> handler) where T : class
     var proxy = DispatchProxy.Create<T, PortProxy>();
     ((PortProxy)(object)proxy).Handler = handler;
     return proxy;
+}
+[MethodImpl(MethodImplOptions.NoInlining)]
+static void CheckSettingsLayout(Window window)
+{
+    var slot = window.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("channelSlot"));
+    Check(slot.Bounds.Width < 1 && slot.Opacity == 0, "settings collapses channel slot before and after restore");
 }
 [MethodImpl(MethodImplOptions.NoInlining)]
 static void CheckOff(Window window, ShellViewModel shell)

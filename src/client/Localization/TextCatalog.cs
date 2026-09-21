@@ -5,20 +5,67 @@ namespace Chat.Localization;
 
 public sealed class TextCatalog : ITextCatalog
 {
-    public string Get(Locale locale, string key, params object[] args)
+    private readonly ILanguagePacks? _packs;
+    private Locale _hotLocale;
+    private FrozenDictionary<string, string>? _hot;
+    public TextCatalog(ILanguagePacks? packs = null)
     {
-        var template = Lookup(locale, key) ?? Lookup(Locale.English, key) ?? key;
-        return args.Length == 0 ? template : string.Format(CultureInfo.CurrentCulture, template, args);
+        _packs = packs;
+        if (packs is not null) packs.Changed += () => { _hot = null; Changed?.Invoke(); };
     }
 
+    public event Action? Changed;
+    public IReadOnlyList<Locale> Available => _packs?.Available ?? Locale.Supported;
     public IReadOnlyCollection<string> Keys => English.Keys;
+
+    public string Get(Locale locale, string key)
+    {
+        var table = Hot(locale);
+        return table.TryGetValue(key, out var value) ? value : key;
+    }
+
+    public string Get(Locale locale, string key, params object[] args)
+    {
+        var template = Get(locale, key);
+        return args.Length == 0 ? template : string.Format(CultureInfo.CurrentCulture, template, args);
+    }
 
     public bool SameKeys() =>
         Keys.Count == Chinese.Count && Keys.Count == Japanese.Count &&
         Keys.All(Chinese.ContainsKey) && Keys.All(Japanese.ContainsKey);
 
-    private static string? Lookup(Locale locale, string key) =>
-        Table(locale).TryGetValue(key, out var value) ? value : null;
+    private FrozenDictionary<string, string> Hot(Locale locale)
+    {
+        if (_hot is not null && _hotLocale == locale) return _hot;
+        _hot = Merge(locale);
+        _hotLocale = locale;
+        return _hot;
+    }
+
+    private FrozenDictionary<string, string> Merge(Locale locale)
+    {
+        var builtIn = Table(locale);
+        var pack = _packs?.Find(locale.Code);
+        if (pack is null && ReferenceEquals(builtIn, English)) return English;
+        if (pack is null) return Merge(English, builtIn);
+        var table = new Dictionary<string, string>(English.Count, StringComparer.Ordinal);
+        foreach (var pair in English) table[pair.Key] = pair.Value;
+        if (pack.Fallback is { } fallback && !fallback.Equals(locale.Code, StringComparison.OrdinalIgnoreCase))
+            foreach (var pair in Table(Locale.Parse(fallback))) table[pair.Key] = pair.Value;
+        if (!ReferenceEquals(builtIn, English))
+            foreach (var pair in builtIn) table[pair.Key] = pair.Value;
+        foreach (var pair in pack.Strings)
+            if (English.ContainsKey(pair.Key)) table[pair.Key] = pair.Value;
+        return table.ToFrozenDictionary(StringComparer.Ordinal);
+    }
+
+    private static FrozenDictionary<string, string> Merge(FrozenDictionary<string, string> fallback, FrozenDictionary<string, string> overlay)
+    {
+        var table = new Dictionary<string, string>(fallback.Count, StringComparer.Ordinal);
+        foreach (var pair in fallback) table[pair.Key] = pair.Value;
+        foreach (var pair in overlay) table[pair.Key] = pair.Value;
+        return table.ToFrozenDictionary(StringComparer.Ordinal);
+    }
 
     private static FrozenDictionary<string, string> Table(Locale locale) => locale.Code switch
     {
@@ -33,6 +80,9 @@ public sealed class TextCatalog : ITextCatalog
     // One row per string: key, English, Chinese, Japanese. Add new copy here only.
     private static readonly (string Key, string En, string Zh, string Ja)[] Rows =
     [
+        (TextKey.NewMessages, "{0} new messages", "{0} 条新消息", "新しいメッセージ {0} 件"),
+        (TextKey.JumpToPresent, "Jump to latest", "回到最新", "最新へ移動"),
+        (TextKey.EditingMessage, "Editing message", "正在编辑消息", "メッセージを編集中"),
         (TextKey.UltraLightMode, "UltraLight", "UltraLight", "UltraLight"),
         (TextKey.UltraLightHelp, "Unload the interface when minimized or hidden; keep chats and voice connected.", "最小化或隐藏时卸载界面，保持消息与语音连接。", "最小化・非表示時に画面を解放し、チャットと音声の接続を維持します。"),
         ("RenameChannel", "Rename channel", "重命名频道", "チャンネル名を変更"),
@@ -267,7 +317,29 @@ public sealed class TextCatalog : ITextCatalog
         ("MentionMember", "Mention", "提及", "メンション"),
         ("KickMember", "Kick", "踢出", "キック"),
         ("BanMember", "Ban", "封禁", "BAN"),
-        ("Copied", "Copied", "已复制", "コピーしました")
+        ("Copied", "Copied", "已复制", "コピーしました"),
+        ("MarkAsRead", "Mark as read", "标为已读", "既読にする"),
+        ("MarkAsUnread", "Mark as unread", "标为未读", "未読にする"),
+        ("NotificationsAll", "All messages", "全部消息", "すべてのメッセージ"),
+        ("NotificationsMentions", "Mentions only", "仅 @", "メンションのみ"),
+        ("NotificationsMute", "Mute", "静音", "ミュート"),
+        ("NewMessages", "{0} new", "{0} 条新消息", "新着 {0}"),
+        ("JumpToPresent", "Jump to present", "跳到最新", "最新へ"),
+        ("NewMessagesDivider", "New messages", "新消息", "新着メッセージ"),
+        ("EditingMessage", "Editing message", "正在编辑消息", "メッセージを編集中"),
+        ("CancelEdit", "Cancel edit", "取消编辑", "編集をキャンセル"),
+        ("EditMessage", "Edit message", "编辑消息", "メッセージを編集"),
+        ("Edited", "edited", "已编辑", "編集済み"),
+        ("LanguagePacks", "Language packs", "语言包", "言語パック"),
+        ("ImportLanguagePack", "Import", "导入", "読み込む"),
+        ("ExportLanguageTemplate", "Export template", "导出模板", "テンプレートを書き出す"),
+        ("DropLanguagePack", "Drop a .json language pack here", "将 .json 语言包拖到这里", "JSON 言語パックをここにドロップ"),
+        ("LanguagePackHelp", "Export the template, translate it, then import to add a language or override built-in copy.", "导出模板翻译后导入，可新增语言或覆盖内置文案。", "テンプレートを書き出して翻訳し、読み込むと言語の追加や上書きができます。"),
+        ("LanguagePackImported", "Imported {0} ({1} strings).", "已导入 {0}（{1} 条）。", "{0} を読み込みました（{1} 件）。"),
+        ("LanguagePackInvalid", "This file is not a valid language pack.", "这不是有效的语言包。", "有効な言語パックではありません。"),
+        ("LanguagePackTooLarge", "Language pack exceeds 256 KiB.", "语言包超过 256 KiB。", "言語パックが 256 KiB を超えています。"),
+        ("RemoveLanguagePack", "Remove pack", "移除语言包", "パックを削除"),
+        ("CustomLanguagePack", "Custom pack applied", "已应用自定义语言包", "カスタムパックを適用中")
     ];
 
     private static readonly FrozenDictionary<string, string> English = Map(Rows, row => row.En);

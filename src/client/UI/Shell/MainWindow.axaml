@@ -7,6 +7,5 @@
   Title="{Binding ProductName}" Width="1200" Height="820" MinWidth="980" MinHeight="640"
   ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="42"
   Classes.reduceMotion="{Binding ReduceMotion}" motion:Motion.ReduceMotion="{Binding ReduceMotion}">
-  <Window.Styles><StyleInclude Source="avares://Chat.UI/Shell/ShellMotion.axaml" /></Window.Styles>
   <vm:ShellSurface />
 </Window>

@@ -19,27 +19,37 @@ public sealed class I18n : INotifyPropertyChanged, IDisposable
         _preference = preference;
         preference.Current.ApplyCulture();
         preference.Changed += OnPreferenceChanged;
+        catalog.Changed += Notify;
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     public Locale Locale => _preference.Current;
     public int Revision { get; private set; }
     public string this[string key] => Get(key);
-    public string Get(string key, params object[] args) => _catalog.Get(_preference.Current, key, args);
+    public string Get(string key) => _catalog.Get(_preference.Current, key);
+    public string Get(string key, params object[] args) =>
+        args.Length == 0 ? Get(key) : _catalog.Get(_preference.Current, key, args);
     public string Error(Exception exception) => exception switch
     {
         OperationCanceledException => Get(TextKey.Cancelled),
+        LanguagePackException pack => Get(pack.Key),
         ClientFault fault => Get(fault.Key, fault.Args),
         _ => exception.Message
     };
-    public void Dispose() => _preference.Changed -= OnPreferenceChanged;
+    public void Dispose()
+    {
+        _preference.Changed -= OnPreferenceChanged;
+        _catalog.Changed -= Notify;
+    }
 
     private void Replace(ITextCatalog catalog, ILocalePreference preference)
     {
         _preference.Changed -= OnPreferenceChanged;
+        _catalog.Changed -= Notify;
         _catalog = catalog;
         _preference = preference;
         preference.Current.ApplyCulture();
         preference.Changed += OnPreferenceChanged;
+        catalog.Changed += Notify;
         Notify();
     }
 

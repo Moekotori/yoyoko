@@ -27,8 +27,9 @@ public partial class DesktopApplication : Application
             var settings = AppSettings.Load();
             if (desktop.Args?.Contains("--design-preview") == true)
             {
-                var previewLocale = FileLocalePreference.Load(settings.PreferencesPath);
-                I18n.Attach(new TextCatalog(), previewLocale);
+                var previewPacks = LanguagePackStore.Open(Path.Combine(settings.DataDirectory, "locales"));
+                var previewLocale = FileLocalePreference.Load(settings.PreferencesPath, previewPacks.Available);
+                I18n.Attach(new TextCatalog(previewPacks), previewLocale);
                 _i18n = I18n.Presenter;
                 desktop.MainWindow = new DesignPreviewWindow(settings.ProductName, _i18n);
                 desktop.Exit += (_, _) => { _i18n.Dispose(); _lifetime.Dispose(); };
@@ -40,8 +41,9 @@ public partial class DesktopApplication : Application
             var vault = new FileCredentialVault(Path.GetDirectoryName(settings.CachePath)!);
             _instances = new(cache, new HttpInstanceDiscovery(_http));
             var media = WorkerMediaService.Create();
-            var locale = FileLocalePreference.Load(settings.PreferencesPath);
-            I18n.Attach(new TextCatalog(), locale);
+            var packs = LanguagePackStore.Open(Path.Combine(settings.DataDirectory, "locales"));
+            var locale = FileLocalePreference.Load(settings.PreferencesPath, packs.Available);
+            I18n.Attach(new TextCatalog(packs), locale);
             _i18n = I18n.Presenter;
             var apis = new ChatApiFactory();
             var voice = new MediaVoiceAdapter(media);
@@ -51,7 +53,7 @@ public partial class DesktopApplication : Application
                 () => new WebSocketConnection(), voice, defaultAddress);
             var shell = new ShellViewModel(_instances, cache, vault, new HttpInstanceDiscovery(_http),
                 apis, () => new WebSocketConnection(), voice,
-                locale, locale, locale, locale, locale, _i18n, settings.ProductName, _lifetime.Token, connection);
+                locale, locale, locale, locale, locale, _i18n, packs, settings.ProductName, _lifetime.Token, connection);
             var window = new MainWindow { DataContext = shell };
             desktop.MainWindow = window;
             var workspace = new DefaultWorkspace(connection);

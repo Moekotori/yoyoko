@@ -140,7 +140,7 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
         Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000003"), "陈默", "chenmo", false, image: chen));
         Channels.Add(new("日常", [
             new("林", "19:20", "下班了，来这里放空一下。", forest),
-            new("Mika", "19:22", "今天的晚风很舒服。", mika, true),
+            new("Mika", "19:22", "今天的晚风很舒服。试一下 **粗体**、`代码` 和 $E=mc^2$。", mika, true),
             new("林", "19:23", "我也刚回来。", forest),
             new("陈默", "19:26", "新的设计整理好了，发在隔壁频道。", chen),
             new("Mika", "19:28", "我去看看！", mika)

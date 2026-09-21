@@ -97,6 +97,10 @@ Check(catalog.Get(Locale.English, TextKey.Settings) == "Settings", "English sett
 Check(catalog.Get(Locale.Japanese, TextKey.Settings) == "設定", "Japanese settings label");
 Check(catalog.Get(Locale.Chinese, TextKey.ConnectedServer) == "已连接", "Chinese connected label");
 Check(catalog.Get(Locale.Chinese, TextKey.DisconnectServer) == "断开", "Chinese disconnect label");
+Check(MessageMarkup.MentionsUser("hey @Ada now", "ada"), "mention scan is case-insensitive");
+Check(!MessageMarkup.MentionsUser("mail ada@example.com", "ada"), "email is not a mention");
+Check(MessageMarkup.Parse("**bold** and `x`").Any(span => span.Kind == MarkupKind.Bold && span.Text == "bold"), "parses bold markup");
+Check(MessageMarkup.IdAfter(Guid.Parse("01950000-0000-7000-8000-000000000011"), Guid.Parse("01950000-0000-7000-8000-000000000010")), "UUIDv7 string order is chronological");
 Check(ProtocolVersion.HealthLivePath == "/health/live", "live health path");
 {
     var tcp = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
@@ -151,6 +155,17 @@ try
     Check(older.Items.Single().Content == "Hello, world" && older.Before is null, "next page does not duplicate boundary");
     Check((await cache.ReadPageAsync(scopeB, message.ChannelId, null, 50, default)).Items.Single().Content == "other instance", "instance cache isolation");
     Check((await cache.ReadPageAsync(accountB, message.ChannelId, null, 50, default)).Items.Count == 0, "account cache isolation");
+    await cache.NoteArrivalAsync(scopeA, newer, mentioned: true, default);
+    await cache.SaveDraftAsync(scopeA, message.ChannelId, "later", default);
+    await cache.SaveNotifyAsync(scopeA, message.ChannelId, ChannelNotify.Mentions, default);
+    var inbox = (await cache.LoadInboxAsync(scopeA, default)).Single(item => item.ChannelId == message.ChannelId);
+    Check(inbox.LastMessageId == newer.Id && inbox.Draft == "later" && inbox.Notify == ChannelNotify.Mentions, "inbox stores latest, draft and notify");
+    Check(inbox.HasMention && inbox.HasUnread(Guid.CreateVersion7()), "unacked mention and unread");
+    Check(!inbox.HasUnread(newer.AuthorId), "own latest message is not unread");
+    await cache.SaveReadAsync(scopeA, message.ChannelId, newer.Id, default);
+    inbox = (await cache.LoadInboxAsync(scopeA, default)).Single(item => item.ChannelId == message.ChannelId);
+    Check(!inbox.HasUnread(Guid.CreateVersion7()) && !inbox.HasMention, "ack clears unread and mention");
+    Check((await cache.LoadInboxAsync(scopeB, default)).All(item => item.ChannelId != message.ChannelId || item.Draft is null), "inbox is instance-scoped");
     await cache.SaveCommunityAsync(scopeA, new([], [], []), default);
     Check((await cache.ReadPageAsync(scopeA, message.ChannelId, null, 50, default)).Items.Count == 0, "removed channel messages are purged with community snapshot");
     Check((await cache.ReadPageAsync(scopeB, message.ChannelId, null, 50, default)).Items.Count == 1, "channel removal preserves other instance cache");

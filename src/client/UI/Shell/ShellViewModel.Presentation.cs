@@ -195,8 +195,8 @@ public sealed partial class ShellViewModel
         for (var i = 0; i < matches.Count; i++)
             if (i >= VisibleMessages.Count || VisibleMessages[i] != matches[i])
             {
-                var previous = VisibleMessages.IndexOf(matches[i]);
-                if (previous >= 0) VisibleMessages.Move(previous, i); else VisibleMessages.Insert(i, matches[i]);
+                var previousIndex = VisibleMessages.IndexOf(matches[i]);
+                if (previousIndex >= 0) VisibleMessages.Move(previousIndex, i); else VisibleMessages.Insert(i, matches[i]);
             }
         RefreshParticipants();
         InsertUnreadDivider(matches);

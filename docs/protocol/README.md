@@ -1,6 +1,6 @@
 # Protocol v1
 
-状态：发现、认证 REST、社区/频道、消息分页与发送、图片上传、Gateway READY / heartbeat / resume 已实现。消息编辑/删除、mention、reaction 仍为 **Not implemented yet**。
+状态：发现、认证 REST、社区/频道、消息分页与发送、作者编辑正文、图片上传、Gateway READY / heartbeat / resume 已实现。发送与编辑会解析 `@username` 写入 `mentions`。删除、reaction、回复仍为 **Not implemented yet**。未读/静音/草稿是客户端缓存，不进协议。
 
 ## 标识和编码
 
@@ -29,7 +29,8 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 | PATCH /servers/{id}/moderation | 社区屏蔽词与发言冷却（owner 或 MANAGE_MESSAGES）。`blocked_words` 最多 200 条、每词 1–32 字符；`cooldown_seconds` 0–600 |
 | GET/POST /servers/{id}/channels | 频道列表/创建 |
 | GET/POST /channels/{id}/messages | before 游标分页/发送（Idempotency-Key） |
-| PATCH/DELETE /channels/{id}/messages/{message_id} | 编辑/删除（**Not implemented yet**） |
+| PATCH /channels/{id}/messages/{message_id} | 作者编辑正文；写入 `edited_at`，按当前成员解析 `@username` 填 `mentions`，广播 `MESSAGE_UPDATE` |
+| DELETE /channels/{id}/messages/{message_id} | 删除（**Not implemented yet**） |
 | POST /attachments | 流式上传；校验大小、扩展名与 MIME；图片生成 256px 缩略图 |
 | GET /attachments/{id}/content | 签名 URL 或登录用户下载；存储 key 为随机 UUID |
 | GET /attachments/{id}/thumbnail | 图片 JPEG 缩略图 |
@@ -68,7 +69,7 @@ Phase 1：验证 token 和 origin（原生无 Origin 的客户端仍需 token）
 - READY / outbox commit / replay ordering 原子语义、15 分钟或 10,000 事件的有界 retention 在 Phase 1 实现，不创建无界内存事件队列。
 - reconnect cursor 必须按实例和账号独立。Redis 驱逐造成 replay 缺失时走 invalid_session，不能谎称恢复成功。
 
-计划事件：READY、MESSAGE_CREATE/UPDATE/DELETE、CHANNEL_CREATE/UPDATE/DELETE、SERVER_CREATE/UPDATE、MEMBER_JOIN/LEAVE、USER_UPDATE、PRESENCE_UPDATE、TYPING_START、VOICE_STATE_UPDATE。User 含可选 `avatar`（download/thumbnail URL、`animated`）；JPEG/PNG/GIF/WebP，GIF/APNG/动态 WebP 为 animated，上限 8 MiB、边长 4096。`VOICE_STATE_UPDATE` 已实现：`channel_id` 为 null 表示离开。语音状态含 `audio_quality`。音质档位：`standard` 48 kHz 单声道 64 kbps、`high` 立体声 128 kbps、`very_high` 立体声 384 kbps、`studio` 510 kbps（Opus 上限）。用户在频道上限内自选发送音质；加入响应带 `audio` 编码参数与 `max_audio_quality`。降低上限时服务端钳制已在频道内的发送档位并广播 `VOICE_STATE_UPDATE`。typing 不持久化；presence/voice 高频状态不写 PostgreSQL。语音状态保存在 API 进程内存中；单进程模块化单体足够，多节点需 Redis。消息含 text/system/encrypted、reply、mention、attachment、embed、reaction；见 Message DTO。
+计划事件：READY、MESSAGE_CREATE/UPDATE/DELETE、CHANNEL_CREATE/UPDATE/DELETE、SERVER_CREATE/UPDATE、MEMBER_JOIN/LEAVE、USER_UPDATE、PRESENCE_UPDATE、TYPING_START、VOICE_STATE_UPDATE。MESSAGE_CREATE 与 MESSAGE_UPDATE 已实现。User 含可选 `avatar`（download/thumbnail URL、`animated`）；JPEG/PNG/GIF/WebP，GIF/APNG/动态 WebP 为 animated，上限 8 MiB、边长 4096。`VOICE_STATE_UPDATE` 已实现：`channel_id` 为 null 表示离开。语音状态含 `audio_quality`。音质档位：`standard` 48 kHz 单声道 64 kbps、`high` 立体声 128 kbps、`very_high` 立体声 384 kbps、`studio` 510 kbps（Opus 上限）。用户在频道上限内自选发送音质；加入响应带 `audio` 编码参数与 `max_audio_quality`。降低上限时服务端钳制已在频道内的发送档位并广播 `VOICE_STATE_UPDATE`。typing 不持久化；presence/voice 高频状态不写 PostgreSQL。语音状态保存在 API 进程内存中；单进程模块化单体足够，多节点需 Redis。消息含 text/system/encrypted、reply、mention、attachment、embed、reaction；见 Message DTO。
 
 官方与自托管走同一套协议与版本协商；无官方专用权限后门。当前不做 federation；未来 Web/移动端不需依赖 C# 逻辑。
 

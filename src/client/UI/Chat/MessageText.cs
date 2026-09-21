@@ -12,6 +12,8 @@ public sealed class MessageText : SelectableTextBlock
     public static readonly StyledProperty<string?> MarkdownProperty =
         AvaloniaProperty.Register<MessageText, string?>(nameof(Markdown));
 
+    private static readonly AttachedProperty<bool> SpoilerProperty =
+        AvaloniaProperty.RegisterAttached<MessageText, Run, bool>("Spoiler");
     private bool _spoilersOpen;
 
     static MessageText()
@@ -41,15 +43,19 @@ public sealed class MessageText : SelectableTextBlock
     {
         if (Inlines is null) return false;
         foreach (var inline in Inlines)
-            if (inline is Run { Tag: "spoiler" }) return true;
+            if (inline is Run run && run.GetValue(SpoilerProperty)) return true;
         return false;
     }
 
     private void Rebuild()
     {
-        Inlines?.Clear();
-        Inlines ??= [];
         var content = Markdown;
+        if (Inlines is null)
+        {
+            Text = content ?? "";
+            return;
+        }
+        Inlines.Clear();
         if (string.IsNullOrEmpty(content))
         {
             Text = "";
@@ -77,7 +83,7 @@ public sealed class MessageText : SelectableTextBlock
                 run.Background = new SolidColorBrush(Color.FromRgb(36, 36, 36));
                 break;
             case MarkupKind.Spoiler:
-                run.Tag = "spoiler";
+                run.SetValue(SpoilerProperty, true);
                 if (_spoilersOpen)
                 {
                     run.Background = new SolidColorBrush(Color.FromRgb(48, 48, 48));
@@ -95,7 +101,7 @@ public sealed class MessageText : SelectableTextBlock
                 break;
             case MarkupKind.Link:
                 run.Foreground = new SolidColorBrush(Color.FromRgb(140, 176, 214));
-                run.TextDecorations = TextDecorations.Underline;
+                run.TextDecorations = global::Avalonia.Media.TextDecorations.Underline;
                 break;
         }
         return run;

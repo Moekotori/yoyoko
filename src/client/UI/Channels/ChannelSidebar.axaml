@@ -10,6 +10,11 @@
     <Style Selector="Button.channel.selected TextBlock"><Setter Property="FontWeight" Value="Medium" /><Setter Property="Foreground" Value="#E8E8E8" /></Style>
     <Style Selector="Button.channel.connected PathIcon"><Setter Property="Foreground" Value="#C8C8C8" /></Style>
     <Style Selector="Button.channel.connected TextBlock"><Setter Property="Foreground" Value="#E8E8E8" /></Style>
+    <Style Selector="Button.channel.unread TextBlock"><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="#F2F2F2" /></Style>
+    <Style Selector="Button.channel.muted TextBlock"><Setter Property="Foreground" Value="#6E6E6E" /><Setter Property="FontWeight" Value="Normal" /></Style>
+    <Style Selector="Button.channel.mention TextBlock"><Setter Property="Foreground" Value="#E8E8E8" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+    <Style Selector="Border.unreadMark"><Setter Property="Width" Value="3" /><Setter Property="Height" Value="8" /><Setter Property="CornerRadius" Value="0,2,2,0" /><Setter Property="Background" Value="#E8E8E8" /><Setter Property="HorizontalAlignment" Value="Left" /></Style>
+    <Style Selector="Border.mentionMark"><Setter Property="Width" Value="8" /><Setter Property="Height" Value="8" /><Setter Property="CornerRadius" Value="4" /><Setter Property="Background" Value="#C45C56" /><Setter Property="VerticalAlignment" Value="Center" /></Style>
   </UserControl.Styles>
   <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">

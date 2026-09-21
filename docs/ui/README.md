@@ -76,7 +76,7 @@ Default chords:
 | Mute / deafen (in voice) | ⌘ ⇧ M / ⌘ ⇧ D | Ctrl Shift M / Ctrl Shift D |
 | Close overlay | Escape | Escape |
 
-⌘ K opens a filterable channel list over the workspace; typing filters by name, ↑/↓ moves the highlight, Enter opens the channel, Escape or a click on the dimmed backdrop closes it. Selecting a text channel focuses the composer. Typing while focus is not in a field inserts into the composer. Middle-click closes a channel tab. Community-menu fields submit with Enter.
+⌘ K opens a filterable channel list over the workspace; typing filters by name, ↑/↓ moves the highlight, Enter opens a text channel or joins a voice channel, Escape or a click on the dimmed backdrop closes it. Selecting a text channel focuses the composer. Typing while focus is not in a field inserts into the composer. Middle-click closes a channel tab. Community-menu fields submit with Enter.
 
 ## Automatic connection and account settings (2026-09-21)
 
@@ -134,7 +134,7 @@ See `../../design-qa.md` for the visual comparison and screenshot evidence.
 
 ### 侧栏与频道管理（2026-09-21）
 
-已实现紧凑频道分组、2 px 选中行圆角和分组旁的新增按钮。所有者可添加文字/语音频道，右键打开、重命名、添加同类频道或删除。添加与重命名直接在侧栏原位输入，Enter 保存、Esc 取消，无遮罩和居中弹窗；删除在原行展开确认，失败就地显示错误，创建语音频道不会自动加入通话。管理请求走 HTTP，变更通过 Gateway 与 SQLite 同步。
+已实现紧凑频道分组、2 px 选中行圆角和分组旁的新增按钮。所有者可添加文字/语音频道，文字频道右键打开、重命名、添加同类频道或删除。语音频道双击加入，右键「设置」打开设备/音质页；加入后文字频道仍留在主栏，成员列在该语音频道下方，账号条上方可离开。添加与重命名直接在侧栏原位输入，Enter 保存、Esc 取消，无遮罩和居中弹窗；删除在原行展开确认，失败就地显示错误，创建语音频道不会自动加入通话。管理请求走 HTTP，变更通过 Gateway 与 SQLite 同步。
 
 成员栏使用 52 px 标题、会话作者计数（空时隐藏）和悬停行。没有头像时显示名字首字，不表示在线或社区成员名单。左键打开用户卡片（显示名、用户名、用户 ID），右键复制或提及；社区所有者对其他人可见踢出/封禁，这两项目前提示尚未实现。
 

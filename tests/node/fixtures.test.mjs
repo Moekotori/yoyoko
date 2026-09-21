@@ -49,6 +49,14 @@ test("server fixture carries optional moderation fields", () => {
   assert.match(server.id, /^[0-9a-f-]{36}$/);
 });
 
+test("message-update fixture keeps seq encoding and edited_at", () => {
+  const envelope = JSON.parse(readFixture("message-update.json"));
+  assert.equal(envelope.event, "MESSAGE_UPDATE");
+  assert.equal(typeof envelope.seq, "string");
+  assert.equal(envelope.data.content, "Hello, edited");
+  assert.equal(typeof envelope.data.edited_at, "string");
+});
+
 test("rtc-token fixture is a closed contract shape", () => {
   const token = JSON.parse(readFixture("rtc-token.json"));
   assert.equal(typeof token.token, "string");

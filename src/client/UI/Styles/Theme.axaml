@@ -66,6 +66,7 @@
   <Style Selector="Button.channel.selected"><Setter Property="Background" Value="{StaticResource SelectedBrush}" /><Setter Property="Foreground" Value="#EEEEEE" /></Style>
   <Style Selector="Button.tab"><Setter Property="Height" Value="41" /><Setter Property="Padding" Value="16,0,8,0" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
   <Style Selector="Button.tab.selected"><Setter Property="Foreground" Value="#EEEEEE" /></Style>
+  <Style Selector="Button.tab.unread TextBlock"><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="#F2F2F2" /></Style>
   <Style Selector="Grid.channelTab.selected"><Setter Property="Background" Value="{StaticResource CanvasBrush}" /></Style>
   <Style Selector="Button.tabClose"><Setter Property="Opacity" Value="0" /><Setter Property="Width" Value="22" /><Setter Property="Height" Value="24" /><Setter Property="Padding" Value="5" /></Style>
   <Style Selector="Grid.channelTab:pointerover Button.tabClose"><Setter Property="Opacity" Value="1" /></Style>
@@ -74,6 +75,14 @@
   <Style Selector="Button.primary"><Setter Property="Background" Value="{StaticResource AccentBrush}" /><Setter Property="Foreground" Value="#212121" /><Setter Property="Padding" Value="16,10" /></Style>
   <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#F0F0F0" /><Setter Property="Foreground" Value="#212121" /></Style>
   <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#BBBBBB" /><Setter Property="Foreground" Value="#212121" /></Style>
+  <Style Selector="Button.messageLink">
+    <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" />
+    <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" /><Setter Property="Foreground" Value="#8CB4FF" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.messageLink:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#B7D0FF" /></Style>
+  <Style Selector="Button.messageLink:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#8CB4FF" /></Style>
   <Style Selector="Button.send"><Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="Background" Value="#343434" /></Style>
   <Style Selector="Button.send:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#717171" /></Style>
   <Style Selector="TextBox">

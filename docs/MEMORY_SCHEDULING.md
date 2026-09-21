@@ -56,4 +56,8 @@
 
 聚焦入口：`dotnet run --project tests/ultralight -c Release`。测试使用真正的 App/ShellSurface 与离屏窗口，验证默认关闭、持久化、卸载后弱引用回收、重建、隐藏时关闭开关、草稿/附件流保留。语音使用真正的 VoiceRuntime 和记录调用次数的 API/媒体端口：加入后经历隐藏/恢复，Connect=1、Leave=0，频道和 mute/deafen 不变。测试内的强制 GC 仅用于证明视图可回收，产品无此调用。
 
-开关已完成离屏渲染检查；此结果不等于真实设备/RTP 音频连续性、三平台恢复延迟或新一轮 RSS A/B 验收。
+开关已完成离屏渲染和 macOS 原生窗口检查：独立空缓存、回环拒绝连接的 Release 开发 host（PID 4095）中，开关 on/off 的辅助功能状态准确；启用后触发最小化，工具再次读取唤回窗口时原页面元素被新树替换且保留设置页，关闭后相同行为保留原页面树。记录为原生卸载/恢复 smoke，不把工具的自动唤回延迟当成恢复耗时。进程日志无错误。
+
+最后一次完整 `dotnet run --project tests/ultralight -c Release --no-restore`（含 App/UI 构建）通过，模块边界检查通过。此前并行消息改动的 Run 元数据、类型限定、局部变量和三语键编译错误已作最小修正后重新验证。
+
+以上不等于真实设备/RTP 音频连续性、三平台恢复延迟或新一轮 RSS A/B 验收。

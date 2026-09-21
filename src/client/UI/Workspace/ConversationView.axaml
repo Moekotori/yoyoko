@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Workspace" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization" xmlns:markup="using:Chat.UI.Markup"
   x:Class="Chat.UI.Workspace.ConversationView" x:DataType="vm:WorkspaceViewModel" x:Name="Conversation">
   <UserControl.Styles>
     <Style Selector="ListBoxItem"><Setter Property="Padding" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Focusable" Value="False" /></Style>
@@ -45,7 +45,7 @@
                     <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
                     <TextBlock Text="{Binding Time}" Foreground="{StaticResource QuietTextBrush}" FontSize="11" VerticalAlignment="Center" />
                   </StackPanel>
-                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="16" LineHeight="25" Foreground="#CCCCCC" />
+                  <markup:MessageBody Text="{Binding Text}" EmSize="16" />
                   <Button IsVisible="{Binding HasReaction}" Background="#343434" BorderBrush="#505050" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" HorizontalAlignment="Left" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="{i18n:T ReactionUnavailable}">
                     <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{StaticResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="#D8D8D8" /></StackPanel>
                   </Button>

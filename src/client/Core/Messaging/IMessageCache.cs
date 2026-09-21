@@ -21,7 +21,7 @@ public interface IMessageCache
     Task<string?> GetSettingAsync(string key, CancellationToken cancellationToken);
     Task<IReadOnlyList<ChannelInbox>> LoadInboxAsync(CacheScope scope, CancellationToken cancellationToken);
     Task NoteArrivalAsync(CacheScope scope, MessageDto message, bool mentioned, CancellationToken cancellationToken);
-    Task SaveReadAsync(CacheScope scope, Guid channelId, Guid lastReadId, CancellationToken cancellationToken);
+    Task SaveReadAsync(CacheScope scope, Guid channelId, Guid? lastReadId, CancellationToken cancellationToken);
     Task SaveNotifyAsync(CacheScope scope, Guid channelId, ChannelNotify notify, CancellationToken cancellationToken);
     Task SaveDraftAsync(CacheScope scope, Guid channelId, string? draft, CancellationToken cancellationToken);
 }

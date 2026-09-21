@@ -239,4 +239,26 @@ public static class TextKey
     public const string KickMember = "KickMember";
     public const string BanMember = "BanMember";
     public const string Copied = "Copied";
+    public const string MarkAsRead = "MarkAsRead";
+    public const string MarkAsUnread = "MarkAsUnread";
+    public const string NotificationsAll = "NotificationsAll";
+    public const string NotificationsMentions = "NotificationsMentions";
+    public const string NotificationsMute = "NotificationsMute";
+    public const string NewMessages = "NewMessages";
+    public const string JumpToPresent = "JumpToPresent";
+    public const string NewMessagesDivider = "NewMessagesDivider";
+    public const string EditingMessage = "EditingMessage";
+    public const string CancelEdit = "CancelEdit";
+    public const string EditMessage = "EditMessage";
+    public const string Edited = "Edited";
+    public const string LanguagePacks = "LanguagePacks";
+    public const string ImportLanguagePack = "ImportLanguagePack";
+    public const string ExportLanguageTemplate = "ExportLanguageTemplate";
+    public const string DropLanguagePack = "DropLanguagePack";
+    public const string LanguagePackHelp = "LanguagePackHelp";
+    public const string LanguagePackImported = "LanguagePackImported";
+    public const string LanguagePackInvalid = "LanguagePackInvalid";
+    public const string LanguagePackTooLarge = "LanguagePackTooLarge";
+    public const string RemoveLanguagePack = "RemoveLanguagePack";
+    public const string CustomLanguagePack = "CustomLanguagePack";
 }
