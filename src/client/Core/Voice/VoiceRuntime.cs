@@ -139,10 +139,11 @@ public sealed class VoiceRuntime(IChatApi api, IVoiceMedia media, Guid selfUserI
 
     public async Task SetRouteAsync(AudioRoute route, CancellationToken cancellationToken)
     {
+        var previous = Route;
         Route = route;
         if (!Joined) { Changed?.Invoke(); return; }
         try { await media.SetDevicesAsync(route, cancellationToken); MediaError = null; }
-        catch (Exception exception) { MediaError = exception.Message; throw; }
+        catch (Exception exception) { Route = previous; MediaError = exception.Message; throw; }
         finally { Changed?.Invoke(); }
     }
 

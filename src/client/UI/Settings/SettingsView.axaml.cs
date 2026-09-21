@@ -26,6 +26,12 @@ public partial class SettingsView : UserControl
     {
         if (e.Key == Key.Escape && DataContext is SettingsViewModel settings)
         {
+            if (settings.Shortcuts.IsRecording)
+            {
+                settings.Shortcuts.CancelCapture();
+                e.Handled = true;
+                return;
+            }
             settings.Close.Execute(null);
             e.Handled = true;
         }

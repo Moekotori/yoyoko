@@ -1,5 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:Chat.UI.Voice" xmlns:i18n="using:Chat.UI.Localization"
  x:Class="Chat.UI.Voice.AccountDevicePicker" x:DataType="vm:VoiceDevicesViewModel" Width="300">
+  <UserControl.Styles>
+    <Style Selector="ComboBox /template/ Popup#PART_Popup"><Setter Property="ShouldUseOverlayLayer" Value="True" /></Style>
+  </UserControl.Styles>
   <StackPanel Spacing="10">
     <TextBlock Text="{i18n:T InputDevice}" FontWeight="Medium" />
     <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedInput}" HorizontalAlignment="Stretch" AutomationProperties.Name="{i18n:T InputDevice}" CornerRadius="2">

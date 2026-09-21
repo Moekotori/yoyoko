@@ -227,4 +227,12 @@ public static class TextKey
     public const string ShortcutPressKey = "ShortcutPressKey";
     public const string ShortcutUnbound = "ShortcutUnbound";
     public const string ShortcutResetAll = "ShortcutResetAll";
+    public const string You = "You";
+    public const string UserId = "UserId";
+    public const string CopyUserId = "CopyUserId";
+    public const string CopyUsername = "CopyUsername";
+    public const string MentionMember = "MentionMember";
+    public const string KickMember = "KickMember";
+    public const string BanMember = "BanMember";
+    public const string Copied = "Copied";
 }

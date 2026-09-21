@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -29,6 +30,8 @@ public partial class ChatView : UserControl
     public ChatView()
     {
         InitializeComponent();
+        // Tunnel so Enter is seen before TextBox.AcceptsReturn inserts a newline.
+        Composer.AddHandler(InputElement.KeyDownEvent, OnComposerKeyDown, RoutingStrategies.Tunnel);
         AttachedToVisualTree += (_, _) => Subscribe();
         DetachedFromVisualTree += (_, _) => Unsubscribe();
         DragDrop.SetAllowDrop(this, true);
@@ -187,21 +190,31 @@ public partial class ChatView : UserControl
 
     private async void OnComposerKeyDown(object? sender, KeyEventArgs e)
     {
-        if (DataContext is not ShellViewModel shell) return;
+        if (e.Handled || DataContext is not ShellViewModel shell) return;
         var chord = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
         if (e.Key == Key.V && chord)
         {
             if (await TryPasteFilesAsync(shell)) e.Handled = true;
             return;
         }
-        if (e.Key != Key.Enter) return;
+        if (e.Key is Key.ImeProcessed or Key.DeadCharProcessed) return;
+        if (!IsComposerEnter(e) || IsComposerComposing()) return;
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var send = shell.EnterToSend ? !shift && !chord : chord;
         if (!send) return;
+        var live = Composer.Text ?? "";
+        if (!string.Equals(live, shell.Draft, StringComparison.Ordinal))
+            shell.Draft = live;
         e.Handled = true;
         if (shell.CanSend && shell.Send.CanExecute(null))
             shell.Send.Execute(null);
     }
+
+    private static bool IsComposerEnter(KeyEventArgs e) =>
+        e.Key is Key.Enter || e.PhysicalKey is PhysicalKey.Enter or PhysicalKey.NumPadEnter;
+
+    private bool IsComposerComposing() =>
+        Composer.GetVisualDescendants().OfType<TextPresenter>().FirstOrDefault() is { PreeditText.Length: > 0 };
 
     private async Task<bool> TryPasteFilesAsync(ShellViewModel shell)
     {

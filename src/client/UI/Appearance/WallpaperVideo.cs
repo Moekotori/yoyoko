@@ -74,7 +74,6 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
         {
             if (_disposed || size == _size) return;
             _size = size;
-            _frame?.Dispose();
             _frame = null;
             if (!_paused) Start();
         }
@@ -87,7 +86,7 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
             if (_disposed) return;
             _disposed = true;
             StopProcess();
-            _frame?.Dispose();
+            _frame = null;
         }
     }
 
@@ -108,7 +107,6 @@ internal sealed class WallpaperFfmpeg : IWallpaperPlayback
             RedirectStandardInput = true
         };
         Add(start, "-hide_banner", "-loglevel", "error", "-nostdin");
-        if (OperatingSystem.IsMacOS()) Add(start, "-hwaccel", "videotoolbox");
         Add(start, "-stream_loop", "-1", "-i", _path, "-an",
             "-vf", $"scale={size.Width}:{size.Height}:force_original_aspect_ratio=increase:flags=fast_bilinear,crop={size.Width}:{size.Height},fps={WallpaperBudget.MaxFps}",
             "-f", "mjpeg", "-q:v", "6", "pipe:1");

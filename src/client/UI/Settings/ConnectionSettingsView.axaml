@@ -7,7 +7,7 @@
         <StackPanel Spacing="10" Margin="0,0,0,8">
           <TextBlock Text="{i18n:T InstanceAddress}" FontSize="14" />
           <TextBox Classes="settingsField" Text="{Binding Address}" IsEnabled="{Binding !IsBusy}"
-            Watermark="{i18n:T InstanceAddressPlaceholder}"
+            PlaceholderText="{i18n:T InstanceAddressPlaceholder}"
             AutomationProperties.Name="{i18n:T InstanceAddress}" />
         </StackPanel>
         <StackPanel IsVisible="{Binding IsConnected}">
@@ -43,9 +43,10 @@
     <StackPanel Orientation="Horizontal" Spacing="12">
       <Button Classes="primary" Content="{i18n:T ConnectServer}" Command="{Binding Connect}"
         IsVisible="{Binding ShowConnect}" IsEnabled="{Binding CanConnect}" MinWidth="104" Height="38"
-        HorizontalAlignment="Left" FontWeight="Medium" />
+        HorizontalAlignment="Left" FontWeight="Medium" AutomationProperties.Name="{i18n:T ConnectServer}" />
       <Button Classes="settingsSecondary" Content="{i18n:T DisconnectServer}" Command="{Binding Disconnect}"
-        IsVisible="{Binding ShowDisconnect}" IsEnabled="{Binding CanDisconnect}" MinWidth="104" Height="38" />
+        IsVisible="{Binding ShowDisconnect}" IsEnabled="{Binding CanDisconnect}" MinWidth="104" Height="38"
+        AutomationProperties.Name="{i18n:T DisconnectServer}" />
     </StackPanel>
     <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Classes="muted" IsVisible="{Binding HasStatus}" />
   </StackPanel>

@@ -14,6 +14,7 @@ public sealed partial class ShellViewModel
 
     private void OpenConnectionSettings()
     {
+        Connection.Bind(SelectedInstance?.Context);
         Settings.Section = SettingsSection.Connection;
         ShowSettings = true;
     }

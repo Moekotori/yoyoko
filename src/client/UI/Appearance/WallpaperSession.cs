@@ -15,14 +15,18 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     private readonly IAppearancePreference _appearance;
     private readonly IChatChrome _chrome;
     private readonly I18n _text;
-    private readonly object _gate = new();
     private Bitmap? _frame;
     private IWallpaperPlayback? _playback;
     private PixelSize _viewport;
     private string _error = "";
     private bool _paused = true;
+    private bool _resourceSuspended;
+    private bool _resourceAnimationPaused;
     private bool _disposed;
     private int _load;
+    private int _appliedBlur = int.MinValue;
+    private bool _appliedEnabled;
+    private string _appliedFile = "";
     private DispatcherTimer? _resize;
     private DispatcherTimer? _blur;
 
@@ -35,12 +39,11 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         Clear = new(_ => Remove());
         _appearance.Changed += OnAppearance;
         _chrome.Changed += OnChrome;
-        _text.PropertyChanged += OnText;
         Notify();
     }
 
     public Func<Task<PickedFile?>>? PickFile { get; set; }
-    public ActionCommand Choose { get; }
+    public AsyncCommand Choose { get; }
     public ActionCommand Clear { get; }
     public Bitmap? Frame { get => _frame; private set { if (ReferenceEquals(_frame, value)) return; _frame = value; Changed(); Changed(nameof(IsActive)); } }
     public bool IsActive => _appearance.WallpaperEnabled && Frame is not null;
@@ -80,7 +83,26 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     public void SetPaused(bool paused)
     {
         _paused = paused;
-        _playback?.SetPaused(paused || _chrome.ReduceMotion);
+        _playback?.SetPaused(paused || _resourceAnimationPaused || _chrome.ReduceMotion);
+    }
+
+    public void SetResourceBudget(bool suspended, bool animate)
+    {
+        var wasSuspended = _resourceSuspended;
+        _resourceSuspended = suspended;
+        _resourceAnimationPaused = !animate;
+        if (suspended)
+        {
+            ++_load; // Any already-decoding frame is stale on delivery.
+            _resize?.Stop();
+            _blur?.Stop();
+            var ownedFrame = _playback is null ? _frame : null;
+            Frame = null;
+            StopPlayback();
+            ownedFrame?.Dispose();
+        }
+        else if (wasSuspended) Reload();
+        else OnChrome();
     }
 
     public async Task ImportAsync(PickedFile file)
@@ -118,12 +140,10 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         _disposed = true;
         _appearance.Changed -= OnAppearance;
         _chrome.Changed -= OnChrome;
-        _text.PropertyChanged -= OnText;
         _resize?.Stop();
         _blur?.Stop();
         StopPlayback();
-        if (_frame is not null && (_playback is null))
-            _frame.Dispose();
+        _frame?.Dispose();
         _frame = null;
         _appearance.Flush();
     }
@@ -153,6 +173,9 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
     private void OnAppearance()
     {
         Notify();
+        if (_appliedBlur == _appearance.WallpaperBlur && _appliedEnabled == _appearance.WallpaperEnabled &&
+            _appliedFile == _appearance.WallpaperFile)
+            return;
         _blur ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
         _blur.Tick -= OnBlur;
         _blur.Tick += OnBlur;
@@ -172,21 +195,19 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         Reload();
     }
 
-    private void OnChrome() => _playback?.SetPaused(_paused || _chrome.ReduceMotion);
-
-    private void OnText(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (HasError) Error = _text.Get(TextKey.WallpaperVideoUnavailable);
-    }
+    private void OnChrome() => _playback?.SetPaused(_paused || _resourceAnimationPaused || _chrome.ReduceMotion);
 
     private void Reload()
     {
-        if (_disposed) return;
+        if (_disposed || _resourceSuspended) return;
         var id = ++_load;
         var enabled = _appearance.WallpaperEnabled;
         var relative = _appearance.WallpaperFile;
         var blur = _appearance.WallpaperBlur;
         var viewport = _viewport;
+        _appliedBlur = blur;
+        _appliedEnabled = enabled;
+        _appliedFile = relative;
         if (!enabled || relative.Length == 0 || viewport.Width < 16)
         {
             StopPlayback();
@@ -216,25 +237,10 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
                 Dispatcher.UIThread.Post(() => StartVideo(id, path, size));
                 return;
             }
-            if (WallpaperBudget.IsImage(extension))
+            if (IsAnimated(path))
             {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    if (id != _load) return;
-                    var motion = WallpaperRaster.TryMotion(path, size, blur, frame =>
-                    {
-                        if (id != _load) return;
-                        Present(frame, true);
-                    });
-                    if (motion is null) return;
-                    StopPlayback();
-                    IsVideo = false;
-                    _playback = motion;
-                    motion.Start();
-                    motion.SetPaused(_paused || _chrome.ReduceMotion);
-                    Error = "";
-                    Notify();
-                });
+                Dispatcher.UIThread.Post(() => StartMotion(id, path, size, blur));
+                return;
             }
             var bitmap = WallpaperRaster.Decode(path, size, blur);
             Dispatcher.UIThread.Post(() =>
@@ -242,7 +248,7 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
                 if (id != _load) { bitmap.Dispose(); return; }
                 StopPlayback();
                 IsVideo = false;
-                Present(bitmap, false);
+                Present(bitmap);
                 Error = "";
                 Notify();
             });
@@ -259,6 +265,54 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         }
     }
 
+    private static bool IsAnimated(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var codec = SkiaSharp.SKCodec.Create(stream);
+        return codec is { FrameCount: > 1 };
+    }
+
+    private void StartMotion(int id, string path, PixelSize size, int blur)
+    {
+        if (id != _load) return;
+        var motion = WallpaperRaster.TryMotion(path, size, blur, frame =>
+        {
+            if (id != _load) return;
+            Present(frame);
+        });
+        if (motion is null)
+        {
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var bitmap = WallpaperRaster.Decode(path, size, blur);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (id != _load) { bitmap.Dispose(); return; }
+                        StopPlayback();
+                        IsVideo = false;
+                        Present(bitmap);
+                        Error = "";
+                        Notify();
+                    });
+                }
+                catch (Exception exception)
+                {
+                    Dispatcher.UIThread.Post(() => { if (id == _load) OnError(exception); });
+                }
+            });
+            return;
+        }
+        StopPlayback();
+        IsVideo = false;
+        _playback = motion;
+        motion.Start();
+        motion.SetPaused(_paused || _resourceAnimationPaused || _chrome.ReduceMotion);
+        Error = "";
+        Notify();
+    }
+
     private void StartVideo(int id, string path, PixelSize size)
     {
         if (id != _load) return;
@@ -267,7 +321,7 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
         var playback = WallpaperVideo.TryOpen(path, size, frame =>
         {
             if (id != _load) return;
-            Present(frame, true);
+            Present(frame);
         }, message =>
         {
             if (id != _load) return;
@@ -281,16 +335,16 @@ public sealed class WallpaperSession : ObservableObject, IDisposable
             return;
         }
         _playback = playback;
-        playback.SetPaused(_paused || _chrome.ReduceMotion);
+        playback.SetPaused(_paused || _resourceAnimationPaused || _chrome.ReduceMotion);
         Error = "";
         Notify();
     }
 
-    private void Present(Bitmap frame, bool reused)
+    private void Present(Bitmap frame)
     {
         var previous = _frame;
         Frame = frame;
-        if (!reused && previous is not null && !ReferenceEquals(previous, frame))
+        if (previous is not null && !ReferenceEquals(previous, frame))
             previous.Dispose();
         Changed(nameof(IsActive));
     }

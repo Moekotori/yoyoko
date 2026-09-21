@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:chat="using:Chat.UI.Chat" xmlns:c="using:Chat.UI.Components" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Chat.UserCard" x:DataType="chat:MemberProfile">
+  <StackPanel Width="248" Spacing="12">
+    <c:Avatar Width="64" Height="64" HorizontalAlignment="Left" Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" />
+    <StackPanel Spacing="2">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{i18n:T You}" Classes="quiet" FontSize="12" VerticalAlignment="Center" IsVisible="{Binding IsSelf}" />
+      </StackPanel>
+      <SelectableTextBlock Text="{Binding Handle}" Foreground="{StaticResource MutedTextBrush}" FontSize="13" IsVisible="{Binding HasHandle}" />
+    </StackPanel>
+    <Border Height="1" Background="{StaticResource DividerBrush}" />
+    <StackPanel Spacing="6">
+      <TextBlock Text="{i18n:T UserId}" Classes="section" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+        <SelectableTextBlock Text="{Binding IdText}" FontSize="12" FontFamily="Menlo, Consolas, monospace" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="icon" Width="28" Height="28" Padding="6" Click="CopyId"
+          ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
+          <PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" />
+        </Button>
+      </Grid>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

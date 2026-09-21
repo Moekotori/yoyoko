@@ -14,6 +14,10 @@
           Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Appearance}">
           <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconEmoji}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T Appearance}" VerticalAlignment="Center" /></Grid>
         </Button>
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowKeyboard}" AutomationProperties.Name="{i18n:T KeyboardShortcuts}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Keyboard}">
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconKeyboard}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T KeyboardShortcuts}" VerticalAlignment="Center" /></Grid>
+        </Button>
         <Button Classes="settingsNav" Classes.selected="{Binding ShowVoice}" AutomationProperties.Name="{i18n:T Voice}"
           Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Voice}">
           <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconHeadphones}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T Voice}" VerticalAlignment="Center" /></Grid>
@@ -22,8 +26,10 @@
           Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Profile}">
           <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconPeople}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T Profile}" VerticalAlignment="Center" /></Grid>
         </Button>
-        <Button Classes="settingsNav" Classes.selected="{Binding ShowConnection}" Content="{i18n:T ServerConnection}"
-          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Connection}" />
+        <Button Classes="settingsNav" Classes.selected="{Binding ShowConnection}" AutomationProperties.Name="{i18n:T ServerConnection}"
+          Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Connection}">
+          <Grid ColumnDefinitions="18,*" ColumnSpacing="12"><PathIcon Data="{StaticResource IconServer}" Width="17" Height="17" Opacity="0.8" /><TextBlock Grid.Column="1" Text="{i18n:T ServerConnection}" VerticalAlignment="Center" /></Grid>
+        </Button>
       </StackPanel>
     </Border>
     <Grid Grid.Column="1" Margin="40,32,40,0" RowDefinitions="48,*">
@@ -40,6 +46,7 @@
         <Panel>
           <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>
+          <Border Classes="settingsPage" Classes.active="{Binding ShowKeyboard}" IsVisible="{Binding ShowKeyboard}"><vm:ShortcutSettingsView DataContext="{Binding Shortcuts}" /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowVoice}" IsVisible="{Binding ShowVoice}"><vm:VoiceSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowConnection}" IsVisible="{Binding ShowConnection}"><vm:ConnectionSettingsView DataContext="{Binding Connection}" /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowProfile}" IsVisible="{Binding ShowProfile}"><vm:ProfileSettingsView /></Border>

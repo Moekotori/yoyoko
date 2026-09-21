@@ -5,6 +5,9 @@ namespace Chat.UI.Channels;
 
 public sealed class ChannelItem(Guid id, Guid serverId, string name, string kind, string? audioQuality) : ObservableObject
 {
+    private ChannelEditorViewModel? _editor;
+    public ChannelEditorViewModel? Editor { get => _editor; set { if (ReferenceEquals(_editor, value)) return; _editor = value; Changed(); Changed(nameof(IsEditing)); } }
+    public bool IsEditing => Editor is not null;
     private bool _isSelected;
     public bool IsSelected { get => _isSelected; set { if (_isSelected == value) return; _isSelected = value; Changed(); } }
     public bool IsVoice => Kind == "voice";

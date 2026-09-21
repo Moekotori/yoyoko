@@ -16,6 +16,9 @@ public sealed class ChannelEditorViewModel : ObservableObject
     public ChannelEditorViewModel(InstanceSession session, Guid serverId, ChannelItem? channel,
         bool voice, ChannelEditMode mode, I18n text, Action<Guid?> completed, Action cancel, CancellationToken lifetime)
     {
+        Mode = mode;
+        ChannelId = mode == ChannelEditMode.Create ? null : channel?.Id;
+        IsVoice = voice;
         _name = mode == ChannelEditMode.Create ? "" : channel?.Name ?? "";
         Title = text.Get(mode switch {
             ChannelEditMode.Rename => TextKey.RenameChannel,
@@ -47,6 +50,9 @@ public sealed class ChannelEditorViewModel : ObservableObject
     public string Error { get => _error; private set { _error = value; Changed(); Changed(nameof(HasError)); } }
     public bool HasError => Error.Length > 0;
     public bool IsBusy { get => _busy; private set { _busy = value; Changed(); } }
+    public ChannelEditMode Mode { get; }
+    public Guid? ChannelId { get; }
+    public bool IsVoice { get; }
     public bool IsDelete { get; }
     public string Title { get; }
     public string Confirmation { get; }

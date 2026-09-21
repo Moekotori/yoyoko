@@ -8,9 +8,12 @@ public partial class ChannelEditor : UserControl
     public ChannelEditor()
     {
         InitializeComponent();
-        AttachedToVisualTree += (_, _) => Dispatcher.UIThread.Post(() => {
-            if (DataContext is ChannelEditorViewModel { IsDelete: true }) CancelButton.Focus();
-            else { NameInput.Focus(); NameInput.SelectAll(); }
-        });
+        Loaded += (_, _) => FocusInput();
+        DataContextChanged += (_, _) => FocusInput();
     }
+    private void FocusInput() => Dispatcher.UIThread.Post(() => {
+        if (!IsLoaded || DataContext is not ChannelEditorViewModel editor) return;
+        if (editor.IsDelete) CancelButton.Focus();
+        else { NameInput.Focus(); NameInput.SelectAll(); }
+    });
 }

@@ -21,3 +21,5 @@ python3 scripts/measure_idle.py <PID> --seconds 10
 | voice CPU / share CPU | Not implemented yet | 整棵进程树、同编码分辨率/设备 |
 
 第一次有真实聊天数据后再加负载 benchmark；不要把创建 10,000 个字符串当成消息渲染结果。
+
+2026-09-21：已有真实时间线和四档图片资源调度，旧表中的 Phase 0 内容仅描述历史基线。当前聚焦回归、独立窗口样本和未测负载见 [内存调度记录](../docs/MEMORY_SCHEDULING.md)。

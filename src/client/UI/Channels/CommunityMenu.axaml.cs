@@ -78,6 +78,8 @@ public partial class CommunityMenu : UserControl
         e.Handled = true;
     }
 
+    private void CloseForChannelEdit(object? sender, RoutedEventArgs e) => CloseHostFlyout();
+
     private void CloseHostFlyout()
     {
         if (this.GetVisualAncestors().OfType<Popup>().FirstOrDefault() is { } popup)

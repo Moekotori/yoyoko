@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Settings.ShortcutSettingsView" x:DataType="vm:ShortcutSettingsViewModel" x:Name="Root">
+  <StackPanel Spacing="28">
+    <ItemsControl ItemsSource="{Binding Groups}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ShortcutGroup">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{Binding Title}" Classes="section" Margin="0,0,0,4" />
+            <Border Classes="settingsGroup">
+              <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ShortcutRow">
+                    <Grid Classes="shortcutRow" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                      <TextBlock Text="{Binding Title}" Classes="settingsLabel" />
+                      <Button Grid.Column="1" Classes="shortcutKey" Classes.recording="{Binding IsRecording}"
+                        Command="{Binding #Root.((vm:ShortcutSettingsViewModel)DataContext).Capture}" CommandParameter="{Binding}"
+                        Content="{Binding Gesture}" AutomationProperties.Name="{Binding Title}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Button Classes="settingsSecondary" Content="{i18n:T ShortcutResetAll}" Command="{Binding ResetAll}"
+      AutomationProperties.Name="{i18n:T ShortcutResetAll}" />
+  </StackPanel>
+</UserControl>

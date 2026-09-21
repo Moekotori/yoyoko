@@ -1,31 +1,36 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ch="using:Chat.UI.Channels" xmlns:i18n="using:Chat.UI.Localization"
- x:Class="Chat.UI.Channels.ChannelEditor" x:DataType="ch:ChannelEditorViewModel"
- KeyboardNavigation.TabNavigation="Cycle">
-  <UserControl.KeyBindings>
-    <KeyBinding Gesture="Escape" Command="{Binding Cancel}" />
-  </UserControl.KeyBindings>
+ x:Class="Chat.UI.Channels.ChannelEditor" x:DataType="ch:ChannelEditorViewModel">
+  <UserControl.KeyBindings><KeyBinding Gesture="Escape" Command="{Binding Cancel}" /></UserControl.KeyBindings>
   <UserControl.Styles>
-    <Style Selector="TextBox /template/ Border#PART_BorderElement"><Setter Property="Background" Value="#202020" /><Setter Property="CornerRadius" Value="2" /></Style>
-    <Style Selector="Button"><Setter Property="CornerRadius" Value="2" /></Style>
-    <Style Selector="Button.danger"><Setter Property="Background" Value="#A54642" /><Setter Property="Foreground" Value="White" /></Style>
-    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#BB514B" /><Setter Property="Foreground" Value="White" /></Style>
+    <Style Selector="Button.inlineAction"><Setter Property="Width" Value="22" /><Setter Property="Height" Value="28" /><Setter Property="Padding" Value="5" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" /></Style>
+    <Style Selector="TextBox"><Setter Property="MinHeight" Value="28" /><Setter Property="FontSize" Value="13" /><Setter Property="Padding" Value="3,4" /><Setter Property="BorderThickness" Value="0" /><Setter Property="CornerRadius" Value="0" /><Setter Property="Background" Value="Transparent" /></Style>
+    <!-- Keep the native text editor, but remove its Fluent background/border in every state. -->
+    <Style Selector="TextBox.inlineName /template/ Border#PART_BorderElement"><Setter Property="IsVisible" Value="False" /></Style>
   </UserControl.Styles>
-  <Border Width="380" Background="#252525" BorderBrush="#414141" BorderThickness="1" CornerRadius="2" Padding="24">
-    <StackPanel Spacing="20">
-      <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" />
-      <StackPanel Spacing="8" IsVisible="{Binding !IsDelete}">
-        <TextBlock Text="{i18n:T NewChannelName}" FontSize="12" Classes="muted" />
-        <TextBox x:Name="NameInput" Text="{Binding Name}" MaxLength="100" CornerRadius="2" IsEnabled="{Binding !IsBusy}" AutomationProperties.Name="{i18n:T NewChannelName}">
+  <StackPanel Spacing="4" Margin="0,0,0,2">
+    <Border Background="Transparent" BorderThickness="0" Padding="9,0,1,0" IsVisible="{Binding !IsDelete}">
+      <Grid ColumnDefinitions="16,*,Auto,Auto" ColumnSpacing="3" MinHeight="32">
+        <PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" IsVisible="{Binding !IsVoice}" Foreground="{StaticResource QuietTextBrush}" />
+        <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" IsVisible="{Binding IsVoice}" Foreground="{StaticResource QuietTextBrush}" />
+        <TextBox Grid.Column="1" Classes="inlineName" x:Name="NameInput" Text="{Binding Name}" MaxLength="100" PlaceholderText="{i18n:T NewChannelName}" IsEnabled="{Binding !IsBusy}" AutomationProperties.Name="{i18n:T NewChannelName}">
           <TextBox.KeyBindings><KeyBinding Gesture="Enter" Command="{Binding Submit}" /></TextBox.KeyBindings>
         </TextBox>
-      </StackPanel>
-      <TextBlock Text="{Binding Confirmation}" IsVisible="{Binding IsDelete}" TextWrapping="Wrap" LineHeight="22" />
-      <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="#E5A19A" FontSize="12" TextWrapping="Wrap" />
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-        <Button x:Name="CancelButton" Content="{i18n:T ChannelCancel}" Command="{Binding Cancel}" IsEnabled="{Binding !IsBusy}" Padding="16,9" />
-        <Button Content="{Binding SubmitLabel}" Command="{Binding Submit}" Classes="primary" Classes.danger="{Binding IsDelete}" IsEnabled="{Binding !IsBusy}" Padding="16,9" />
+        <Button Grid.Column="2" Classes="inlineAction" Command="{Binding Submit}" IsEnabled="{Binding !IsBusy}" ToolTip.Tip="{Binding SubmitLabel}" AutomationProperties.Name="{Binding SubmitLabel}">
+          <PathIcon Data="M 1,6 L 4,9 L 11,2 L 12,3 L 4,11 L 0,7 Z" Width="12" Height="12" />
+        </Button>
+        <Button Grid.Column="3" Classes="inlineAction" Command="{Binding Cancel}" IsEnabled="{Binding !IsBusy}" ToolTip.Tip="{i18n:T ChannelCancel}" AutomationProperties.Name="{i18n:T ChannelCancel}">
+          <PathIcon Data="{StaticResource IconClose}" Width="11" Height="11" />
+        </Button>
+      </Grid>
+    </Border>
+    <StackPanel Margin="9,5" Spacing="7" IsVisible="{Binding IsDelete}">
+      <TextBlock Text="{Binding Confirmation}" FontSize="12" TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button x:Name="CancelButton" Content="{i18n:T ChannelCancel}" Command="{Binding Cancel}" IsEnabled="{Binding !IsBusy}" FontSize="12" Padding="7,4" />
+        <Button Content="{Binding SubmitLabel}" Command="{Binding Submit}" IsEnabled="{Binding !IsBusy}" Foreground="#E3A09A" FontSize="12" Padding="7,4" />
       </StackPanel>
     </StackPanel>
-  </Border>
+    <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="#E5A19A" FontSize="11" TextWrapping="Wrap" Margin="10,0,4,4" />
+  </StackPanel>
 </UserControl>

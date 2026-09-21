@@ -51,8 +51,7 @@ internal static class WallpaperRaster
         var origin = codec.EncodedOrigin;
         var (srcW, srcH) = Oriented(info.Width, info.Height, origin);
         var scale = Math.Max(size.Width / (float)srcW, size.Height / (float)srcH);
-        var decode = new SKSizeI(Math.Max(1, (int)Math.Ceiling(info.Width * scale)), Math.Max(1, (int)Math.Ceiling(info.Height * scale)));
-        decode = codec.GetScaledDimensions(decode);
+        var decode = codec.GetScaledDimensions(Math.Min(1f, scale));
         var decodedInfo = new SKImageInfo(decode.Width, decode.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var decoded = new SKBitmap(decodedInfo);
         var result = codec.GetPixels(decodedInfo, decoded.GetPixels(), new SKCodecOptions(Math.Clamp(frame, 0, Math.Max(0, codec.FrameCount - 1))));
@@ -78,12 +77,12 @@ internal static class WallpaperRaster
                     lowCanvas.Clear(SKColors.Black);
                     lowCanvas.DrawBitmap(oriented, SKRect.Create(dest.Left * down, dest.Top * down, dest.Width * down, dest.Height * down));
                 }
-                using var blurPaint = new SKPaint { ImageFilter = SKImageFilters.Blur(sigma * down, sigma * down) };
+                using var blurPaint = new SKPaint { ImageFilter = SKImageFilter.CreateBlur(sigma * down, sigma * down) };
                 canvas.DrawBitmap(low, SKRect.Create(size.Width, size.Height), blurPaint);
             }
             else
             {
-                using var paint = new SKPaint { ImageFilter = SKImageFilters.Blur(sigma, sigma) };
+                using var paint = new SKPaint { ImageFilter = SKImageFilter.CreateBlur(sigma, sigma) };
                 canvas.DrawBitmap(oriented, dest, paint);
             }
         }
@@ -118,7 +117,7 @@ internal static class WallpaperRaster
     }
 }
 
-internal sealed class WallpaperMotion : IDisposable
+internal sealed class WallpaperMotion : IWallpaperPlayback
 {
     private readonly FileStream _stream;
     private readonly SKCodec _codec;
@@ -170,7 +169,6 @@ internal sealed class WallpaperMotion : IDisposable
         if (size == _size && blur == _blur) return;
         _size = size;
         _blur = blur;
-        _frame?.Dispose();
         _frame = null;
         Show(_index);
     }
@@ -200,7 +198,7 @@ internal sealed class WallpaperMotion : IDisposable
         if (_disposed) return;
         _disposed = true;
         _timer.Stop();
-        _frame?.Dispose();
+        _frame = null;
         _codec.Dispose();
         _stream.Dispose();
     }

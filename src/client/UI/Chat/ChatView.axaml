@@ -84,7 +84,7 @@
           <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <Grid ColumnDefinitions="30,*,30" ColumnSpacing="9">
             <Button Classes="icon" Command="{Binding AttachFile}" ToolTip.Tip="{Binding AttachTip}" AutomationProperties.Name="{i18n:T AddFile}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
-            <TextBox x:Name="Composer" Grid.Column="1" Classes="composer" Text="{Binding Draft}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" AutomationProperties.Name="{i18n:T MessageInput}" KeyDown="OnComposerKeyDown" />
+            <TextBox x:Name="Composer" Grid.Column="1" Classes="composer" Text="{Binding Draft}" PlaceholderText="{Binding ComposerPlaceholder}" VerticalAlignment="Center" TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="132" MaxLength="4000" AutomationProperties.Name="{i18n:T MessageInput}" />
             <Button Grid.Column="2" Classes="icon send" Command="{Binding Send}" IsEnabled="{Binding CanSend}" ToolTip.Tip="{Binding SendTip}" AutomationProperties.Name="{i18n:T Send}"><PathIcon Data="{StaticResource IconSendFilled}" Width="18" Height="18" /></Button>
           </Grid>
         </Border>

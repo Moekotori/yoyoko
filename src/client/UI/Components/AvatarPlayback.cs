@@ -28,19 +28,21 @@ public sealed class AvatarPlayback : IDisposable, INotifyPropertyChanged
     }
     public Bitmap Current { get; private set; }
     public bool IsAnimated { get; }
+    public long DecodedBytes => _frames.Sum(frame => (long)frame.PixelSize.Width * frame.PixelSize.Height * 4);
 
-    public static AvatarPlayback Decode(byte[] bytes, int maxEdge)
+    public static AvatarPlayback Decode(byte[] bytes, int maxEdge, bool allowAnimation = true)
     {
-        try
+        using var data = SKData.CreateCopy(bytes);
+        using var codec = SKCodec.Create(data) ?? throw new InvalidDataException("Invalid avatar.");
+        if (allowAnimation && codec.FrameCount > 1)
         {
-            using var data = SKData.CreateCopy(bytes);
-            using var codec = SKCodec.Create(data);
-            if (codec is not null && codec.FrameCount > 1)
-                return DecodeMotion(codec, maxEdge);
+            try { return DecodeMotion(codec, maxEdge); }
+            catch { /* A failed animation falls back to a bounded first frame. */ }
         }
-        catch { /* first frame via Avalonia */ }
-        using var stream = new MemoryStream(bytes);
-        return new([Bitmap.DecodeToWidth(stream, maxEdge)], [0]);
+        using var input = new MemoryStream(bytes, writable: false);
+        return new([codec.Info.Width >= codec.Info.Height
+            ? Bitmap.DecodeToWidth(input, Math.Min(maxEdge, codec.Info.Width))
+            : Bitmap.DecodeToHeight(input, Math.Min(maxEdge, codec.Info.Height))], [0]);
     }
 
     public void AddWatcher()
@@ -73,14 +75,23 @@ public sealed class AvatarPlayback : IDisposable, INotifyPropertyChanged
         var delays = new int[count];
         var frameInfo = codec.FrameInfo;
         using var sk = new SKBitmap(imageInfo);
-        for (var i = 0; i < count; i++)
+        try
         {
-            codec.GetPixels(imageInfo, sk.GetPixels(), new SKCodecOptions(i));
-            frames[i] = ToAvalonia(sk);
-            var delay = frameInfo is { Length: > 0 } ? frameInfo[Math.Min(i, frameInfo.Length - 1)].Duration : 100;
-            delays[i] = delay <= 0 ? 100 : Math.Clamp(delay, 20, 4_000);
+            for (var i = 0; i < count; i++)
+            {
+                var result = codec.GetPixels(imageInfo, sk.GetPixels(), new SKCodecOptions(i));
+                if (result != SKCodecResult.Success) throw new InvalidDataException("Invalid avatar frame.");
+                frames[i] = ToAvalonia(sk);
+                var delay = frameInfo is { Length: > 0 } ? frameInfo[Math.Min(i, frameInfo.Length - 1)].Duration : 100;
+                delays[i] = delay <= 0 ? 100 : Math.Clamp(delay, 20, 4_000);
+            }
+            return new(frames, delays);
         }
-        return new(frames, delays);
+        catch
+        {
+            foreach (var frame in frames) frame?.Dispose();
+            throw;
+        }
     }
 
     private static Bitmap ToAvalonia(SKBitmap source)

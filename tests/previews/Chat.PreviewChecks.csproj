@@ -10,5 +10,7 @@
     <Compile Include="../../src/client/UI/Chat/AttachmentRow.cs" Link="AttachmentRow.cs" />
     <Compile Include="../../src/client/UI/Components/ObservableObject.cs" Link="ObservableObject.cs" />
     <Compile Include="../../src/client/UI/Components/AsyncCommand.cs" Link="AsyncCommand.cs" />
+    <Compile Include="../../src/client/UI/Components/AvatarPlayback.cs" Link="AvatarPlayback.cs" />
+    <Compile Include="../../src/client/UI/Resources/*.cs" Link="Resources/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

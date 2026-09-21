@@ -2,13 +2,14 @@
   xmlns:vm="using:Chat.UI.Shell" xmlns:chat="using:Chat.UI.Chat" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
   x:Class="Chat.UI.Chat.MemberSidebar" x:DataType="vm:ShellViewModel">
   <UserControl.Styles>
-    <Style Selector="Border.memberRow">
+    <Style Selector="Button.memberRow">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="CornerRadius" Value="2" />
       <Setter Property="Padding" Value="8,6" />
       <Setter Property="Margin" Value="0,0,0,1" />
     </Style>
-    <Style Selector="Border.memberRow:pointerover"><Setter Property="Background" Value="{StaticResource HoverBrush}" /></Style>
   </UserControl.Styles>
   <Border Width="220" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1,0,0,0">
     <Grid RowDefinitions="52,*">
@@ -21,13 +22,32 @@
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
         <ItemsControl ItemsSource="{Binding Participants}" Margin="8,12,8,16" AutomationProperties.Name="{i18n:T PageParticipants}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="chat:MessageRow">
-              <Border Classes="memberRow">
+            <DataTemplate x:DataType="chat:MemberProfile">
+              <Button Classes="memberRow" AutomationProperties.Name="{Binding Name}">
+                <Button.Flyout>
+                  <Flyout Placement="LeftEdgeAlignedTop" Opened="OnCardOpened">
+                    <chat:UserCard DataContext="{Binding}" />
+                  </Flyout>
+                </Button.Flyout>
+                <Button.ContextMenu>
+                  <ContextMenu DataContext="{Binding}" Opening="OnMemberMenuOpening">
+                    <MenuItem Header="{i18n:T MentionMember}" />
+                    <MenuItem Header="{i18n:T CopyUsername}" />
+                    <MenuItem Header="{i18n:T CopyUserId}" />
+                    <MenuItem Header="{i18n:T Profile}" />
+                    <Separator />
+                    <MenuItem Header="{i18n:T KickMember}" Foreground="#E3A09A" />
+                    <MenuItem Header="{i18n:T BanMember}" Foreground="#E3A09A" />
+                  </ContextMenu>
+                </Button.ContextMenu>
                 <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
-                  <c:Avatar Width="28" Height="28" Playback="{Binding Playback}" Initial="{Binding Initial}" />
-                  <TextBlock Grid.Column="1" Text="{Binding Author}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  <c:Avatar Width="28" Height="28" Playback="{Binding Playback}" Source="{Binding Image}" Initial="{Binding Initial}" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Handle}" Classes="quiet" FontSize="11" IsVisible="{Binding HasHandle}" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
                 </Grid>
-              </Border>
+              </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

@@ -20,6 +20,8 @@ public sealed class AttachmentPreviews(CancellationToken lifetime) : IDisposable
     private Func<Uri, int, CancellationToken, Task<byte[]?>>? _download;
     private int _workers;
     private bool _disposed;
+    private long _budget = MemoryBudget.ThumbnailBytes;
+    private int _concurrency = 4;
     public long RetainedBytes { get; private set; }
 
     public void Update(IEnumerable<AttachmentRow> rows,
@@ -47,8 +49,29 @@ public sealed class AttachmentPreviews(CancellationToken lifetime) : IDisposable
             foreach (var row in consumers)
                 if (!ReferenceEquals(row.Preview, entry.Image)) row.Preview = entry.Image;
         }
+        StartWorkers();
+    }
+
+    public void SetBudget(long bytes, int concurrency)
+    {
+        if (_disposed) return;
+        _budget = Math.Clamp(bytes, 0, MemoryBudget.ThumbnailBytes);
+        _concurrency = Math.Clamp(concurrency, 0, 4);
+        if (_budget == 0 || _concurrency == 0) { Clear(); return; }
+        foreach (var entry in _entries.Values.Reverse())
+        {
+            if (RetainedBytes > _budget) Release(entry, keepRows: true);
+            if (entry.Image is null) entry.Attempted = false;
+        }
+        StartWorkers();
+    }
+
+    private void StartWorkers()
+    {
         // Fixed workers scan the latest bounded timeline; no task per row or refresh.
-        while (_workers < 4 && _entries.Values.Any(entry => !entry.Attempted))
+        while (!_disposed && !lifetime.IsCancellationRequested && _budget > 0
+            && _budget - RetainedBytes >= 128 * 128 * 4
+            && _workers < _concurrency && _entries.Values.Any(entry => !entry.Attempted))
         {
             _workers++;
             _ = RunAsync();
@@ -59,8 +82,9 @@ public sealed class AttachmentPreviews(CancellationToken lifetime) : IDisposable
     {
         try
         {
-            while (!_disposed && !lifetime.IsCancellationRequested)
+            while (!_disposed && !lifetime.IsCancellationRequested && _workers <= _concurrency && _budget > 0)
             {
+                if (_budget - RetainedBytes < 128 * 128 * 4) return;
                 var entry = _entries.Values.FirstOrDefault(item => !item.Attempted);
                 if (entry is null) return;
                 entry.Attempted = true;
@@ -71,7 +95,7 @@ public sealed class AttachmentPreviews(CancellationToken lifetime) : IDisposable
                     if (bytes is null || token.IsCancellationRequested || !IsCurrent(entry)) continue;
                     var bitmap = Decode(bytes);
                     var size = Size(bitmap);
-                    if (size > MemoryBudget.ThumbnailBytes - RetainedBytes)
+                    if (size > _budget - RetainedBytes)
                     {
                         bitmap.Dispose();
                         continue; // The downloadable attachment chip remains available.
@@ -102,10 +126,10 @@ public sealed class AttachmentPreviews(CancellationToken lifetime) : IDisposable
 
     private static long Size(Bitmap bitmap) => (long)bitmap.PixelSize.Width * bitmap.PixelSize.Height * 4;
 
-    private void Release(Entry entry)
+    private void Release(Entry entry, bool keepRows = false)
     {
         foreach (var row in entry.Rows) row.Preview = null;
-        entry.Rows.Clear();
+        if (!keepRows) entry.Rows.Clear();
         if (entry.Image is not { } image) return;
         RetainedBytes -= Size(image);
         entry.Image = null;
@@ -115,12 +139,14 @@ public sealed class AttachmentPreviews(CancellationToken lifetime) : IDisposable
     public void Clear()
     {
         if (_disposed) return;
-        _scope.Cancel();
-        _scope.Dispose();
-        _scope = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
         foreach (var entry in _entries.Values) Release(entry);
         _entries.Clear();
         _download = null;
+        // Cancel only after removing pending work: cancellation continuations may run inline.
+        var previous = _scope;
+        _scope = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+        previous.Cancel();
+        previous.Dispose();
     }
 
     public void Dispose()

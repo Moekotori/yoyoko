@@ -52,7 +52,6 @@ internal sealed class WallpaperMac : IWallpaperPlayback
         size = WallpaperBudget.Clamp(size);
         if (_disposed || size == _size) return;
         _size = size;
-        _frame?.Dispose();
         _frame = null;
         if (!_paused) Start();
     }
@@ -62,7 +61,7 @@ internal sealed class WallpaperMac : IWallpaperPlayback
         if (_disposed) return;
         _disposed = true;
         _lifetime.Cancel();
-        _frame?.Dispose();
+        _frame = null;
         _lifetime.Dispose();
     }
 
@@ -220,7 +219,6 @@ internal sealed class WallpaperMac : IWallpaperPlayback
         }
 
         private static IntPtr Number(uint value) => MsgU32(GetClass("NSNumber"), Sel("numberWithUnsignedInt:"), value);
-        private static IntPtr Array(IntPtr value) => Msg(GetClass("NSArray"), Sel("arrayWithObject:"), value);
         private static IntPtr Ns(string value)
         {
             var utf8 = Marshal.StringToCoTaskMemUTF8(value);

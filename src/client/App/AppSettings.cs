@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Chat.App;
 
-internal sealed record AppSettings(string ProductName = "LightChat", string CacheDirectory = "", string DefaultInstanceUrl = "")
+internal sealed record AppSettings(string ProductName = "yoyoko", string CacheDirectory = "", string DefaultInstanceUrl = "")
 {
     public static AppSettings Load()
     {

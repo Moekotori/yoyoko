@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Chat.Core.Instances;
 using Chat.Core;
@@ -94,6 +95,33 @@ Check(Locale.Parse("fr").Code == "en", "unsupported locale falls back to English
 Check(catalog.Get(Locale.Chinese, TextKey.Settings) == "设置", "Chinese settings label");
 Check(catalog.Get(Locale.English, TextKey.Settings) == "Settings", "English settings label");
 Check(catalog.Get(Locale.Japanese, TextKey.Settings) == "設定", "Japanese settings label");
+Check(catalog.Get(Locale.Chinese, TextKey.ConnectedServer) == "已连接", "Chinese connected label");
+Check(catalog.Get(Locale.Chinese, TextKey.DisconnectServer) == "断开", "Chinese disconnect label");
+Check(ProtocolVersion.HealthLivePath == "/health/live", "live health path");
+{
+    var tcp = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+    tcp.Start();
+    var port = ((System.Net.IPEndPoint)tcp.LocalEndpoint).Port;
+    tcp.Stop();
+    using var listener = new HttpListener();
+    listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+    listener.Start();
+    var serve = Task.Run(async () =>
+    {
+        var context = await listener.GetContextAsync();
+        var body = """{"status":"ok","phase":1}"""u8.ToArray();
+        context.Response.ContentType = "application/json";
+        context.Response.ContentLength64 = body.Length;
+        await context.Response.OutputStream.WriteAsync(body);
+        context.Response.Close();
+    });
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    var rtt = await new Chat.Networking.Http.HttpInstanceDiscovery(http)
+        .ProbeAsync(new Uri($"http://127.0.0.1:{port}/"), default);
+    await serve;
+    listener.Stop();
+    Check(rtt >= TimeSpan.Zero && rtt < TimeSpan.FromSeconds(3), "health probe measures live RTT");
+}
 await using var media = new UnavailableMediaService();
 Check(media.Capabilities == MediaCapabilities.None, "no false media capabilities");
 var devices = await media.ListDevicesAsync(default);

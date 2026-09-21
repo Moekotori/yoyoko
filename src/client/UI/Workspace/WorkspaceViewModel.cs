@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Chat.Localization;
+using Chat.UI.Chat;
 using Chat.UI.Components;
 using Chat.UI.Localization;
 
@@ -42,10 +43,10 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     public string AccountName => IsPreview ? "林" : _text.Get(TextKey.SignedOut);
     public string AccountInitial => Avatar.FromName(AccountName);
     public string AccountStatus => IsPreview ? _text.Get(TextKey.DesignPreview) : _text.Get(TextKey.Offline);
-    public Bitmap? AccountAvatar => Members.FirstOrDefault()?.Avatar;
-    public Bitmap? VoiceAvatar => Members.Skip(1).FirstOrDefault()?.Avatar;
+    public Bitmap? AccountAvatar => Members.FirstOrDefault()?.Image as Bitmap;
+    public Bitmap? VoiceAvatar => Members.Skip(1).FirstOrDefault()?.Image as Bitmap;
     public ObservableCollection<ChannelItem> Channels { get; } = [];
-    public ObservableCollection<MemberItem> Members { get; } = [];
+    public ObservableCollection<MemberProfile> Members { get; } = [];
     public ObservableCollection<PreviewServerItem> PreviewServers { get; } = [];
     public ObservableCollection<MessageItem> Messages { get; } = [];
     public ObservableCollection<ChannelItem> OpenTabs { get; } = [];
@@ -101,6 +102,14 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
     public string Draft { get => _draft; set { _draft = value; if (_selected is not null) _selected.Draft = value; Changed(); Changed(nameof(CanAttemptSend)); } }
     public string Notice { get => _notice; private set { _notice = value; Changed(); Changed(nameof(HasNotice)); } }
     public void ShowNotice(string message) => Notice = message;
+    public void MentionMember(MemberProfile member)
+    {
+        var token = member.MentionToken;
+        if (string.IsNullOrEmpty(token)) return;
+        if (string.IsNullOrEmpty(Draft)) Draft = token + " ";
+        else if (char.IsWhiteSpace(Draft[^1])) Draft += token + " ";
+        else Draft += " " + token + " ";
+    }
     public bool HasNotice => Notice.Length > 0;
     public bool HasNoMessages => Messages.Count == 0;
     private void RefreshMessages()
@@ -126,7 +135,9 @@ public sealed class WorkspaceViewModel : ObservableObject, IDisposable
         PreviewServers.Add(new("林间", forest, true));
         PreviewServers.Add(new("城市", LoadImage("city"), false));
         PreviewServers.Add(new("绿洲", LoadImage("plant"), false));
-        Members.Add(new("林", forest)); Members.Add(new("Mika", mika)); Members.Add(new("陈默", chen));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000001"), "林", "lin", true, image: forest));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000002"), "Mika", "mika", false, image: mika));
+        Members.Add(new(Guid.Parse("01900000-0000-7000-8000-000000000003"), "陈默", "chenmo", false, image: chen));
         Channels.Add(new("日常", [
             new("林", "19:20", "下班了，来这里放空一下。", forest),
             new("Mika", "19:22", "今天的晚风很舒服。", mika, true),
@@ -166,8 +177,4 @@ public sealed class ChannelItem(string name, IReadOnlyList<MessageItem> messages
     public bool IsSelected { get => _selected; set { _selected = value; Changed(); } }
 }
 public sealed record PreviewServerItem(string Name, Bitmap Avatar, bool IsSelected);
-public sealed record MemberItem(string Name, Bitmap Avatar)
-{
-    public string Initial => global::Chat.UI.Components.Avatar.FromName(Name);
-}
 public sealed record MessageItem(string Name, string Time, string Text, Bitmap Avatar, bool HasReaction = false);

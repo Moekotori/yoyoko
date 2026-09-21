@@ -69,7 +69,7 @@ macOS 双击根目录 `dev.command`，或运行：
 
 服务端唯一应用配置为 `config.toml`；`CHAT_CONFIG=/path/config.toml` 指定路径。所有字段支持 `CHAT__SECTION__KEY` 覆盖，例如 `CHAT__SERVER__NAME`、`CHAT__DATABASE__MAX_CONNECTIONS`、`CHAT__STORAGE__MAX_BYTES`；数组用逗号分隔，例如 `CHAT__SERVER__ALLOWED_ORIGINS=https://a.example,https://b.example`。附件上限默认 24 MiB，允许 64 KiB..=256 MiB。不要把真实密钥写入版本库。`check-config` 仅显示校验结果，不打印秘密。
 
-客户端配置为 App/appsettings.json，支持 `CHAT_PRODUCT_NAME` / `CHAT_CACHE_DIRECTORY` / `CHAT_DEFAULT_INSTANCE_URL`。默认缓存为 .NET LocalApplicationData 下 `chat-desktop/cache.db`。界面语言写入同目录 `preferences.json`；首次启动跟随系统（`zh*` → 简体中文，`ja*` → 日语，其余为英文），设置中可改为中文、英文或日语。`CHAT_LOCALE`（`zh-Hans` / `en` / `ja`）仅在尚未保存过语言时生效。凭据库尚未接入，SQLite 不存令牌。
+客户端配置为 App/appsettings.json，支持 `CHAT_PRODUCT_NAME` / `CHAT_CACHE_DIRECTORY` / `CHAT_DEFAULT_INSTANCE_URL`。默认缓存为 .NET LocalApplicationData 下 `chat-desktop/cache.db`。界面语言、紧凑布局、自定义背景和键盘快捷键等写入同目录 `preferences.json`；背景文件复制到同目录 `wallpaper/`，解码时缩放到窗口像素尺寸。视频背景优先使用系统解码器，否则查找 `ffmpeg`（`CHAT_FFMPEG` 或 PATH）。首次启动跟随系统（`zh*` → 简体中文，`ja*` → 日语，其余为英文），设置中可改为中文、英文或日语。`CHAT_LOCALE`（`zh-Hans` / `en` / `ja`）仅在尚未保存过语言时生效。凭据库尚未接入，SQLite 不存令牌。
 
 新增界面文案：在 `src/client/Localization/TextCatalog.cs` 的 `Rows` 加一行 `(Key, English, 中文, 日本語)`，并在 `TextKey.cs` 加同名常量。XAML 用 `{i18n:T Key}`，C# 用 `_text.Get(TextKey.Key)` 或 `I18n.T(TextKey.Key)`。foundation check 会核对三语和 TextKey 是否对齐。
 

@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using Chat.Localization;
 using Chat.UI.Channels;
 using Chat.UI.Components;
+using Chat.UI.Shortcuts;
 
 namespace Chat.UI.Shell;
 
@@ -30,9 +32,13 @@ public sealed partial class ShellViewModel
         }
     }
     public JumpItem? SwitcherSelected => _switcherSelected;
-    public string AttachTip => FileLimitTip + " · ⌘ U / Ctrl U";
-    public string MuteTip => MuteLabel + " · ⌘ ⇧ M / Ctrl Shift M";
-    public string DeafTip => DeafLabel + " · ⌘ ⇧ D / Ctrl Shift D";
+    public string AttachTip => FileLimitTip + " · " + ChordLabel(ShortcutAction.Attach);
+    public string MuteTip => MuteLabel + " · " + ChordLabel(ShortcutAction.Mute);
+    public string DeafTip => DeafLabel + " · " + ChordLabel(ShortcutAction.Deafen);
+    public string SearchShortcutTip => ChordTip(TextKey.SearchMessages, ShortcutAction.Search);
+    public string MembersShortcutTip => ChordTip(TextKey.Members, ShortcutAction.Members);
+    public string SettingsShortcutTip => ChordTip(TextKey.Settings, ShortcutAction.Settings);
+    public string CloseTabShortcutTip => ChordTip(TextKey.CloseTab, ShortcutAction.CloseTab);
 
     private void InitializeKeyboard()
     {
@@ -175,6 +181,70 @@ public sealed partial class ShellViewModel
         if (list.Count == 0) list.AddRange(TextChannels.Concat(VoiceChannels));
         return list;
     }
+
+    public bool ExecuteShortcut(ShortcutAction action)
+    {
+        switch (action)
+        {
+            case ShortcutAction.Jump:
+                OpenJump();
+                return true;
+            case ShortcutAction.Search:
+                OpenSearch();
+                return true;
+            case ShortcutAction.PreviousChannel:
+                SelectAdjacentChannel(-1);
+                return true;
+            case ShortcutAction.NextChannel:
+                SelectAdjacentChannel(1);
+                return true;
+            case ShortcutAction.PreviousTab:
+                SelectAdjacentTab(-1);
+                return true;
+            case ShortcutAction.NextTab:
+                SelectAdjacentTab(1);
+                return true;
+            case ShortcutAction.CloseTab:
+                CloseCurrentTab();
+                return true;
+            case ShortcutAction.Settings:
+                CloseJump();
+                if (ShowSettings) ShowSettings = false;
+                else OpenSettings.Execute(null);
+                return true;
+            case ShortcutAction.Members:
+                ToggleParticipants.Execute(null);
+                return true;
+            case ShortcutAction.Attach:
+                if (ShowChat && AttachFile.CanExecute(null)) AttachFile.Execute(null);
+                return true;
+            case ShortcutAction.Mute:
+                if (IsSignedIn && ToggleMute.CanExecute(null)) ToggleMute.Execute(null);
+                return true;
+            case ShortcutAction.Deafen:
+                if (IsSignedIn && ToggleDeaf.CanExecute(null)) ToggleDeaf.Execute(null);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void OnShortcutsChanged()
+    {
+        Changed(nameof(AttachTip));
+        Changed(nameof(MuteTip));
+        Changed(nameof(DeafTip));
+        Changed(nameof(SearchShortcutTip));
+        Changed(nameof(MembersShortcutTip));
+        Changed(nameof(SettingsShortcutTip));
+        Changed(nameof(CloseTabShortcutTip));
+    }
+
+    private string ChordTip(string labelKey, ShortcutAction action) =>
+        _text.Get(labelKey) + " · " + ChordLabel(action);
+
+    private string ChordLabel(ShortcutAction action) =>
+        ShortcutScheme.Display(action, _shortcuts.Overrides, _text.Get(TextKey.ShortcutUnbound));
 
     private static ChannelItem? Adjacent(IReadOnlyList<ChannelItem> channels, ChannelItem? current, int delta)
     {

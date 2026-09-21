@@ -5,6 +5,7 @@ using Chat.UI.Auth;
 using Chat.Localization;
 using Chat.UI.Components;
 using Chat.UI.Localization;
+using Chat.UI.Shortcuts;
 using Chat.UI.Voice;
 
 namespace Chat.UI.Settings;
@@ -32,7 +33,7 @@ public sealed class LanguageOption(Locale locale, bool selected) : ObservableObj
     }
 }
 
-public enum SettingsSection { General, Appearance, Voice, Profile, Connection }
+public enum SettingsSection { General, Appearance, Keyboard, Voice, Profile, Connection }
 
 public sealed class SettingsViewModel : ObservableObject, IDisposable
 {
@@ -42,7 +43,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private readonly I18n _text;
     private SettingsSection _section;
     public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, IAppearancePreference appearance,
-        WallpaperSession wallpaper, Action close, Func<InstanceSession?> session,
+        IShortcutPreference shortcuts, WallpaperSession wallpaper, Action close, Func<InstanceSession?> session,
         Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth)
     {
         _preference = preference;
@@ -50,6 +51,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _appearance = appearance;
         _text = text;
         Wallpaper = wallpaper;
+        Shortcuts = new(shortcuts, text);
         Profile = new(session, pickAvatar, onError, text);
         Devices = devices;
         Connection = connection;
@@ -95,6 +97,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
             Changed();
             Changed(nameof(ShowGeneral));
             Changed(nameof(ShowAppearance));
+            Changed(nameof(ShowKeyboard));
             Changed(nameof(ShowVoice));
             Changed(nameof(ShowProfile));
             Changed(nameof(ShowConnection));
@@ -108,11 +111,13 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public bool ShowConnection => Section == SettingsSection.Connection;
     public bool ShowGeneral => Section == SettingsSection.General;
     public bool ShowAppearance => Section == SettingsSection.Appearance;
+    public bool ShowKeyboard => Section == SettingsSection.Keyboard;
     public bool ShowVoice => Section == SettingsSection.Voice;
     public bool ShowProfile => Section == SettingsSection.Profile;
     public string SectionTitle => _text.Get(Section switch
     {
         SettingsSection.Appearance => TextKey.Appearance,
+        SettingsSection.Keyboard => TextKey.KeyboardShortcuts,
         SettingsSection.Voice => TextKey.Voice,
         SettingsSection.Profile => TextKey.Profile,
         SettingsSection.Connection => TextKey.ServerConnection,
@@ -133,6 +138,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public ProfileViewModel Profile { get; }
     public VoiceDevicesViewModel Devices { get; }
     public WallpaperSession Wallpaper { get; }
+    public ShortcutSettingsViewModel Shortcuts { get; }
     public ObservableCollection<ColorSchemeChoice> ColorSchemes { get; } = [];
     public ColorSchemeChoice? SelectedColorScheme
     {
@@ -165,6 +171,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _chrome.Changed -= OnChrome;
         _appearance.Changed -= OnAppearance;
         Connection.Dispose();
+        Shortcuts.Dispose();
     }
     private void OnChanged(Locale _) => Refresh();
     private void OnChrome() => NotifyChrome();

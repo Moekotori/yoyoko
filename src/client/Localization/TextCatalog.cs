@@ -255,7 +255,15 @@ public sealed class TextCatalog : ITextCatalog
         ("ShortcutNextTab", "Next tab", "下一个标签", "次のタブ"),
         ("ShortcutPressKey", "Press keys", "按下按键", "キーを入力"),
         ("ShortcutUnbound", "None", "未绑定", "なし"),
-        ("ShortcutResetAll", "Reset to defaults", "恢复默认", "デフォルトに戻す")
+        ("ShortcutResetAll", "Reset to defaults", "恢复默认", "デフォルトに戻す"),
+        ("You", "You", "你", "あなた"),
+        ("UserId", "User ID", "用户 ID", "ユーザーID"),
+        ("CopyUserId", "Copy user ID", "复制用户 ID", "ユーザーIDをコピー"),
+        ("CopyUsername", "Copy username", "复制用户名", "ユーザー名をコピー"),
+        ("MentionMember", "Mention", "提及", "メンション"),
+        ("KickMember", "Kick", "踢出", "キック"),
+        ("BanMember", "Ban", "封禁", "BAN"),
+        ("Copied", "Copied", "已复制", "コピーしました")
     ];
 
     private static readonly FrozenDictionary<string, string> English = Map(Rows, row => row.En);

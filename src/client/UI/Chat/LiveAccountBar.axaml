@@ -19,18 +19,24 @@
       </Button>
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" PointerEntered="OnDevicesHover">
         <Button Classes="icon" Classes.off="{Binding IsSelfMuted}" Width="26" Padding="5" Command="{Binding ToggleMute}" IsEnabled="{Binding IsSignedIn}" AutomationProperties.Name="{Binding MuteLabel}" ToolTip.ShowDelay="250">
-          <Button.ToolTip.Tip><StackPanel MaxWidth="320" Spacing="4"><TextBlock Text="{Binding MuteTip}" /><TextBlock Text="{Binding Devices.SelectedInput.Name}" TextWrapping="Wrap" /><TextBlock Text="{Binding Devices.Error}" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" /></StackPanel></Button.ToolTip.Tip>
+          <ToolTip.Tip><StackPanel MaxWidth="320" Spacing="4"><TextBlock Text="{Binding MuteTip}" /><TextBlock Text="{Binding Devices.SelectedInput.Name}" TextWrapping="Wrap" /><TextBlock Text="{Binding Devices.Error}" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" /></StackPanel></ToolTip.Tip>
           <Panel Width="16" Height="16"><PathIcon Data="{StaticResource IconMic}" Width="16" Height="16" /><Path Data="M1,1 L15,15" Stroke="#ED9292" StrokeThickness="1.8" IsVisible="{Binding IsSelfMuted}" /></Panel>
         </Button>
         <Button Classes="icon" Classes.off="{Binding IsSelfDeafened}" Width="26" Padding="5" Command="{Binding ToggleDeaf}" IsEnabled="{Binding IsSignedIn}" AutomationProperties.Name="{Binding DeafLabel}" ToolTip.ShowDelay="250">
-          <Button.ToolTip.Tip><StackPanel MaxWidth="320" Spacing="4"><TextBlock Text="{Binding DeafTip}" /><TextBlock Text="{Binding Devices.SelectedOutput.Name}" TextWrapping="Wrap" /><TextBlock Text="{Binding Devices.Error}" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" /></StackPanel></Button.ToolTip.Tip>
+          <ToolTip.Tip><StackPanel MaxWidth="320" Spacing="4"><TextBlock Text="{Binding DeafTip}" /><TextBlock Text="{Binding Devices.SelectedOutput.Name}" TextWrapping="Wrap" /><TextBlock Text="{Binding Devices.Error}" TextWrapping="Wrap" IsVisible="{Binding Devices.HasError}" /></StackPanel></ToolTip.Tip>
           <Panel Width="16" Height="16"><PathIcon Data="{StaticResource IconHeadphones}" Width="16" Height="16" /><Path Data="M1,1 L15,15" Stroke="#ED9292" StrokeThickness="1.8" IsVisible="{Binding IsSelfDeafened}" /></Panel>
         </Button>
-        <Button Classes="icon" Width="16" Padding="2" ToolTip.Tip="{i18n:T AudioDevices}" AutomationProperties.Name="{i18n:T AudioDevices}">
+        <Button x:Name="DeviceButton" Classes="icon" Width="16" Padding="2" ToolTip.Tip="{i18n:T AudioDevices}" AutomationProperties.Name="{i18n:T AudioDevices}">
           <PathIcon Data="{StaticResource IconChevronDown}" Width="9" Height="9" />
-          <Button.Flyout><Flyout Placement="TopEdgeAlignedRight" Opened="OnDevicesOpened"><voice:AccountDevicePicker DataContext="{Binding Devices}" /></Flyout></Button.Flyout>
+
         </Button>
       </StackPanel>
+      <Popup x:Name="DevicePopup" PlacementTarget="{Binding #DeviceButton}" Placement="TopEdgeAlignedRight"
+        IsLightDismissEnabled="True" ShouldUseOverlayLayer="True" Opened="OnDevicesOpened">
+        <Border Background="#252525" BorderBrush="#404040" BorderThickness="1" CornerRadius="2" Padding="16">
+          <voice:AccountDevicePicker DataContext="{Binding Devices}" />
+        </Border>
+      </Popup>
     </Grid>
   </Border>
 </UserControl>

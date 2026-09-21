@@ -1,16 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:vm="using:Chat.UI.Shell" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
  x:Class="Chat.UI.Chat.ProfileDrawer" x:DataType="vm:ShellViewModel"
- IsVisible="False" IsHitTestVisible="{Binding ProfileOpen}">
+ Classes="profileDrawer" IsVisible="False" IsHitTestVisible="{Binding ProfileOpen}">
   <UserControl.Styles>
     <Style Selector="Border#DrawerSurface"><Setter Property="Opacity" Value="0" /><Setter Property="RenderTransform" Value="translate(-32px, 0px)" /></Style>
     <Style Selector="Border#DrawerBackdrop"><Setter Property="Opacity" Value="0" /></Style>
-    <Style Selector="UserControl.motion Border#DrawerSurface">
+    <Style Selector=".profileDrawer.motion Border#DrawerSurface">
       <Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.18" Easing="CubicEaseOut" /><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut" /></Transitions></Setter>
     </Style>
-    <Style Selector="UserControl.motion Border#DrawerBackdrop"><Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.18" /></Transitions></Setter></Style>
-    <Style Selector="UserControl.open Border#DrawerSurface"><Setter Property="Opacity" Value="1" /><Setter Property="RenderTransform" Value="translate(0px, 0px)" /></Style>
-    <Style Selector="UserControl.open Border#DrawerBackdrop"><Setter Property="Opacity" Value="1" /></Style>
+    <Style Selector=".profileDrawer.motion Border#DrawerBackdrop"><Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.18" /></Transitions></Setter></Style>
+    <Style Selector=".profileDrawer.open Border#DrawerSurface"><Setter Property="Opacity" Value="1" /><Setter Property="RenderTransform" Value="translate(0px, 0px)" /></Style>
+    <Style Selector=".profileDrawer.open Border#DrawerBackdrop"><Setter Property="Opacity" Value="1" /></Style>
     <Style Selector="TextBox"><Setter Property="CornerRadius" Value="2" /><Setter Property="MinHeight" Value="40" /></Style>
     <Style Selector="Button"><Setter Property="CornerRadius" Value="2" /></Style>
   </UserControl.Styles>

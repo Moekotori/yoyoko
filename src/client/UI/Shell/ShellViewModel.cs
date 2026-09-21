@@ -16,6 +16,7 @@ using Chat.UI.Components;
 using Chat.UI.Instances;
 using Chat.UI.Localization;
 using Chat.UI.Settings;
+using Chat.UI.Shortcuts;
 using Chat.UI.Voice;
 using Chat.UI.Workspace;
 using ChannelItem = Chat.UI.Channels.ChannelItem;
@@ -33,15 +34,14 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private readonly IVoiceMedia _media;
     private readonly I18n _text;
     private readonly IChatChrome _chrome;
+    private readonly IShortcutPreference _shortcuts;
     private readonly CancellationToken _lifetime;
     private DateTimeOffset _cooldownUntil;
     private Guid? _cooldownChannel;
     private string _moderationWords = "";
     private string _cooldownInput = "0";
     private bool _settingsOpen;
-    private readonly SemaphoreSlim _images = new(4);
     private readonly AttachmentPreviews _previews;
-    private readonly Dictionary<Guid, (Uri Url, AvatarPlayback Playback)> _playbacks = [];
     private string _address = "";
     private string _status = "";
     private string _draft = "";
@@ -58,7 +58,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public ShellViewModel(InstanceManager instances, IMessageCache cache, ICredentialVault vault,
         IInstanceDiscovery discovery, IChatApiFactory apis, Func<IGatewayConnection> gateways,
         IVoiceMedia media, ILocalePreference locale, IChatChrome chrome, IVoiceDevicePreference devices,
-        IAppearancePreference appearance, I18n text, string productName, CancellationToken lifetime, WorkspaceConnection connection)
+        IAppearancePreference appearance, IShortcutPreference shortcuts, I18n text, string productName, CancellationToken lifetime, WorkspaceConnection connection)
     {
         _connection = connection;
         _instances = instances;
@@ -70,6 +70,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _media = media;
         _text = text;
         _chrome = chrome;
+        _shortcuts = shortcuts;
         ProductName = productName;
         _lifetime = lifetime;
         _previews = new(lifetime);
@@ -77,8 +78,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         AuthForm = new(AuthenticateAsync, error => { AuthForm!.Status = _text.Error(error); OnError(error); });
         Connection = new(ConnectWorkspaceAsync, DisconnectWorkspaceAsync, ProbeLatencyAsync, OnError, text);
         Wallpaper = new(appearance, chrome, text);
-        Settings = new(locale, chrome, appearance, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm);
+        Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm);
         chrome.Changed += OnChromeChanged;
+        shortcuts.Changed += OnShortcutsChanged;
         OpenAddInstance = new(_ =>
         {
             OpenConnectionSettings();
@@ -406,6 +408,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             _cache, _vault, _gateways, _media, Username.Trim(), Password, string.IsNullOrWhiteSpace(DisplayName) ? Username.Trim() : DisplayName.Trim(),
             register, _lifetime);
         session.ApplyDiscovery(info);
+        item.Context.AttachDiscovery(info);
         if (item.Context.Session is { } previous)
         {
             _boundSessions.Remove(previous);
@@ -451,7 +454,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (SelectedChannel is null || Channels.All(item => item.Id != SelectedChannel.Id))
             SelectedChannel = Channels.FirstOrDefault(channel => channel.Kind == "text") ?? Channels.FirstOrDefault();
         if (SelectedChannel is { } selected && Channels.FirstOrDefault(item => item.Id == selected.Id) is { } updated)
+        {
             selected.Name = updated.Name;
+            Changed(nameof(ComposerPlaceholder));
+        }
         FillModeration();
         NotifySession();
         _ = SyncVoiceCapAsync();
@@ -490,6 +496,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(CanModerate));
         Changed(nameof(ActiveServer));
         Changed(nameof(CanSend));
+        RefreshParticipants();
     }
 
     private void OnTextChanged(object? sender, PropertyChangedEventArgs args) => OnLocaleChanged();
@@ -504,12 +511,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Changed(nameof(HasInvite));
         Changed(nameof(MuteLabel));
         Changed(nameof(DeafLabel));
-        Changed(nameof(MuteTip));
-        Changed(nameof(DeafTip));
         Changed(nameof(VoiceStatus));
         Changed(nameof(VoiceMembers));
         Changed(nameof(FileLimitTip));
-        Changed(nameof(AttachTip));
+        OnShortcutsChanged();
         Changed(nameof(ComposerPlaceholder));
         Changed(nameof(SendTip));
         RebuildQualityChoices();
@@ -584,6 +589,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     private void SyncMessages()
     {
+        if (_visualBudget.Suspended) return;
         if (_timeline is null)
         {
             Messages.Clear();
@@ -607,7 +613,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             }
             if (_playbacks.TryGetValue(item.Message.AuthorId, out var cached))
                 row.Playback = cached.Playback;
-            if (session is not null) _ = LoadUserAvatarAsync(item.Message.AuthorId);
             ordered.Add(row);
         }
         for (var i = 0; i < ordered.Count; i++)
@@ -620,6 +625,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         while (Messages.Count > ordered.Count)
             Messages.RemoveAt(Messages.Count - 1);
         RefreshMessagePresentation();
+        RefreshAvatars();
         if (session is not null)
             _previews.Update(Messages.SelectMany(row => row.Files), session.DownloadAsync);
         Changed(nameof(HasOlder));
@@ -854,65 +860,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private async Task<PickedFile?> PickAvatarAsync() =>
         PickAvatar is null ? null : await PickAvatar();
 
-    private async Task LoadUserAvatarAsync(Guid userId)
-    {
-        var session = SelectedInstance?.Context.Session;
-        var user = session?.User(userId);
-        if (user?.Avatar is null)
-        {
-            if (_playbacks.Remove(userId, out var stale)) stale.Playback.Dispose();
-            ApplyPlayback(userId, null);
-            return;
-        }
-        var url = user.Avatar.Animated
-            ? user.Avatar.DownloadUrl
-            : user.Avatar.ThumbnailUrl ?? user.Avatar.DownloadUrl;
-        if (_playbacks.TryGetValue(userId, out var existing) && existing.Url == url)
-        {
-            ApplyPlayback(userId, existing.Playback);
-            return;
-        }
-        var limit = user.Avatar.Animated
-            ? (int)Math.Min(Math.Max(user.Avatar.Size, 1) + 65_536, ProtocolVersion.MaxAvatarBytes)
-            : 512 * 1024;
-        await _images.WaitAsync(_lifetime);
-        try
-        {
-            var bytes = await session!.DownloadAsync(url, limit, _lifetime);
-            if (bytes is null || bytes.Length == 0) return;
-            var playback = AvatarPlayback.Decode(bytes, 128);
-            if (_playbacks.Remove(userId, out var previous)) previous.Playback.Dispose();
-            _playbacks[userId] = (url, playback);
-            ApplyPlayback(userId, playback);
-        }
-        catch { /* keep letter avatar */ }
-        finally { _images.Release(); }
-    }
-
-    private void ApplyPlayback(Guid userId, AvatarPlayback? playback)
-    {
-        if (SelectedInstance?.Context.Session?.Me.Id == userId)
-        {
-            AccountPlayback = playback;
-            Changed(nameof(AccountPlayback));
-            Changed(nameof(HasAvatar));
-            Settings.Profile.SetPlayback(playback);
-        }
-        foreach (var row in Messages)
-            if (row.Item.Message.AuthorId == userId)
-                row.Playback = playback;
-    }
-
-    private void ClearPlaybacks()
-    {
-        foreach (var item in _playbacks.Values) item.Playback.Dispose();
-        _playbacks.Clear();
-        AccountPlayback = null;
-        Changed(nameof(AccountPlayback));
-        Changed(nameof(HasAvatar));
-        Settings.Profile.SetPlayback(null);
-    }
-
     private void OnError(Exception exception)
     {
         Status = exception switch
@@ -987,6 +934,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _previews.Dispose();
         _text.PropertyChanged -= OnTextChanged;
         _chrome.Changed -= OnChromeChanged;
+        _shortcuts.Changed -= OnShortcutsChanged;
         ClearPlaybacks();
         Settings.Dispose();
         Wallpaper.Dispose();

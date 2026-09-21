@@ -28,7 +28,8 @@
         </Grid>
         <ItemsControl ItemsSource="{Binding TextChannels}" IsVisible="{Binding TextExpanded}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
-            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
+            <Panel>
+            <Button IsVisible="{Binding !IsEditing}" Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
               <Button.ContextMenu><ContextMenu Opening="OnChannelMenuOpening">
                 <MenuItem Header="{i18n:T OpenChannel}" />
                 <Separator />
@@ -42,8 +43,15 @@
                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
               </Grid>
             </Button>
+            <ContentControl Content="{Binding Editor}" IsVisible="{Binding IsEditing}">
+              <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
+            </ContentControl>
+            </Panel>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
+        <ContentControl Content="{Binding NewTextChannelEditor}" IsVisible="{Binding HasNewTextChannelEditor}">
+          <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
+        </ContentControl>
         <Grid ColumnDefinitions="*,Auto" Margin="0,19,0,5">
           <Button Classes="groupHeader" Command="{Binding ToggleVoiceChannels}" AutomationProperties.Name="{i18n:T VoiceChannels}">
             <StackPanel Orientation="Horizontal" Spacing="7">
@@ -60,7 +68,8 @@
         </Grid>
         <ItemsControl ItemsSource="{Binding VoiceChannels}" IsVisible="{Binding VoiceExpanded}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="ch:ChannelItem">
-            <Button Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
+            <Panel>
+            <Button IsVisible="{Binding !IsEditing}" Classes="channel" Classes.selected="{Binding IsSelected}" Command="{Binding #Sidebar.((vm:ShellViewModel)DataContext).SelectOpenChannel}" CommandParameter="{Binding}" Margin="0,0,0,2" AutomationProperties.Name="{Binding Name}" Loaded="OnChannelLoaded">
               <Button.ContextMenu><ContextMenu Opening="OnChannelMenuOpening">
                 <MenuItem Header="{i18n:T OpenChannel}" />
                 <Separator />
@@ -74,8 +83,15 @@
                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
               </Grid>
             </Button>
+            <ContentControl Content="{Binding Editor}" IsVisible="{Binding IsEditing}">
+              <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
+            </ContentControl>
+            </Panel>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
+        <ContentControl Content="{Binding NewVoiceChannelEditor}" IsVisible="{Binding HasNewVoiceChannelEditor}">
+          <ContentControl.ContentTemplate><DataTemplate x:DataType="ch:ChannelEditorViewModel"><ch:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
+        </ContentControl>
       </StackPanel>
     </ScrollViewer>
   </Border>

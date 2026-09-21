@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using Chat.Core.Instances;
 using Chat.Localization;
 using Chat.UI.Components;
@@ -148,21 +149,21 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
     private async Task ProbeOnceAsync(CancellationToken token)
     {
         if (!IsConnected) return;
-        try
-        {
-            var ms = await _probe(token);
-            if (token.IsCancellationRequested) return;
-            _latencyMs = ms;
-            _latencyFailed = false;
-        }
+        int? ms = null;
+        var failed = false;
+        try { ms = await _probe(token); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
-        catch
+        catch { failed = true; }
+        if (token.IsCancellationRequested) return;
+        void Apply()
         {
-            if (token.IsCancellationRequested) return;
-            _latencyMs = null;
-            _latencyFailed = true;
+            if (token.IsCancellationRequested || !IsConnected) return;
+            _latencyMs = ms;
+            _latencyFailed = failed;
+            Changed(nameof(LatencyText));
         }
-        Changed(nameof(LatencyText));
+        if (Dispatcher.UIThread.CheckAccess()) Apply();
+        else Dispatcher.UIThread.Post(Apply);
     }
 
     private void NotifyActions()

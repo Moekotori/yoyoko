@@ -74,6 +74,7 @@ public sealed class VoiceDevicesViewModel : ObservableObject
 
     public Task RefreshAsync()
     {
+        if (_applying) return Task.CompletedTask;
         if (_refresh is { IsCompleted: false }) return _refresh;
         return _refresh = RefreshDevicesAsync();
     }

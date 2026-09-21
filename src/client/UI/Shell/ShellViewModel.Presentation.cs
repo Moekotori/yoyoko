@@ -25,7 +25,7 @@ public sealed partial class ShellViewModel
     private readonly Dictionary<string, string> _channelDrafts = [];
     public ObservableCollection<ChannelItem> OpenChannels { get; } = [];
     public ObservableCollection<MessageRow> VisibleMessages { get; } = [];
-    public ObservableCollection<MessageRow> Participants { get; } = [];
+    public ObservableCollection<MemberProfile> Participants { get; } = [];
     public IEnumerable<ChannelItem> TextChannels => Channels.Where(channel => channel.Kind == "text");
     public IEnumerable<ChannelItem> VoiceChannels => Channels.Where(channel => channel.Kind == "voice");
     public ActionCommand SelectOpenChannel { get; private set; } = null!;
@@ -74,8 +74,8 @@ public sealed partial class ShellViewModel
             else FocusSearch?.Invoke();
         });
         ToggleParticipants = new(_ => ParticipantsOpen = !ParticipantsOpen);
-        ToggleTextChannels = new(_ => TextExpanded = !TextExpanded);
-        ToggleVoiceChannels = new(_ => VoiceExpanded = !VoiceExpanded);
+        ToggleTextChannels = new(_ => { TextExpanded = !TextExpanded; if (!TextExpanded && ChannelEditor is { IsVoice: false } editor) editor.Cancel.Execute(null); });
+        ToggleVoiceChannels = new(_ => { VoiceExpanded = !VoiceExpanded; if (!VoiceExpanded && ChannelEditor is { IsVoice: true } editor) editor.Cancel.Execute(null); });
         DismissPresentation = new(_ =>
         {
             if (ProfileOpen) ProfileOpen = false;
@@ -156,7 +156,8 @@ public sealed partial class ShellViewModel
             if (_channelsChanged)
             {
                 _channelsChanged = false;
-                Changed(nameof(TextChannels)); Changed(nameof(VoiceChannels));
+                RefreshChannelEditor();
+            Changed(nameof(TextChannels)); Changed(nameof(VoiceChannels));
                 for (var index = OpenChannels.Count - 1; index >= 0; index--)
                 {
                     var current = Channels.FirstOrDefault(item => item.Id == OpenChannels[index].Id);
@@ -185,21 +186,57 @@ public sealed partial class ShellViewModel
                 var previous = VisibleMessages.IndexOf(matches[i]);
                 if (previous >= 0) VisibleMessages.Move(previous, i); else VisibleMessages.Insert(i, matches[i]);
             }
-        var participants = Messages
-            .DistinctBy(row => row.Item.Message.AuthorId)
-            .OrderBy(row => row.Author, StringComparer.CurrentCultureIgnoreCase)
-            .Take(50)
-            .ToList();
-        if (!Participants.SequenceEqual(participants))
-        {
-            Participants.Clear();
-            foreach (var row in participants) Participants.Add(row);
-            Changed(nameof(ParticipantCount));
-            Changed(nameof(HasParticipants));
-        }
+        RefreshParticipants();
         for (var i = 0; i < VisibleMessages.Count; i++)
             VisibleMessages[i].SetContinuation(i > 0 && Continues(VisibleMessages[i - 1], VisibleMessages[i]));
         Changed(nameof(EmptyMessages)); Changed(nameof(EmptyMessageTitle));
+    }
+
+    private void RefreshParticipants()
+    {
+        var session = SelectedInstance?.Context.Session;
+        var me = session?.Me.Id;
+        var next = Messages
+            .DistinctBy(row => row.Item.Message.AuthorId)
+            .OrderBy(row => row.Author, StringComparer.CurrentCultureIgnoreCase)
+            .Take(50)
+            .Select(row =>
+            {
+                var id = row.Item.Message.AuthorId;
+                var user = session?.User(id);
+                var name = user?.DisplayName ?? row.Author;
+                var username = user?.Username ?? "";
+                var isSelf = me is Guid self && self == id;
+                var existing = Participants.FirstOrDefault(item => item.Id == id);
+                if (existing is null) existing = new MemberProfile(id, name, username, isSelf);
+                else existing.Update(name, username, isSelf);
+                existing.Playback = _playbacks.TryGetValue(id, out var cached) ? cached.Playback : row.Playback;
+                return existing;
+            })
+            .ToList();
+        for (var i = Participants.Count - 1; i >= 0; i--)
+            if (next.All(item => item.Id != Participants[i].Id))
+                Participants.RemoveAt(i);
+        for (var i = 0; i < next.Count; i++)
+        {
+            if (i < Participants.Count && Participants[i].Id == next[i].Id) continue;
+            var previous = -1;
+            for (var j = 0; j < Participants.Count; j++)
+                if (Participants[j].Id == next[i].Id) { previous = j; break; }
+            if (previous >= 0) Participants.Move(previous, i);
+            else Participants.Insert(i, next[i]);
+        }
+        Changed(nameof(ParticipantCount));
+        Changed(nameof(HasParticipants));
+    }
+
+    public void MentionMember(MemberProfile member)
+    {
+        var token = member.MentionToken;
+        if (string.IsNullOrEmpty(token)) return;
+        if (Draft.Length > 0 && !char.IsWhiteSpace(Draft[^1]))
+            AppendDraft(" ");
+        AppendDraft(token + " ");
     }
 
     private static bool Continues(MessageRow previous, MessageRow current)

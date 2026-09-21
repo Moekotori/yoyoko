@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Chat.Localization;
+using Chat.UI.Shortcuts;
 using FileKinds = global::Chat.Core.Messaging.FileKinds;
 using PickedFile = global::Chat.Core.Sessions.PickedFile;
 
@@ -13,6 +14,8 @@ namespace Chat.UI.Shell;
 
 public partial class MainWindow : Window
 {
+    private global::Chat.UI.Resources.WindowResourceGovernor? _resources;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -23,6 +26,10 @@ public partial class MainWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        _resources ??= new(this, budget =>
+        {
+            if (DataContext is ShellViewModel model) model.ApplyVisualBudget(budget);
+        });
         if (DataContext is ShellViewModel shell)
         {
             shell.PickFiles = PickFilesAsync;
@@ -112,12 +119,14 @@ public partial class MainWindow : Window
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Handled || DataContext is not ShellViewModel shell) return;
+        if (shell.Settings.Shortcuts.IsRecording) return;
+        var pressed = KeyChord.FromKeyEvent(e);
+        var action = pressed is { } chord ? ShortcutScheme.Match(chord, shell.Settings.Shortcuts.Overrides) : null;
         if (shell.ProfileOpen)
         {
-            var profileChord = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
             if (e.Key == Key.Escape) { shell.CloseProfile.Execute(null); e.Handled = true; }
-            else if (profileChord && e.Key == Key.K) { shell.CloseProfile.Execute(null); shell.OpenJump(); e.Handled = true; }
-            else if (profileChord && e.Key == Key.OemComma) { shell.CloseProfile.Execute(null); shell.OpenSettings.Execute(null); e.Handled = true; }
+            else if (action is ShortcutAction.Jump) { shell.CloseProfile.Execute(null); shell.OpenJump(); e.Handled = true; }
+            else if (action is ShortcutAction.Settings) { shell.CloseProfile.Execute(null); shell.OpenSettings.Execute(null); e.Handled = true; }
             return;
         }
         if (shell.IsChannelEditorOpen)
@@ -126,97 +135,39 @@ public partial class MainWindow : Window
             return;
         }
 
-        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-        var alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
-        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        var meta = e.KeyModifiers.HasFlag(KeyModifiers.Meta);
-        var chord = ctrl || meta;
-
         if (shell.SwitcherOpen)
         {
-            if (e.Key == Key.Escape || (chord && e.Key == Key.W)) { shell.CloseJump(); e.Handled = true; }
-            else if (e.Key == Key.Enter) { shell.ConfirmJump(null); e.Handled = true; }
-            else if (e.Key == Key.Up) { shell.MoveJump(-1); e.Handled = true; }
-            else if (e.Key == Key.Down) { shell.MoveJump(1); e.Handled = true; }
-            else if (chord && e.Key == Key.F) { shell.OpenSearch(); e.Handled = true; }
-            else if (chord && e.Key == Key.K) e.Handled = true;
-            else if (chord && e.Key == Key.OemComma) { shell.CloseJump(); shell.OpenSettings.Execute(null); e.Handled = true; }
+            if (e.Key == Key.Escape || action is ShortcutAction.CloseTab) { shell.CloseJump(); e.Handled = true; }
+            else if (e.Key == Key.Enter && action is null) { shell.ConfirmJump(null); e.Handled = true; }
+            else if (e.Key is Key.Up or Key.Down && action is null)
+            {
+                shell.MoveJump(e.Key == Key.Down ? 1 : -1);
+                e.Handled = true;
+            }
+            else if (action is ShortcutAction.Search or ShortcutAction.Jump or ShortcutAction.Settings)
+            {
+                if (shell.ExecuteShortcut(action.Value)) e.Handled = true;
+            }
             return;
         }
 
-        if (alt && !chord && e.Key is Key.Up or Key.Down)
+        if (action is { } matched && shell.ExecuteShortcut(matched))
         {
-            shell.SelectAdjacentChannel(e.Key == Key.Down ? 1 : -1);
             e.Handled = true;
             return;
         }
 
-        if (ctrl && !meta && e.Key == Key.Tab)
+        if (e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None)
         {
-            shell.SelectAdjacentTab(shift ? -1 : 1);
+            shell.DismissPresentation.Execute(null);
             e.Handled = true;
             return;
         }
 
-        if (!chord)
-        {
-            if (e.Key == Key.Escape) { shell.DismissPresentation.Execute(null); e.Handled = true; }
-            return;
-        }
-
-        if (alt) return;
-        switch (e.Key)
-        {
-            case Key.F:
-                shell.OpenSearch();
-                e.Handled = true;
-                break;
-            case Key.K:
-                shell.OpenJump();
-                e.Handled = true;
-                break;
-            case Key.W:
-                shell.CloseCurrentTab();
-                e.Handled = true;
-                break;
-            case Key.U when shift:
-                shell.ToggleParticipants.Execute(null);
-                e.Handled = true;
-                break;
-            case Key.U:
-                if (shell.ShowChat && shell.AttachFile.CanExecute(null))
-                {
-                    shell.AttachFile.Execute(null);
-                    e.Handled = true;
-                }
-                break;
-            case Key.M when shift:
-                if (shell.IsSignedIn && shell.ToggleMute.CanExecute(null))
-                {
-                    shell.ToggleMute.Execute(null);
-                    e.Handled = true;
-                }
-                break;
-            case Key.D when shift:
-                if (shell.IsSignedIn && shell.ToggleDeaf.CanExecute(null))
-                {
-                    shell.ToggleDeaf.Execute(null);
-                    e.Handled = true;
-                }
-                break;
-            case Key.OemComma:
-                shell.OpenSettings.Execute(null);
-                e.Handled = true;
-                break;
-            case >= Key.D1 and <= Key.D9:
-                shell.SelectOpenTab(e.Key - Key.D1);
-                e.Handled = true;
-                break;
-            case >= Key.NumPad1 and <= Key.NumPad9:
-                shell.SelectOpenTab(e.Key - Key.NumPad1);
-                e.Handled = true;
-                break;
-        }
+        var mod = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+        if (!mod || e.KeyModifiers.HasFlag(KeyModifiers.Alt)) return;
+        if (e.Key is >= Key.D1 and <= Key.D9) { shell.SelectOpenTab(e.Key - Key.D1); e.Handled = true; }
+        else if (e.Key is >= Key.NumPad1 and <= Key.NumPad9) { shell.SelectOpenTab(e.Key - Key.NumPad1); e.Handled = true; }
     }
 
     private void OnWindowTextInput(object? sender, TextInputEventArgs e)

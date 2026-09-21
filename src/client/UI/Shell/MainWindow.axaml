@@ -10,7 +10,7 @@
   <Window.Styles><StyleInclude Source="avares://Chat.UI/Shell/ShellMotion.axaml" /></Window.Styles>
   <Panel>
   <appearance:WallpaperView DataContext="{Binding Wallpaper}" />
-  <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsEnabled="{Binding !IsChannelEditorOpen}" IsHitTestVisible="{Binding !ProfileOpen}">
+  <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsHitTestVisible="{Binding !ProfileOpen}">
     <Border Grid.ColumnSpan="3" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" />
     <Border Grid.ColumnSpan="3" Width="292" HorizontalAlignment="Left" IsVisible="{Binding !ShowSettings}" Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,1" Padding="100,0,14,0">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding InstanceHost}">
@@ -22,7 +22,13 @@
         </Button.Flyout>
       </Button>
     </Border>
-    <channels:LiveChannelTabs Grid.Column="2" IsVisible="{Binding !ShowSettings}" />
+    <Grid Grid.Column="2" ColumnDefinitions="*,Auto" Margin="{OnPlatform Default='0,0,112,0', macOS='0'}" IsVisible="{Binding !ShowSettings}">
+      <channels:LiveChannelTabs />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,12,0" VerticalAlignment="Center" IsVisible="{Binding ShowChat}">
+        <Button Classes="icon" Classes.active="{Binding SearchOpen}" Command="{Binding ToggleSearch}" ToolTip.Tip="{Binding SearchShortcutTip}" AutomationProperties.Name="{i18n:T SearchMessages}"><PathIcon Data="{StaticResource IconSearch}" /></Button>
+        <Button Classes="icon" Classes.active="{Binding ParticipantsOpen}" Command="{Binding ToggleParticipants}" ToolTip.Tip="{Binding MembersShortcutTip}" AutomationProperties.Name="{i18n:T ToggleMembers}"><PathIcon Data="{StaticResource IconPeople}" /></Button>
+      </StackPanel>
+    </Grid>
     <instances:InstanceRail Grid.Row="1" Grid.RowSpan="2" />
     <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Classes="channelSlot"
       Classes.collapsed="{Binding ShowSettings}" Classes.motion="{Binding !ReduceMotion}"
@@ -32,15 +38,9 @@
         <chat:LiveAccountBar Grid.Row="1" />
       </Grid>
     </Border>
-    <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" RowDefinitions="52,*" IsVisible="{Binding !ShowSettings}">
-      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" IsVisible="{Binding ShowChat}">
-            <Button Classes="icon" Classes.active="{Binding SearchOpen}" Command="{Binding ToggleSearch}" ToolTip.Tip="{i18n:T SearchShortcut}" AutomationProperties.Name="{i18n:T SearchMessages}"><PathIcon Data="{StaticResource IconSearch}" /></Button>
-            <Button Classes="icon" Classes.active="{Binding ParticipantsOpen}" Command="{Binding ToggleParticipants}" ToolTip.Tip="{i18n:T MembersShortcut}" AutomationProperties.Name="{i18n:T ToggleMembers}"><PathIcon Data="{StaticResource IconPeople}" /></Button>
-          </StackPanel>
-        </Grid>
+    <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" RowDefinitions="Auto,*" IsVisible="{Binding !ShowSettings}">
+      <Border Height="52" IsVisible="{Binding !ShowChat}" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="24,0,18,0">
+        <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
       </Border>
       <Panel Grid.Row="1">
         <motion:MotionHost IsVisible="{Binding ShowAddInstance}"><instances:AddInstanceView /></motion:MotionHost>
@@ -70,10 +70,6 @@
     <Border Background="#59000000" PointerPressed="OnJumpBackdrop" />
     <channels:QuickSwitcher HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,56,0,0" />
   </Panel>
-  <Border Background="#88000000" IsVisible="{Binding IsChannelEditorOpen}">
-    <ContentControl Content="{Binding ChannelEditor}" HorizontalAlignment="Center" VerticalAlignment="Center">
-      <ContentControl.ContentTemplate><DataTemplate x:DataType="channels:ChannelEditorViewModel"><channels:ChannelEditor /></DataTemplate></ContentControl.ContentTemplate>
-    </ContentControl>
-  </Border>
+
   </Panel>
 </Window>
