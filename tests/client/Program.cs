@@ -122,7 +122,7 @@ Check(server.CooldownSeconds == 5 && server.BlockedWords is ["spam"], "server mo
 Check(InstanceManager.NormalizeAddress("friends.example.com").Scheme == "https", "discovery defaults to HTTPS");
 Check(InstanceManager.NormalizeAddress("localhost:8080").Scheme == "http", "loopback defaults to HTTP");
 Check(WorkspaceAddress.Resolve(" localhost ", "http://10.19.144.83:8080") == "http://10.19.144.83:8080/", "localhost shortcut uses configured LAN server and port");
-Check(WorkspaceAddress.Resolve("localhost", "http://localhost:8080") == "http://localhost:8080/", "localhost shortcut can target the local instance");
+Check(WorkspaceAddress.Resolve("localhost", WorkspaceAddress.LocalServerUrl) == "http://localhost:8080/", "localhost shortcut can target the local instance");
 Check(WorkspaceAddress.Resolve("HTTP://LOCALHOST/", "http://192.168.1.10:9090") == "http://192.168.1.10:9090/", "localhost shortcut follows configured default changes");
 Check(WorkspaceAddress.Resolve("localhost:8081", "http://10.19.144.83:8080") == "http://localhost:8081/", "explicit loopback port is not redirected");
 Check(WorkspaceAddress.Resolve("localhost.example.com", "http://10.19.144.83:8080") == "https://localhost.example.com/", "localhost-like domain is not redirected");

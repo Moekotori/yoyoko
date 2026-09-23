@@ -11,6 +11,8 @@ allowed_origins = ["http://localhost:8080"]
 token_secret = "local-development-only-change-me-32b"
 access_ttl_seconds = 43200
 refresh_ttl_days = 30
+# Optional new-account gate: set CHAT__AUTH__REGISTRATION_PASSWORD in the server environment.
+# Do not put a real password in this tracked sample config.
 
 [database]
 # Local file store for machines without Postgres. Compose/CI override to postgres://.

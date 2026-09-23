@@ -21,15 +21,15 @@
       <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
     </Style>
     <Style Selector="Button.menuAction PathIcon"><Setter Property="Foreground" Value="{DynamicResource QuietTextBrush}" /></Style>
-    <Style Selector="Button.menuDanger"><Setter Property="Foreground" Value="#DDA49C" /></Style>
-    <Style Selector="Button.menuDanger:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="#E8B8B2" /></Style>
+    <Style Selector="Button.menuDanger"><Setter Property="Foreground" Value="{DynamicResource DangerActionBrush}" /></Style>
+    <Style Selector="Button.menuDanger:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource DangerHoverBrush}" /></Style>
     <Style Selector="Button.link">
       <Setter Property="Padding" Value="0" /><Setter Property="MinHeight" Value="0" />
       <Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" />
       <Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
     </Style>
     <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="#E8E8E8" />
+      <Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource StrongTextBrush}" />
     </Style>
     <Style Selector="Button.avatarPick">
       <Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" />
@@ -140,7 +140,7 @@
         </motion:RevealHost>
         <Border Classes="menuDivider" />
         <Button Classes="menuAction menuDanger" Click="SignOutClick">
-          <TextBlock Text="{i18n:T SignOut}" Foreground="#DDA49C" VerticalAlignment="Center" />
+          <TextBlock Text="{i18n:T SignOut}" Foreground="{DynamicResource DangerActionBrush}" VerticalAlignment="Center" />
         </Button>
       </StackPanel>
       <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="10,6,10,8" IsVisible="{Binding HasStatus}" />

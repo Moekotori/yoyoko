@@ -105,6 +105,8 @@ pub struct RegisterRequest {
     pub username: String,
     pub display_name: String,
     pub password: String,
+    #[serde(default)]
+    pub server_password: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

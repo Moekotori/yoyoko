@@ -11,11 +11,11 @@
   </UserControl.Styles>
   <Panel>
   <appearance:WallpaperView DataContext="{Binding Wallpaper}" />
-  <Grid ColumnDefinitions="72,Auto,*" RowDefinitions="42,*,66" IsHitTestVisible="{Binding !ProfileOpen}">
+  <Grid ColumnDefinitions="64,Auto,*" RowDefinitions="42,*,66" IsHitTestVisible="{Binding !ProfileOpen}">
     <Border Grid.ColumnSpan="3" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1"
       chrome:WindowDecorationProperties.ElementRole="TitleBar" />
     <Border Grid.ColumnSpan="3" Classes="communityTitle" Classes.collapsed="{Binding ShowSettings}" Classes.motion="{Binding !ReduceMotion}"
-      HorizontalAlignment="Left" Background="{DynamicResource ChromeBrush}" Padding="100,0,14,0"
+      HorizontalAlignment="Left" Background="{DynamicResource ChromeBrush}" Padding="92,0,14,0"
       chrome:WindowDecorationProperties.ElementRole="TitleBar" IsHitTestVisible="{Binding !ShowSettings}">
       <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ToolTip.Tip="{Binding InstanceHost}">
         <Grid ColumnDefinitions="*,16" ColumnSpacing="8"><TextBlock Text="{Binding InstanceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><PathIcon Grid.Column="1" Data="{StaticResource IconChevronDown}" Width="12" Height="12" /></Grid>
@@ -36,7 +36,7 @@
     <instances:InstanceRail Grid.Row="1" Grid.RowSpan="2" />
     <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Classes="channelSlot" Classes.collapsed="{Binding ShowSettings}"
       Classes.motion="{Binding !ReduceMotion}" IsHitTestVisible="{Binding !ShowSettings}">
-      <Grid Width="260" HorizontalAlignment="Left" RowDefinitions="*,Auto">
+      <Grid Width="236" HorizontalAlignment="Left" RowDefinitions="*,Auto">
         <channels:ChannelSidebar />
         <StackPanel Grid.Row="1">
           <voice:VoiceSessionBar IsVisible="{Binding InVoice}" />
@@ -49,7 +49,6 @@
         <TextBlock Text="{Binding PaneTitle}" VerticalAlignment="Center" FontSize="15" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
       </Border>
       <Panel Grid.Row="1">
-        <motion:MotionHost IsVisible="{Binding ShowAddInstance}"><instances:AddInstanceView /></motion:MotionHost>
         <motion:MotionHost IsVisible="{Binding ShowAuth}">
           <StackPanel MaxWidth="420" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
             <TextBlock Text="{Binding Connection.Status}" TextWrapping="Wrap" HorizontalAlignment="Center" />
@@ -69,7 +68,7 @@
       Preset="SlideLeft" StartOpacity="0.88" Duration="0:0:0.16">
       <settings:SettingsView DataContext="{Binding Settings}" />
     </motion:MotionHost>
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="#333333" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" CornerRadius="8" Padding="14,6" MinWidth="280">
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" IsVisible="{Binding Workspace.HasNotice}" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="20,0,20,106" CornerRadius="8" Padding="14,6" MinWidth="280">
       <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Workspace.Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding Workspace.DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
     </Border>
   </Grid>
@@ -77,6 +76,24 @@
   <Panel IsVisible="{Binding SwitcherOpen}" ZIndex="10">
     <Border Background="#59000000" PointerPressed="OnJumpBackdrop" />
     <channels:QuickSwitcher HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,56,0,0" />
+  </Panel>
+
+  <Panel IsVisible="{Binding ShowAddInstance}" ZIndex="30">
+    <Border Background="#B9000000" PointerPressed="OnAddInstanceBackdrop" />
+    <Border Width="420" MaxWidth="420" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center"
+      Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource DividerBrush}"
+      BorderThickness="1" CornerRadius="2">
+      <instances:AddInstanceView />
+    </Border>
+  </Panel>
+
+  <Panel IsVisible="{Binding ShowVoiceChannelSettings}" ZIndex="31">
+    <Border Background="#B9000000" PointerPressed="OnVoiceChannelSettingsBackdrop" />
+    <Border Width="440" MaxWidth="440" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center"
+      Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource DividerBrush}"
+      BorderThickness="1" CornerRadius="2">
+      <channels:VoiceChannelSettingsView DataContext="{Binding VoiceChannelSettings}" />
+    </Border>
   </Panel>
 
   </Panel>

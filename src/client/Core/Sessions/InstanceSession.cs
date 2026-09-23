@@ -75,10 +75,11 @@ public sealed partial class InstanceSession : IAsyncDisposable
 
     public static async Task<InstanceSession> SignInAsync(InstanceDescriptor descriptor, IChatApi api,
         IMessageCache cache, ICredentialVault vault, Func<IGatewayConnection> gateways, IVoiceMedia media,
-        string username, string password, string? displayName, bool register, CancellationToken cancellationToken)
+        string username, string password, string? displayName, bool register, CancellationToken cancellationToken,
+        string? serverPassword = null)
     {
         var auth = register
-            ? await api.RegisterAsync(new(username, displayName ?? username, password), cancellationToken)
+            ? await api.RegisterAsync(new(username, displayName ?? username, password, serverPassword), cancellationToken)
             : await api.LoginAsync(new(username, password), cancellationToken);
         var session = new InstanceSession(descriptor, auth.User, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
         await session.PersistAuthAsync(cancellationToken);

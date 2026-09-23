@@ -28,7 +28,8 @@ public sealed record UserDto(Guid Id, string Username, string DisplayName, Avata
     AvatarDto? Banner = null);
 public sealed record PatchMeRequest(string? Username, string? DisplayName, Guid? AvatarId, bool ClearAvatar = false,
     Guid? BannerId = null, bool ClearBanner = false);
-public sealed record RegisterRequest(string Username, string DisplayName, string Password);
+public sealed record RegisterRequest(string Username, string DisplayName, string Password,
+    string? ServerPassword = null);
 public sealed record LoginRequest(string Username, string Password);
 public sealed record RefreshRequest(string RefreshToken);
 public sealed record AuthResponse(string AccessToken, string RefreshToken, ulong ExpiresIn, UserDto User);

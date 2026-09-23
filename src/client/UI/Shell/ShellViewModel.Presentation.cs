@@ -7,15 +7,14 @@ using Chat.Localization;
 using Chat.UI.Chat;
 using Chat.UI.Components;
 using ChannelItem = Chat.UI.Channels.ChannelItem;
-using VoiceMemberRow = Chat.UI.Channels.VoiceMemberRow;
 
 namespace Chat.UI.Shell;
 
-// Local presentation state. Presence is not a server feature; extra names are layout fixtures.
+// Local presentation state. Presence is not a server feature.
 public sealed partial class ShellViewModel
 {
     private bool _searchOpen;
-    private bool _participantsOpen = true;
+    private bool _participantsOpen;
     private bool _textExpanded = true;
     private bool _voiceExpanded = true;
     private bool _directExpanded = true;
@@ -26,6 +25,7 @@ public sealed partial class ShellViewModel
     private string _searchQuery = "";
     private string? _draftKey;
     private readonly Dictionary<string, string> _channelDrafts = [];
+    private readonly Dictionary<string, List<PendingFileItem>> _pendingByDraftKey = [];
     public ObservableCollection<ChannelItem> OpenChannels { get; } = [];
     public ObservableCollection<MessageRow> VisibleMessages { get; } = [];
     public ObservableCollection<MemberProfile> Participants { get; } = [];
@@ -93,7 +93,9 @@ public sealed partial class ShellViewModel
         CancelComposerEdit = new(_ => CancelComposer());
         DismissPresentation = new(_ =>
         {
-            if (MentionOpen) CloseMention();
+            if (ShowAddInstance) CloseAddInstanceDialog();
+            else if (VoiceChannelSettings is { } channelSettings) channelSettings.Close.Execute(null);
+            else if (MentionOpen) CloseMention();
             else if (IsEditing) CancelEdit();
             else if (ProfileOpen) ProfileOpen = false;
             else if (SwitcherOpen) CloseJump();
@@ -107,16 +109,17 @@ public sealed partial class ShellViewModel
         PropertyChanged += OnPresentationChanged;
         Channels.CollectionChanged += OnPresentationCollection;
         Messages.CollectionChanged += OnPresentationCollection;
-        SeedLayoutFixtures();
     }
 
     private void OnPresentationChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (args.PropertyName == nameof(SelectedInstance))
         {
+            StashPendingFiles();
+            _draftKey = null;
             ProfileOpen = false;
             ChannelEditor = null;
-            _draftKey = null;
+            VoiceChannelSettings = null;
             Draft = "";
             OpenChannels.Clear();
             SearchQuery = "";
@@ -125,6 +128,7 @@ public sealed partial class ShellViewModel
         if (args.PropertyName == nameof(SelectedChannel))
         {
             FlushDraft();
+            StashPendingFiles();
             if (IsEditing) { _editingId = null; _editBackup = ""; Changed(nameof(IsEditing)); }
             if (IsReplying) CancelReply();
             RefreshTyping();
@@ -140,6 +144,7 @@ public sealed partial class ShellViewModel
             _draftKey = account is null || SelectedChannel is null ? null
                 : $"{SelectedInstance!.Context.Descriptor.Id.Value}:{account.Key.Id}:{SelectedChannel.Id}";
             Draft = _draftKey is not null && _channelDrafts.TryGetValue(_draftKey, out var draft) ? draft : "";
+            RestorePendingFiles();
             CloseMention();
             Changed(nameof(ComposerPlaceholder));
             Changed(nameof(SendTip));
@@ -205,8 +210,7 @@ public sealed partial class ShellViewModel
     private void RefreshMessagePresentation()
     {
         _messagesChanged = false;
-        var matches = FixtureRows()
-            .Concat(Messages)
+        var matches = Messages
             .Where(row => string.IsNullOrWhiteSpace(SearchQuery)
                 || row.Content.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)
                 || row.Author.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
@@ -275,8 +279,8 @@ public sealed partial class ShellViewModel
                 var username = user?.Username ?? "";
                 var isSelf = me is Guid self && self == id;
                 var existing = Participants.FirstOrDefault(item => item.Id == id);
-                if (existing is null) existing = new MemberProfile(id, name, username, isSelf, isOnline: true);
-                else existing.Update(name, username, isSelf, true);
+                if (existing is null) existing = new MemberProfile(id, name, username, isSelf, isOnline: isSelf);
+                else existing.Update(name, username, isSelf, isSelf);
                 existing.Playback = _playbacks.TryGetValue(id, out var cached) ? cached.Playback : row.Playback;
                 existing.BannerPlayback = _banners.TryGetValue(id, out var banner) ? banner.Playback : existing.BannerPlayback;
                 return existing;
@@ -292,19 +296,8 @@ public sealed partial class ShellViewModel
             existing.BannerPlayback = _banners.TryGetValue(selfId, out var selfBanner) ? selfBanner.Playback : existing.BannerPlayback;
             next.Add(existing);
         }
-        foreach (var seed in MemberFixtures.Seeds)
-        {
-            if (next.Any(item => item.Id == seed.Id
-                || item.Username.Equals(seed.Username, StringComparison.OrdinalIgnoreCase)
-                || item.Name.Equals(seed.Name, StringComparison.OrdinalIgnoreCase)))
-                continue;
-            var existing = Participants.FirstOrDefault(item => item.Id == seed.Id)
-                ?? new MemberProfile(seed.Id, seed.Name, seed.Username, false, isOnline: seed.Online, isFixture: true);
-            existing.Update(seed.Name, seed.Username, false, seed.Online);
-            next.Add(existing);
-        }
         next = next
-            .OrderByDescending(item => item.IsOnline)
+            .OrderByDescending(item => item.IsSelf)
             .ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
             .Take(50)
             .ToList();
@@ -320,53 +313,12 @@ public sealed partial class ShellViewModel
             if (previous >= 0) Participants.Move(previous, i);
             else Participants.Insert(i, next[i]);
         }
-        var online = Participants.Where(item => item.IsOnline).ToArray();
-        var offline = Participants.Where(item => !item.IsOnline).ToArray();
-        var sections = new List<MemberSection>(2);
-        if (online.Length > 0) sections.Add(new MemberSection(_text.Get(TextKey.OnlineCount, online.Length), online));
-        if (offline.Length > 0) sections.Add(new MemberSection(_text.Get(TextKey.OfflineCount, offline.Length), offline));
-        ParticipantSections = sections;
+        ParticipantSections = Participants.Count == 0
+            ? []
+            : [new MemberSection(_text.Get(TextKey.PageParticipants), Participants.ToArray())];
         Changed(nameof(ParticipantCount));
         Changed(nameof(HasParticipants));
         Changed(nameof(ParticipantSections));
-    }
-
-    private IEnumerable<MessageRow> FixtureRows() =>
-        IsUltraLightParked || SelectedChannel is not { Kind: "text" }
-            ? []
-            : MessageFixtures.Rows;
-
-    private void SeedLayoutFixtures()
-    {
-        if (IsUltraLightParked || Channels.Any(item => !item.IsFixture)) return;
-        if (Channels.Count == 0)
-        {
-            var server = Guid.Parse("01900000-0000-7000-8000-000000000100");
-            var general = new ChannelItem(Guid.Parse("01900000-0000-7000-8000-000000000101"), server, "日常", "text", null, true);
-            var design = new ChannelItem(Guid.Parse("01900000-0000-7000-8000-000000000102"), server, "设计", "text", null, true);
-            var voice = new ChannelItem(Guid.Parse("01900000-0000-7000-8000-000000000103"), server, "深夜电台", "voice", "studio", true);
-            voice.SyncMembers(
-            [
-                VoiceRow(MemberFixtures.Seeds[0], muted: true, deafened: false),
-                VoiceRow(MemberFixtures.Seeds[1], muted: false, deafened: false),
-                VoiceRow(MemberFixtures.Seeds[2], muted: false, deafened: true),
-            ]);
-            Channels.Add(general);
-            Channels.Add(design);
-            Channels.Add(voice);
-            SelectedChannel = general;
-        }
-        RefreshMessagePresentation();
-        Changed(nameof(ShowChannelNav));
-        Changed(nameof(ShowChat));
-        Changed(nameof(ShowAuth));
-    }
-
-    private static VoiceMemberRow VoiceRow(
-        (Guid Id, string Name, string Username, bool Online) seed, bool muted, bool deafened)
-    {
-        var profile = new MemberProfile(seed.Id, seed.Name, seed.Username, false, isOnline: true, isFixture: true);
-        return new VoiceMemberRow(seed.Id, seed.Name, seed.Username, muted, deafened, false, profile);
     }
 
     public void MentionMember(MemberProfile member)
@@ -401,9 +353,52 @@ public sealed partial class ShellViewModel
     {
         var account = SelectedInstance?.Context.Account;
         if (account is null) return;
-        var prefix = $"{SelectedInstance!.Context.Descriptor.Id.Value}:{account.Key.Id}:";
+        ClearAccountDrafts(SelectedInstance!.Context.Descriptor.Id.Value, account.Key.Id);
+    }
+
+    private void ClearAccountDrafts(Guid instanceId, Guid accountId)
+    {
+        var prefix = $"{instanceId}:{accountId}:";
         foreach (var key in _channelDrafts.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal)).ToArray())
             _channelDrafts.Remove(key);
+        foreach (var key in _pendingByDraftKey.Keys.Where(key => key.StartsWith(prefix, StringComparison.Ordinal)).ToArray())
+        {
+            DisposePending(_pendingByDraftKey[key]);
+            _pendingByDraftKey.Remove(key);
+        }
+    }
+
+    private void StashPendingFiles()
+    {
+        if (PendingFiles.Count == 0) return;
+        var pending = PendingFiles.ToList();
+        PendingFiles.Clear();
+        if (_draftKey is null)
+            DisposePending(pending);
+        else
+        {
+            if (_pendingByDraftKey.Remove(_draftKey, out var previous)) DisposePending(previous);
+            if (_pendingByDraftKey.Count >= 8)
+            {
+                var oldest = _pendingByDraftKey.First();
+                DisposePending(oldest.Value);
+                _pendingByDraftKey.Remove(oldest.Key);
+            }
+            _pendingByDraftKey[_draftKey] = pending;
+        }
+        NotifyPending();
+    }
+
+    private void RestorePendingFiles()
+    {
+        if (_draftKey is null || !_pendingByDraftKey.Remove(_draftKey, out var pending)) return;
+        foreach (var item in pending) PendingFiles.Add(item);
+        NotifyPending();
+    }
+
+    private static void DisposePending(IEnumerable<PendingFileItem> pending)
+    {
+        foreach (var item in pending) item.File.Content.Dispose();
     }
 
     private void DisposePresentation()
@@ -418,6 +413,10 @@ public sealed partial class ShellViewModel
         Channels.CollectionChanged -= OnPresentationCollection;
         Messages.CollectionChanged -= OnPresentationCollection;
         CloseJump();
+        DisposePending(PendingFiles);
+        PendingFiles.Clear();
+        foreach (var pending in _pendingByDraftKey.Values) DisposePending(pending);
+        _pendingByDraftKey.Clear();
         _channelDrafts.Clear();
         _inbox.Clear();
     }

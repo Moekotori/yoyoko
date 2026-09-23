@@ -42,8 +42,8 @@
                           <MenuItem Header="{i18n:T CopyUserId}" Tag="copy-id" />
                           <MenuItem Header="{i18n:T Profile}" Tag="profile" />
                           <Separator />
-                          <MenuItem Header="{i18n:T KickMember}" Tag="kick" Foreground="#E3A09A" />
-                          <MenuItem Header="{i18n:T BanMember}" Tag="ban" Foreground="#E3A09A" />
+                          <MenuItem Header="{i18n:T KickMember}" Tag="kick" Foreground="{DynamicResource DangerActionBrush}" />
+                          <MenuItem Header="{i18n:T BanMember}" Tag="ban" Foreground="{DynamicResource DangerActionBrush}" />
                         </ContextMenu>
                       </Button.ContextMenu>
                       <DockPanel MinWidth="252">

@@ -53,7 +53,7 @@
   <Panel>
     <Border Background="Transparent" PointerPressed="OnBackdrop" />
     <Border x:Name="DrawerSurface" Width="360" HorizontalAlignment="Left" VerticalAlignment="Bottom"
-      Margin="80,0,0,78" Background="#242424" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="12"
+      Margin="80,0,0,78" Background="{DynamicResource ProfileBrush}" BorderBrush="{DynamicResource PressedBrush}" BorderThickness="1" CornerRadius="12"
       ClipToBounds="True" IsEnabled="{Binding ProfileOpen}" KeyboardNavigation.TabNavigation="Cycle">
       <StackPanel>
         <Panel Height="168">
@@ -70,20 +70,20 @@
             Command="{Binding CloseProfile}" ToolTip.Tip="{i18n:T CloseProfile}" AutomationProperties.Name="{i18n:T CloseProfile}">
             <PathIcon Data="{StaticResource IconClose}" Width="12" Height="12" />
           </Button>
-          <Border Width="92" Height="92" CornerRadius="46" Background="#242424" Margin="16,72,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+          <Border Width="92" Height="92" CornerRadius="46" Background="{DynamicResource ProfileBrush}" Margin="16,72,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
             <Button Classes="avatarHit" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center"
               Command="{Binding Settings.Profile.ChangeAvatar}" ToolTip.Tip="{i18n:T ChangeAvatar}" AutomationProperties.Name="{i18n:T ChangeAvatar}">
               <c:Avatar Width="80" Height="80" Playback="{Binding Settings.Profile.Playback}" Initial="{Binding Settings.Profile.Initial}" />
             </Button>
           </Border>
         </Panel>
-        <Border Margin="12,0,12,12" Background="#1C1C1C" CornerRadius="8" Padding="12">
+        <Border Margin="12,0,12,12" Background="{DynamicResource ProfileInsetBrush}" CornerRadius="8" Padding="12">
           <StackPanel Spacing="10">
             <StackPanel Spacing="2">
               <TextBlock Text="{Binding Settings.Profile.DisplayName}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
               <SelectableTextBlock Text="{Binding Settings.Profile.Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" IsVisible="{Binding Settings.Profile.HasHandle}" />
             </StackPanel>
-            <Border Height="1" Background="#2E2E2E" />
+            <Border Height="1" Background="{DynamicResource DividerBrush}" />
             <StackPanel Spacing="4">
               <TextBlock Text="{i18n:T UserId}" Classes="section" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">

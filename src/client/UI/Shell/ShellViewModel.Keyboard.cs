@@ -49,7 +49,7 @@ public sealed partial class ShellViewModel
 
     public void OpenJump()
     {
-        if (!IsSignedIn || IsChannelEditorOpen) return;
+        if (!IsSignedIn || ShowAddInstance || IsChannelEditorOpen) return;
         if (ProfileOpen) ProfileOpen = false;
         CloseMention();
         if (SwitcherOpen)
@@ -115,7 +115,7 @@ public sealed partial class ShellViewModel
 
     public void OpenSearch()
     {
-        if (IsChannelEditorOpen || SelectedChannel is not { CanChat: true }) return;
+        if (ShowAddInstance || IsChannelEditorOpen || SelectedChannel is not { CanChat: true }) return;
         if (ProfileOpen) ProfileOpen = false;
         CloseJump();
         ShowSettings = false;

@@ -13,11 +13,11 @@
 | Avalonia 桌面外壳、轻量 MVVM、独立客户端项目 | 已实现 |
 | 轻量动画系统 `Chat.Motion` | 已实现入场/切换预设、可中断动画、隐藏/最小化清理与减少动效；文字频道仅消息区轻微淡入，过期加载取消；频道分组与社区菜单分区用 `RevealHost` 做可中断收展；[调用与验证](docs/ui/MOTION.md) |
 | 自动连接 / 账号设置 | 首次自动创建实例账号，之后恢复会话；设置 → 资料修改头像、横幅、显示名和用户名；点击底部账号也可改这些项；设置中更换服务器并记住选择 |
-| 设置页面 | 左下角入口，打开时频道列收起并把空间留给设置，分类导航贴着实例栏；点左侧实例或 Escape 可返回工作区；分类含通用、外观、快捷键、语音、资料和服务器；语言 / 发送快捷键 / 可改绑定的键盘快捷键 / 设备、深色/浅色、自定义背景、紧凑布局与动效开关；[界面验证记录](docs/ui/README.md#settings) |
+| 设置页面 | 左下角入口，打开时频道列收起并把空间留给设置，分类导航贴着实例栏；点左侧实例或 Escape 可返回工作区；分类含通用、外观、快捷键、语音、资料和服务器；语言 / 发送快捷键 / 可改绑定的键盘快捷键 / 设备、统一的深色/纸白浅色主题、自定义背景、紧凑布局与动效开关；[界面验证记录](docs/ui/README.md#settings) |
 | 界面细节 | 统一圆角选择框与输入框、简化设置分隔、社区操作按需展开；[本轮视觉与验证](docs/ui/README.md#product-surface-polish-2026-09-21) |
 | 工作区快捷键 | 跳转频道、搜索、频道/标签切换、设置、成员栏、附件与语音 mute/deafen；设置中可改绑定；[快捷键](docs/ui/README.md#keyboard) |
 | 客户端界面语言（中文 / English / 日本語），设置中切换 | 已实现；跟随系统，可覆盖并写入本地偏好 |
-| 实例发现、添加、SQLite 保存及离线恢复 | 已实现并在本机窗口验证 |
+| 实例发现、添加、SQLite 保存及离线恢复 | 已实现；实例栏加号打开独立服务器弹窗，填写地址与可选服务器密码；本轮弹窗与密码接入待真实双端验证 |
 | 独立 InstanceContext、账号/实例隔离的数据契约 | 已实现；登录会话按实例隔离 |
 | SQLite 消息分页缓存与账号隔离 | 已实现并接入远程同步；未发送文字写入有界 outbox |
 | 乐观发送与弱网恢复 | 本地先上屏、失败可点重试/取消；Gateway 去重、缺口 resume、`invalid_session` 后当前频道一页同步 |
@@ -67,6 +67,8 @@ Desktop Client
 `InstanceManager` 管理多个 `InstanceContext`，每个上下文拥有独立账号、连接与缓存作用域。远端实体包含 InstanceId，本地私有消息缓存额外包含 AccountId，避免跨实例或跨账号串数据。
 
 用户只需输入域名，通过 `/.well-known/lightchat` 发现 API、Gateway、CDN 和 RTC 地址。发现路径是协议标识，不随产品改名。默认使用 HTTPS/WSS，本机开发允许回环 HTTP/WS。
+
+实例栏加号用于添加独立服务器地址（域名、IP 或带端口地址），不会创建当前实例内的新社区。在这个弹窗输入 `localhost` 会连接本机 `http://localhost:8080`；显式填写 `localhost:端口` 则使用所填端口。可选的服务器密码只用于新账号注册；自托管实例可通过服务端环境变量 `CHAT__AUTH__REGISTRATION_PASSWORD` 设置注册门槛，不配置时留空即可。已有账号登录和恢复会话不需要服务器密码。账号和缓存仍按实例隔离。
 
 ## 技术栈与边界
 
@@ -139,7 +141,7 @@ docker compose up -d --build
 
 或双击 `up.cmd`（Windows）/ `up.command`（macOS）。首次构建镜像需要几分钟；就绪后访问 `http://localhost:8080/.well-known/lightchat`。停止：`docker compose down`（不加 `-v`，数据卷会保留）。
 
-Windows 上双击 `start.cmd` 会先拉起这套 Compose（有 Docker 时），再打开桌面 UI。设置中输入 `localhost` 即连接 `http://localhost:8080`。没有 Docker 时回退到本机 `cargo` 进程。macOS 上 `start.command` 在 Docker 可用时同样先起服务端。Windows 首次启动若没有 .NET SDK 10，`start.cmd` 会下载到用户目录 `%USERPROFILE%\.dotnet`；之后仍需联网拉取构建依赖。
+Windows 上双击 `start.cmd`、macOS 上双击 `start.command` 会先确保本机服务端运行，再打开桌面 UI。设置中输入 `localhost` 即连接 `http://localhost:8080`。Docker 可用时使用 Compose；否则回退到本机 `cargo` 服务端，首次编译可能需要几分钟。Windows 首次启动若没有 .NET SDK 10，`start.cmd` 会下载到用户目录 `%USERPROFILE%\.dotnet`；之后仍需联网拉取构建依赖。
 
 所有普通启动入口（含直接 `dotnet run`）都会连接默认服务器、恢复账号并选中文字频道；首次无账号时自动注册独立账号，用户名为「设置 → 服务器」中填写的值，未填则为 `User`；内网实例无社区时创建社区及默认 `general`。社区菜单可自由创建社区；社区拥有者可创建文字／语音频道，文字频道创建后自动打开，语音频道不会自动加入。真实数据保存在所连接服务器。首次默认地址集中在 `src/client/App/appsettings.json` 的 `default_instance_url`，可用 `CHAT_DEFAULT_INSTANCE_URL` 覆盖；在「设置 → 服务器」连接成功后优先使用记住的地址。已有账号会话失效时不会静默创建替代账号；设置 → 资料只编辑当前账号资料，不再提供登录/注册表单。
 

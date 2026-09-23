@@ -27,6 +27,8 @@ UTF-8 JSON、snake_case，UUIDv7 小写标准字符串，时间 RFC3339 UTC。`p
 | 方法与资源 | 用途 |
 | --- | --- |
 | POST /auth/register, /auth/login, /auth/refresh, /auth/logout | 实例内账号与会话 |
+
+`POST /auth/register` 可附带 `server_password` 字符串。旧客户端省略该字段仍可注册未设门槛的实例；实例配置 `CHAT__AUTH__REGISTRATION_PASSWORD` 后，新账号注册需要匹配，缺失或错误返回 403 `invalid_server_password`。已有账号登录和会话恢复不需要再次提交服务器密码。该密码只用于注册请求，不写入客户端缓存；这是可选注册门槛，不代替账号密码、邀请或管理员权限。
 | GET /users/me | 当前实例身份 |
 | PATCH /users/me | 更新用户名、显示名、头像与资料横幅（avatar_id / clear_avatar，banner_id / clear_banner） |
 | GET/POST /servers | 社区列表/创建 |

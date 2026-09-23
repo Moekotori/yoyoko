@@ -19,6 +19,7 @@ public static class TextKey
     public const string ChannelCancel = "ChannelCancel";
     public const string CreateTextChannel = "CreateTextChannel";
     public const string CreateVoiceChannel = "CreateVoiceChannel";
+    public const string VoiceChannelSettings = "VoiceChannelSettings";
 
     public const string SessionRecoveryRequired = "SessionRecoveryRequired";
     public const string ServerConnection = "ServerConnection";
@@ -49,6 +50,8 @@ public static class TextKey
     public const string AudioDevices = "AudioDevices";
     public const string CloseSettings = "CloseSettings";
     public const string AddInstance = "AddInstance";
+    public const string OptionalServerPassword = "OptionalServerPassword";
+    public const string InvalidServerPassword = "InvalidServerPassword";
     public const string Instances = "Instances";
     public const string ConnectCommunity = "ConnectCommunity";
     public const string InstanceAddress = "InstanceAddress";
@@ -200,6 +203,7 @@ public static class TextKey
     public const string FileLimitHint = "FileLimitHint";
     public const string FileTooLarge = "FileTooLarge";
     public const string TooManyFiles = "TooManyFiles";
+    public const string CannotAttachWhileEditing = "CannotAttachWhileEditing";
     public const string FileSaved = "FileSaved";
     public const string Profile = "Profile";
     public const string ProfileImage = "ProfileImage";

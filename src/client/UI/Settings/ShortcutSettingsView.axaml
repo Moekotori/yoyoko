@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.ShortcutSettingsView" x:DataType="vm:ShortcutSettingsViewModel" x:Name="Root">
-  <StackPanel HorizontalAlignment="Stretch" Spacing="20">
+  <StackPanel HorizontalAlignment="Stretch" Spacing="28">
     <Button Classes="settingsSecondary" HorizontalAlignment="Right" Content="{i18n:T ShortcutResetAll}"
       Command="{Binding ResetAll}" IsVisible="{Binding CanResetAll}" AutomationProperties.Name="{i18n:T ShortcutResetAll}" />
     <Border Classes="settingsGroup">
@@ -15,12 +15,12 @@
     </Border>
     <ItemsControl ItemsSource="{Binding Groups}">
       <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate><StackPanel Spacing="20" /></ItemsPanelTemplate>
+        <ItemsPanelTemplate><StackPanel Spacing="28" /></ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:ShortcutGroup">
           <StackPanel Spacing="8">
-            <TextBlock Text="{Binding Title}" Classes="section" Margin="4,0,0,2" />
+            <TextBlock Text="{Binding Title}" Classes="settingsLabel" FontWeight="Medium" Margin="0,0,0,4" />
             <Border Classes="settingsGroup">
               <ItemsControl ItemsSource="{Binding Rows}">
                 <ItemsControl.ItemTemplate>

@@ -2,61 +2,70 @@
   xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.SettingsView" x:DataType="vm:SettingsViewModel" Classes="settingsRoot" motion:Motion.ReduceMotion="{Binding ReduceMotion}">
   <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/SettingsStyles.axaml" /><StyleInclude Source="avares://Chat.UI/Settings/SettingsMotion.axaml" /></UserControl.Styles>
-  <Grid ColumnDefinitions="240,*" Background="{DynamicResource CanvasBrush}">
-    <Border Classes="settingsSidebar" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
-      <DockPanel Margin="12,28,12,16">
-        <TextBlock DockPanel.Dock="Top" Text="{i18n:T Settings}" FontSize="22" FontWeight="SemiBold" Margin="12,0,12,18" />
-        <StackPanel Spacing="2">
+  <Grid ColumnDefinitions="208,*" Background="{DynamicResource CanvasBrush}">
+    <Border Classes="settingsSidebar" Background="{DynamicResource SidebarBrush}">
+      <DockPanel Margin="16,32,16,24">
+        <TextBlock DockPanel.Dock="Top" Text="{i18n:T Settings}" FontSize="18" FontWeight="SemiBold" Margin="12,0,12,28" />
+        <StackPanel Spacing="4">
           <Button Classes="settingsNav" Classes.selected="{Binding ShowGeneral}" AutomationProperties.Name="{i18n:T GeneralSettings}"
             Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.General}">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="12">
-              <PathIcon Data="{StaticResource IconSettings}" Width="18" Height="18" Opacity="0.75" />
+            <Grid ColumnDefinitions="18,*" ColumnSpacing="10">
+              <PathIcon Data="{StaticResource IconSettings}" Width="16" Height="16" Opacity="0.8" />
               <TextBlock Grid.Column="1" Text="{i18n:T GeneralSettings}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Button>
           <Button Classes="settingsNav" Classes.selected="{Binding ShowAppearance}" AutomationProperties.Name="{i18n:T Appearance}"
             Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Appearance}">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="12">
-              <PathIcon Data="{StaticResource IconEmoji}" Width="18" Height="18" Opacity="0.75" />
+            <Grid ColumnDefinitions="18,*" ColumnSpacing="10">
+              <PathIcon Data="{StaticResource IconEmoji}" Width="16" Height="16" Opacity="0.8" />
               <TextBlock Grid.Column="1" Text="{i18n:T Appearance}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Button>
           <Button Classes="settingsNav" Classes.selected="{Binding ShowKeyboard}" AutomationProperties.Name="{i18n:T KeyboardShortcuts}"
             Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Keyboard}">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="12">
-              <PathIcon Data="{StaticResource IconKeyboard}" Width="18" Height="18" Opacity="0.75" />
+            <Grid ColumnDefinitions="18,*" ColumnSpacing="10">
+              <PathIcon Data="{StaticResource IconKeyboard}" Width="16" Height="16" Opacity="0.8" />
               <TextBlock Grid.Column="1" Text="{i18n:T KeyboardShortcuts}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Button>
           <Button Classes="settingsNav" Classes.selected="{Binding ShowVoice}" AutomationProperties.Name="{i18n:T Voice}"
             Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Voice}">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="12">
-              <PathIcon Data="{StaticResource IconHeadphones}" Width="18" Height="18" Opacity="0.75" />
+            <Grid ColumnDefinitions="18,*" ColumnSpacing="10">
+              <PathIcon Data="{StaticResource IconHeadphones}" Width="16" Height="16" Opacity="0.8" />
               <TextBlock Grid.Column="1" Text="{i18n:T Voice}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Button>
+          <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="12,16" />
           <Button Classes="settingsNav" Classes.selected="{Binding ShowProfile}" AutomationProperties.Name="{i18n:T Profile}"
             Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Profile}">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="12">
-              <PathIcon Data="{StaticResource IconPeople}" Width="18" Height="18" Opacity="0.75" />
+            <Grid ColumnDefinitions="18,*" ColumnSpacing="10">
+              <PathIcon Data="{StaticResource IconPeople}" Width="16" Height="16" Opacity="0.8" />
               <TextBlock Grid.Column="1" Text="{i18n:T Profile}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Button>
           <Button Classes="settingsNav" Classes.selected="{Binding ShowConnection}" AutomationProperties.Name="{i18n:T ServerConnection}"
             Command="{Binding Navigate}" CommandParameter="{x:Static vm:SettingsSection.Connection}">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="12">
-              <PathIcon Data="{StaticResource IconServer}" Width="18" Height="18" Opacity="0.75" />
+            <Grid ColumnDefinitions="18,*" ColumnSpacing="10">
+              <PathIcon Data="{StaticResource IconServer}" Width="16" Height="16" Opacity="0.8" />
               <TextBlock Grid.Column="1" Text="{i18n:T ServerConnection}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </Grid>
           </Button>
         </StackPanel>
       </DockPanel>
     </Border>
-    <Grid Grid.Column="1" Margin="36,28,0,0" RowDefinitions="40,*">
-      <TextBlock Text="{Binding SectionTitle}" FontSize="26" FontWeight="SemiBold" VerticalAlignment="Center" />
+    <Grid Grid.Column="1" Margin="40,32,32,0" MaxWidth="760" HorizontalAlignment="Stretch" RowDefinitions="Auto,*">
+      <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,22" Margin="0,0,8,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="{Binding SectionTitle}" FontSize="26" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="icon settingsClose" Command="{Binding Close}" Width="32" Height="32" CornerRadius="16"
+            ToolTip.Tip="{i18n:T CloseSettings}" AutomationProperties.Name="{i18n:T CloseSettings}">
+            <PathIcon Data="{StaticResource IconClose}" Width="16" Height="16" />
+          </Button>
+        </Grid>
+      </Border>
       <ScrollViewer x:Name="SettingsScroll" Grid.Row="1"
         HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Panel Margin="0,16,16,40" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+        <Panel Margin="0,24,8,40" HorizontalAlignment="Stretch" VerticalAlignment="Top">
           <Border Classes="settingsPage" Classes.active="{Binding ShowGeneral}" IsVisible="{Binding ShowGeneral}"><vm:GeneralSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowAppearance}" IsVisible="{Binding ShowAppearance}"><vm:AppearanceSettingsView /></Border>
           <Border Classes="settingsPage" Classes.active="{Binding ShowKeyboard}" IsVisible="{Binding ShowKeyboard}"><vm:ShortcutSettingsView DataContext="{Binding Shortcuts}" /></Border>

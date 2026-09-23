@@ -293,7 +293,14 @@ async fn register(
         return Err(ApiErr::too_many());
     }
     Ok(Json(
-        services::register(&state, body.username, body.display_name, body.password).await?,
+        services::register(
+            &state,
+            body.username,
+            body.display_name,
+            body.password,
+            body.server_password,
+        )
+        .await?,
     ))
 }
 
@@ -777,16 +784,60 @@ mod tests {
     use axum::{body::to_bytes, http::Request};
     use tower::ServiceExt;
 
-    async fn test_app() -> Router {
+    async fn test_app_with_server_password(server_password: Option<&str>) -> Router {
         let dir = std::env::temp_dir().join(format!("chat-test-{}", Uuid::now_v7()));
         std::fs::create_dir_all(&dir).unwrap();
         let mut settings =
             Settings::load(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../config.toml")).unwrap();
+        settings.auth.registration_password = server_password.map(str::to_owned);
         settings.database.url = format!("local:{}", dir.join("chat.json").display());
         settings.storage.local_dir = dir.join("objects").display().to_string();
         let store = crate::database::open(&settings.database).await.unwrap();
         let objects = ObjectStore::open(&settings.storage.local_dir).unwrap();
         router(AppState::new(settings, store, objects))
+    }
+
+    async fn test_app() -> Router {
+        test_app_with_server_password(None).await
+    }
+
+    #[tokio::test]
+    async fn server_password_gates_new_accounts_only() {
+        let app = test_app_with_server_password(Some("join-secret")).await;
+        let missing = post_json(
+            &app,
+            "/api/v1/auth/register",
+            None,
+            r#"{"username":"alice","display_name":"Alice","password":"password1"}"#,
+        )
+        .await;
+        assert_eq!(missing.status(), StatusCode::FORBIDDEN);
+        let error: ApiError = json(missing).await;
+        assert_eq!(error.code, "invalid_server_password");
+        let wrong = post_json(
+            &app,
+            "/api/v1/auth/register",
+            None,
+            r#"{"username":"alice","display_name":"Alice","password":"password1","server_password":"wrong"}"#,
+        )
+        .await;
+        assert_eq!(wrong.status(), StatusCode::FORBIDDEN);
+        let registered = post_json(
+            &app,
+            "/api/v1/auth/register",
+            None,
+            r#"{"username":"alice","display_name":"Alice","password":"password1","server_password":"join-secret"}"#,
+        )
+        .await;
+        assert_eq!(registered.status(), StatusCode::OK);
+        let login = post_json(
+            &app,
+            "/api/v1/auth/login",
+            None,
+            r#"{"username":"alice","password":"password1"}"#,
+        )
+        .await;
+        assert_eq!(login.status(), StatusCode::OK);
     }
 
     async fn json<T: serde::de::DeserializeOwned>(response: axum::response::Response) -> T {

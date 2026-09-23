@@ -17,13 +17,13 @@
             </Grid>
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Button Width="40" Height="40" CornerRadius="20" Background="#292929" HorizontalAlignment="Center" Command="{Binding Unavailable}" AutomationProperties.Name="{i18n:T AddInstance}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
+        <Button Width="40" Height="40" CornerRadius="20" Background="{DynamicResource FieldBrush}" HorizontalAlignment="Center" Command="{Binding Unavailable}" AutomationProperties.Name="{i18n:T AddInstance}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>
       </StackPanel>
     </Border>
     <preview:PreviewChannelSidebar Grid.Row="1" Grid.Column="1" />
     <vm:AccountBar Grid.Row="2" Grid.ColumnSpan="2" />
     <motion:MotionHost Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Preset="Fade" Trigger="{Binding SelectedChannel}"><vm:ConversationView /></motion:MotionHost>
-    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Background="#333333" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" IsVisible="{Binding HasNotice}" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="280" Padding="14,6" Margin="20,0,20,106">
+    <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Background="{DynamicResource SubtleBrush}" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" IsVisible="{Binding HasNotice}" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="280" Padding="14,6" Margin="20,0,20,106">
       <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Notice}" VerticalAlignment="Center" FontSize="13" /><Button Grid.Column="1" Classes="icon" Command="{Binding DismissNotice}" AutomationProperties.Name="{i18n:T CloseNotice}"><PathIcon Data="{StaticResource IconClose}" Width="14" Height="14" /></Button></Grid>
     </Border>
   </Grid>

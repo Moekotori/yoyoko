@@ -6,44 +6,45 @@
     <Style Selector="ListBoxItem"><Setter Property="Padding" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Focusable" Value="False" /></Style>
     <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
-    <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /><Setter Property="Margin" Value="0,0,0,12" /></Style>
-    <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#232323" /></Style>
-    <Style Selector="Grid.messageRow.mentioned"><Setter Property="Background" Value="#2A221F" /></Style>
-    <Style Selector="Grid.messageRow.mentioned:pointerover"><Setter Property="Background" Value="#322824" /></Style>
+    <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /><Setter Property="Margin" Value="0,0,0,4" /></Style>
+    <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="{DynamicResource MessageHoverBrush}" /></Style>
+    <Style Selector="Grid.messageRow.mentioned"><Setter Property="Background" Value="{DynamicResource MentionRowBrush}" /></Style>
+    <Style Selector="Grid.messageRow.mentioned:pointerover"><Setter Property="Background" Value="{DynamicResource MentionRowHoverBrush}" /></Style>
     <Style Selector="Button.mentionPick"><Setter Property="Height" Value="36" /><Setter Property="Padding" Value="8,0" /><Setter Property="CornerRadius" Value="2" /></Style>
     <Style Selector="Button.mentionPick.selected"><Setter Property="Background" Value="{DynamicResource SelectedBrush}" /></Style>
     <Style Selector="Button.mentionChip">
       <Setter Property="Padding" Value="4,0" />
       <Setter Property="MinHeight" Value="0" />
-      <Setter Property="Background" Value="#332820" />
-      <Setter Property="Foreground" Value="#D2A88C" />
+      <Setter Property="Background" Value="{DynamicResource MentionBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource MentionTextBrush}" />
       <Setter Property="CornerRadius" Value="2" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Button.mentionChip.strong">
-      <Setter Property="Background" Value="#4A3228" />
-      <Setter Property="Foreground" Value="#E8C4A8" />
+      <Setter Property="Background" Value="{DynamicResource MentionStrongBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource MentionStrongTextBrush}" />
     </Style>
     <Style Selector="Button.mentionChip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#403028" />
+      <Setter Property="Background" Value="{DynamicResource MentionHoverBrush}" />
     </Style>
     <Style Selector="UserControl.compact Grid.messageRow"><Setter Property="Margin" Value="0,0,0,2" /></Style>
     <Style Selector="Grid.messageRow.continued"><Setter Property="Margin" Value="0,0,0,2" /></Style>
     <Style Selector="UserControl.compact Grid.messageRow.continued"><Setter Property="Margin" Value="0" /></Style>
-    <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,16,1" /></Style>
-    <Style Selector="Grid.messageRow Panel.avatarSlot"><Setter Property="DockPanel.Dock" Value="Left" /><Setter Property="Margin" Value="0,12,13,0" /></Style>
-    <Style Selector="Grid.messageRow StackPanel.body"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="Margin" Value="0,11,16,9" /></Style>
+    <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,12,1" /></Style>
+    <Style Selector="Grid.messageRow Panel.avatarSlot"><Setter Property="DockPanel.Dock" Value="Left" /><Setter Property="Margin" Value="0,4,10,0" /></Style>
+    <Style Selector="Grid.messageRow.continued Panel.avatarSlot"><Setter Property="Height" Value="0" /><Setter Property="Margin" Value="0,0,10,0" /></Style>
+    <Style Selector="Grid.messageRow StackPanel.body"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="Margin" Value="0,6,12,5" /></Style>
     <Style Selector="SelectableTextBlock.messageText">
-      <Setter Property="FontSize" Value="16" />
-      <Setter Property="LineHeight" Value="25" />
-      <Setter Property="Foreground" Value="#CCCCCC" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="LineHeight" Value="22" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="UserControl.compact SelectableTextBlock.messageText"><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="22" /></Style>
+    <Style Selector="UserControl.compact SelectableTextBlock.messageText"><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="20" /></Style>
     <Style Selector="Grid.messageRow.pending SelectableTextBlock.messageText"><Setter Property="Opacity" Value="0.7" /></Style>
     <Style Selector="UserControl.reduceMotion SelectableTextBlock.messageText"><Setter Property="Transitions"><Transitions /></Setter></Style>
     <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /><Setter Property="HorizontalAlignment" Value="Right" /><Setter Property="Margin" Value="0,4,16,0" /></Style>
@@ -53,7 +54,7 @@
     <Style Selector="Button.authorName"><Setter Property="Padding" Value="0" /><Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalAlignment" Value="Left" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Cursor" Value="Hand" /></Style>
     <Style Selector="Button.authorName:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="Button.avatarPick"><Setter Property="Cursor" Value="Hand" /></Style>
-    <Style Selector="Grid.unreadDivider TextBlock"><Setter Property="FontSize" Value="10" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="#C98884" /></Style>
+    <Style Selector="Grid.unreadDivider TextBlock"><Setter Property="FontSize" Value="10" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{DynamicResource UnreadTextBrush}" /></Style>
   </UserControl.Styles>
   <Grid ColumnDefinitions="*,Auto">
     <Grid RowDefinitions="Auto,*,Auto">
@@ -64,7 +65,7 @@
       <motion:MotionHost Grid.Row="1" Trigger="{Binding ChannelContentVersion}" Preset="Fade" Duration="0:0:0.12" StartOpacity="0.82">
       <Panel x:Name="TimelineSurface">
         <TextBlock Text="{Binding EmptyMessageTitle}" Classes="muted" FontSize="14" IsVisible="{Binding EmptyMessages}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        <ListBox x:Name="Messages" ItemsSource="{Binding VisibleMessages}" Margin="0,22,0,12" AutomationProperties.Name="{i18n:T Messages}"
+        <ListBox x:Name="Messages" ItemsSource="{Binding VisibleMessages}" Margin="0,12,0,8" AutomationProperties.Name="{i18n:T Messages}"
           AutoScrollToSelectedItem="False" motion:SmoothScroll.Wheel="True"
           ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.BringIntoViewOnFocusChange="False">
           <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel CacheLength="1" /></ItemsPanelTemplate></ListBox.ItemsPanel>
@@ -72,9 +73,9 @@
             <DataTemplate x:DataType="chat:MessageRow">
               <Panel>
               <Grid Classes="unreadDivider" ColumnDefinitions="*,Auto,*" Margin="16,6,16,6" IsVisible="{Binding IsUnreadDivider}">
-                <Border Height="1" Background="#5C3A38" VerticalAlignment="Center" />
+                <Border Height="1" Background="{DynamicResource UnreadDividerBrush}" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="{i18n:T NewMessagesDivider}" Margin="8,0" />
-                <Border Grid.Column="2" Height="1" Background="#5C3A38" VerticalAlignment="Center" />
+                <Border Grid.Column="2" Height="1" Background="{DynamicResource UnreadDividerBrush}" VerticalAlignment="Center" />
               </Grid>
               <Grid Classes="messageRow" Classes.continued="{Binding IsContinuation}" Classes.pending="{Binding IsPending}" Classes.mentioned="{Binding IsMentioned}" IsVisible="{Binding !IsUnreadDivider}">
                 <Grid.ContextMenu><ContextMenu>
@@ -84,26 +85,26 @@
                   <MenuItem Header="{i18n:T EditMessage}" Click="EditMessage" IsVisible="{Binding CanEdit}" />
                   <MenuItem Header="{i18n:T DeleteMessage}" Click="DeleteMessage" IsVisible="{Binding CanDelete}" />
                 </ContextMenu></Grid.ContextMenu>
-                <DockPanel Margin="24,0">
-                  <Panel Classes="avatarSlot" Width="36" Height="36" VerticalAlignment="Top">
-                    <Button Classes="avatarPick" Width="36" Height="36" Padding="0" IsVisible="{Binding ShowHeader}" AutomationProperties.Name="{Binding Author}">
+                <DockPanel Margin="20,0">
+                  <Panel Classes="avatarSlot" Width="40" Height="40" VerticalAlignment="Top">
+                    <Button Classes="avatarPick" Width="40" Height="40" Padding="0" IsVisible="{Binding ShowHeader}" AutomationProperties.Name="{Binding Author}">
                       <Button.Flyout>
                         <Flyout Placement="{Binding CardPlacement}" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
                           <chat:UserCard />
                         </Flyout>
                       </Button.Flyout>
-                      <c:Avatar Width="36" Height="36" Playback="{Binding Playback}" Initial="{Binding Initial}" />
+                      <c:Avatar Width="40" Height="40" Playback="{Binding Playback}" Initial="{Binding Initial}" />
                     </Button>
                   </Panel>
-                  <StackPanel Classes="body" Spacing="4">
-                    <StackPanel Classes="header" Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowHeader}">
+                  <StackPanel Classes="body" Spacing="2">
+                    <StackPanel Classes="header" Orientation="Horizontal" Spacing="8" IsVisible="{Binding ShowHeader}">
                       <Button Classes="authorName" Padding="0" Background="Transparent" AutomationProperties.Name="{Binding Author}">
                         <Button.Flyout>
                           <Flyout Placement="{Binding NamePlacement}" FlyoutPresenterClasses="userCardFlyout" Opened="OnCardOpened">
                             <chat:UserCard />
                           </Flyout>
                         </Button.Flyout>
-                        <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
+                        <TextBlock Text="{Binding Author}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
                       </Button>
                       <TextBlock Text="{Binding Time}" Classes="quiet" FontSize="11" VerticalAlignment="Center" />
                       <TextBlock Text="{i18n:T Edited}" Classes="quiet" FontSize="11" VerticalAlignment="Center" IsVisible="{Binding IsEdited}" />
@@ -111,7 +112,7 @@
                     <StackPanel Classes="sendState" Orientation="Horizontal" Spacing="9" IsVisible="{Binding IsFailed}">
                       <Button Padding="8,2" Command="{Binding Retry}"
                         ToolTip.Tip="{i18n:T RetrySend}" AutomationProperties.Name="{i18n:T RetrySend}">
-                        <TextBlock Text="{i18n:T SendFailed}" Foreground="#D98980" FontSize="11" />
+                        <TextBlock Text="{i18n:T SendFailed}" Foreground="{DynamicResource DangerActionBrush}" FontSize="11" />
                       </Button>
                     </StackPanel>
                     <TextBlock Text="{Binding ReplyLabel}" Classes="quiet" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="400" IsVisible="{Binding HasReply}" />
@@ -130,7 +131,7 @@
                     </ItemsControl>
                   </StackPanel>
                 </DockPanel>
-                <Border Classes="messageTools" Background="#2A2A2A" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" VerticalAlignment="Top">
+                <Border Classes="messageTools" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" VerticalAlignment="Top">
                   <StackPanel Orientation="Horizontal">
                     <Button Classes="icon" Width="26" Height="26" Click="CopyMessage" AutomationProperties.Name="{i18n:T CopyMessage}" ToolTip.Tip="{i18n:T CopyText}"><PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" /></Button>
                     <Button Classes="icon" Width="26" Height="26" Command="{Binding Cancel}" IsVisible="{Binding CanCancel}" AutomationProperties.Name="{i18n:T CancelSend}" ToolTip.Tip="{i18n:T CancelSend}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button>
@@ -144,13 +145,13 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <Border Background="#E51C1C1C" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" Margin="12" CornerRadius="8" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False"><TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" /></Border>
+        <Border Background="{DynamicResource DropOverlayBrush}" BorderBrush="{DynamicResource FocusBrush}" BorderThickness="1" Margin="12" CornerRadius="8" IsVisible="{Binding #ChatRoot.DropActive}" IsHitTestVisible="False"><TextBlock Text="{i18n:T DropFiles}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" /></Border>
         <Button Classes="jumpPresent" Command="{Binding JumpPresent}" IsVisible="{Binding ShowJumpBar}"
           HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10"
           Content="{Binding JumpBarLabel}" AutomationProperties.Name="{Binding JumpBarLabel}" />
       </Panel>
       </motion:MotionHost>
-      <StackPanel Grid.Row="2" Margin="24,0,24,22" Spacing="8">
+      <StackPanel Grid.Row="2" Margin="20,0,20,14" Spacing="6">
         <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasStatus}" />
         <ItemsControl ItemsSource="{Binding PendingFiles}" IsVisible="{Binding HasPending}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -161,11 +162,11 @@
           </DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl>
         <TextBlock Text="{Binding TypingLabel}" Classes="muted" FontSize="12" IsVisible="{Binding HasTyping}" />
-        <Border Classes="composerFrame" Classes.editing="{Binding HasComposerBanner}" Background="{DynamicResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" MinHeight="60" Padding="8,8,8,10" IsEnabled="{Binding !ChannelForbidden}">
+        <Border Classes="composerFrame" Classes.editing="{Binding HasComposerBanner}" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" MinHeight="52" Padding="7,5" IsEnabled="{Binding !ChannelForbidden}">
           <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <DockPanel>
             <Grid DockPanel.Dock="Top" Height="24" Margin="4,0,4,4" IsVisible="{Binding HasComposerBanner}">
-              <TextBlock Text="{Binding ComposerBannerText}" FontSize="12" Foreground="#C4B4B2" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding ComposerBannerText}" FontSize="12" Foreground="{DynamicResource ComposerBannerTextBrush}" VerticalAlignment="Center" />
               <Button Classes="icon" Width="22" Height="22" HorizontalAlignment="Right" Command="{Binding CancelComposerEdit}" ToolTip.Tip="{Binding ComposerCancelTip}" AutomationProperties.Name="{Binding ComposerCancelTip}"><PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" /></Button>
             </Grid>
             <Grid ColumnDefinitions="30,*,30" ColumnSpacing="9">
@@ -199,7 +200,7 @@
         </Border>
       </StackPanel>
     </Grid>
-    <Border Grid.Column="1" Width="300" IsVisible="{Binding ParticipantsOpen}">
+    <Border Grid.Column="1" Width="248" IsVisible="{Binding ParticipantsOpen}">
       <chat:MemberSidebar />
     </Border>
   </Grid>

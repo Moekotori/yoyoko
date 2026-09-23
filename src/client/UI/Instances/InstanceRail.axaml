@@ -2,9 +2,10 @@
   xmlns:vm="using:Chat.UI.Shell" xmlns:items="using:Chat.UI.Instances" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
   x:Class="Chat.UI.Instances.InstanceRail" x:DataType="vm:ShellViewModel">
   <UserControl.Styles>
-    <Style Selector="ListBoxItem"><Setter Property="Padding" Value="4" /><Setter Property="Margin" Value="0,0,0,8" /><Setter Property="CornerRadius" Value="2" /></Style>
-    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#2C2C2C" /><Setter Property="BorderThickness" Value="0" /></Style>
-    <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#303030" /></Style>
+    <Style Selector="ListBoxItem"><Setter Property="Padding" Value="4" /><Setter Property="Margin" Value="0,0,0,8" /><Setter Property="CornerRadius" Value="2" /><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
+    <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="c|Avatar.railAvatar Ellipse.avatarOutline"><Setter Property="IsVisible" Value="False" /></Style>
   </UserControl.Styles>
   <Border Background="{DynamicResource RailBrush}">
@@ -18,14 +19,14 @@
                 <Panel Width="42" Height="42">
                   <c:Avatar Classes="railAvatar" Width="42" Height="42" Playback="{Binding Playback}" Initial="{Binding Initial}" ToolTip.Tip="{Binding Host}" />
                   <Border Width="8" Height="8" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-6,0,0,0"
-                    Background="#E8E8E8" IsVisible="{Binding HasUnread}" />
+                    Background="{DynamicResource StrongTextBrush}" IsVisible="{Binding HasUnread}" />
                   <Border Width="8" Height="8" CornerRadius="4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-1,-1"
-                    Background="#C45C56" IsVisible="{Binding HasMention}" />
+                    Background="{DynamicResource MentionBadgeBrush}" IsVisible="{Binding HasMention}" />
                 </Panel>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
-          <Button Width="40" Height="40" CornerRadius="20" Background="#292929" Foreground="{DynamicResource MutedTextBrush}"
+          <Button Width="40" Height="40" CornerRadius="20" Background="{DynamicResource FieldBrush}" Foreground="{DynamicResource MutedTextBrush}"
             HorizontalAlignment="Center" Command="{Binding OpenAddInstance}"
             AutomationProperties.Name="{i18n:T AddInstance}" ToolTip.Tip="{i18n:T AddInstance}">
             <PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" />

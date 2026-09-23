@@ -8,6 +8,6 @@
         <BlurEffect Radius="{Binding LiveBlur}" />
       </Image.Effect>
     </Image>
-    <Rectangle Fill="Black" Opacity="{Binding DimOpacity}" />
+    <Rectangle Fill="{DynamicResource WallpaperScrimBrush}" Opacity="{Binding DimOpacity}" />
   </Panel>
 </UserControl>

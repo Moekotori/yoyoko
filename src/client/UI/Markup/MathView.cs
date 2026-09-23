@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Chat.Core.Messaging;
 
 namespace Chat.UI.Markup;
@@ -9,8 +10,6 @@ namespace Chat.UI.Markup;
 internal static class MathView
 {
     private static readonly FontFamily MathFont = new("Georgia, Times New Roman, Songti SC, STIX Two Math, serif");
-    private static readonly SolidColorBrush Ink = new(Color.Parse("#CCCCCC"));
-    private static readonly SolidColorBrush Rule = new(Color.Parse("#8A8A8A"));
 
     public static Control Create(MathNode node, double em) =>
         new Border
@@ -61,7 +60,7 @@ internal static class MathView
         num.HorizontalAlignment = HorizontalAlignment.Center;
         den.HorizontalAlignment = HorizontalAlignment.Center;
         column.Children.Add(num);
-        column.Children.Add(new Border { Height = 1, Background = Rule, Margin = new Thickness(0, 1) });
+        column.Children.Add(new Border { Height = 1, [!Border.BackgroundProperty] = new DynamicResourceExtension("MathRuleBrush"), Margin = new Thickness(0, 1) });
         column.Children.Add(den);
         return column;
     }
@@ -70,14 +69,14 @@ internal static class MathView
     {
         var body = Build(sqrt.Body, em);
         var inner = new StackPanel { Spacing = 1 };
-        inner.Children.Add(new Border { Height = 1, Background = Rule });
+        inner.Children.Add(new Border { Height = 1, [!Border.BackgroundProperty] = new DynamicResourceExtension("MathRuleBrush") });
         inner.Children.Add(body);
         var radical = new TextBlock
         {
             Text = "√",
             FontSize = em * 1.15,
             FontFamily = MathFont,
-            Foreground = Ink,
+            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MessageTextBrush"),
             VerticalAlignment = VerticalAlignment.Center
         };
         var row = new StackPanel
@@ -122,7 +121,7 @@ internal static class MathView
             Text = accent.Mark,
             FontSize = em * 0.7,
             FontFamily = MathFont,
-            Foreground = Ink,
+            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MessageTextBrush"),
             HorizontalAlignment = HorizontalAlignment.Center
         });
         column.Children.Add(Build(accent.Body, em));
@@ -165,7 +164,7 @@ internal static class MathView
                 Text = matrix.Left,
                 FontSize = em * 1.2,
                 FontFamily = MathFont,
-                Foreground = Ink,
+                [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MessageTextBrush"),
                 VerticalAlignment = VerticalAlignment.Center
             });
         row.Children.Add(grid);
@@ -175,7 +174,7 @@ internal static class MathView
                 Text = matrix.Right,
                 FontSize = em * 1.2,
                 FontFamily = MathFont,
-                Foreground = Ink,
+                [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MessageTextBrush"),
                 VerticalAlignment = VerticalAlignment.Center
             });
         return row;
@@ -190,7 +189,7 @@ internal static class MathView
             FontSize = em,
             FontFamily = MathFont,
             FontStyle = text.Italic ? FontStyle.Italic : FontStyle.Normal,
-            Foreground = Ink,
+            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MessageTextBrush"),
             VerticalAlignment = VerticalAlignment.Center
         };
     }

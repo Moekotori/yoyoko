@@ -66,14 +66,15 @@ public sealed class MemberProfile : ObservableObject
     public bool IsSelf
     {
         get => _isSelf;
-        private set { if (_isSelf == value) return; _isSelf = value; Changed(); }
+        private set { if (_isSelf == value) return; _isSelf = value; Changed(); Changed(nameof(HasPresenceStatus)); }
     }
     public bool IsOnline
     {
         get => _isOnline;
-        set { if (_isOnline == value) return; _isOnline = value; Changed(); }
+        set { if (_isOnline == value) return; _isOnline = value; Changed(); Changed(nameof(HasPresenceStatus)); }
     }
     public bool IsFixture { get; }
+    public bool HasPresenceStatus => IsSelf || IsOnline || IsFixture;
     public AvatarPlayback? Playback
     {
         get => _playback;

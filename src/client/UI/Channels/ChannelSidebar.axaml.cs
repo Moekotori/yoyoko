@@ -72,11 +72,7 @@ public partial class ChannelSidebar : UserControl
         }
         ((MenuItem)menu.Items[1]!).Command = new ActionCommand(_ => _ = CopyWebVoiceAsync(shell, channel));
         var settings = (MenuItem)menu.Items[2]!;
-        settings.Command = new ActionCommand(_ =>
-        {
-            if (shell.SelectedChannel?.Id != channel.Id) shell.SelectedChannel = channel;
-            shell.OpenVoiceSettings.Execute(null);
-        });
+        settings.Command = new ActionCommand(_ => shell.OpenVoiceChannelSettings(channel));
         var canManage = shell.CanManageChannel(channel);
         for (var index = 3; index < menu.Items.Count; index++) ((Control)menu.Items[index]!).IsVisible = canManage;
         ((MenuItem)menu.Items[4]!).Command = new ActionCommand(_ => shell.EditChannel(channel, true, ChannelEditMode.Rename));

@@ -3,7 +3,7 @@
   <Style Selector="Border.bannerPreview">
     <Setter Property="Height" Value="120" />
     <Setter Property="Margin" Value="0,0,0,0" />
-    <Setter Property="CornerRadius" Value="10,10,0,0" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Button.bannerPick">
     <Setter Property="Padding" Value="0" />
@@ -29,42 +29,42 @@
   </Style>
   <Style Selector="Grid.profileHero">
     <Setter Property="MinHeight" Value="120" />
-    <Setter Property="Margin" Value="20,18,20,16" />
+    <Setter Property="Margin" Value="0,20,0,24" />
   </Style>
   <Style Selector="Border.avatarRing">
-    <Setter Property="Width" Value="96" />
-    <Setter Property="Height" Value="96" />
+    <Setter Property="Width" Value="80" />
+    <Setter Property="Height" Value="80" />
     <Setter Property="Padding" Value="4" />
-    <Setter Property="CornerRadius" Value="48" />
+    <Setter Property="CornerRadius" Value="40" />
     <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
     <Setter Property="ClipToBounds" Value="True" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Grid.profileFooter">
-    <Setter Property="MinHeight" Value="48" />
-    <Setter Property="Margin" Value="16,8,16,12" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Margin" Value="0,24,0,0" />
   </Style>
   <Style Selector="TextBox.settingsField.profileField">
-    <Setter Property="Height" Value="32" />
+    <Setter Property="Height" Value="36" />
     <Setter Property="Padding" Value="10,6" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.settingsSecondary.profileAction">
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Padding" Value="12,6" />
     <Setter Property="MinHeight" Value="32" />
-    <Setter Property="Height" Value="32" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Button.settingsPrimary.profileSave">
-    <Setter Property="MinWidth" Value="96" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="MinWidth" Value="80" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Button.avatarPick">
     <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="CornerRadius" Value="44" />
+    <Setter Property="CornerRadius" Value="36" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
   </Style>
@@ -76,7 +76,7 @@
   </Style>
   <Style Selector="Button.avatarPick Border.avatarScrim">
     <Setter Property="Background" Value="#99000000" />
-    <Setter Property="CornerRadius" Value="44" />
+    <Setter Property="CornerRadius" Value="36" />
     <Setter Property="Opacity" Value="0" />
     <Setter Property="Transitions">
       <Transitions>

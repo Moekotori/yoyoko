@@ -4,6 +4,7 @@ namespace Chat.Core.Instances;
 
 public static class WorkspaceAddress
 {
+    public const string LocalServerUrl = "http://localhost:8080";
     // An application shortcut only. Explicit ports and other hosts keep their normal meaning.
     public static string Resolve(string address, string defaultAddress)
     {

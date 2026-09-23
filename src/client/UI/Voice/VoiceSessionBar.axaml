@@ -3,7 +3,7 @@
   x:Class="Chat.UI.Voice.VoiceSessionBar" x:DataType="vm:ShellViewModel">
   <Border Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="10,8">
     <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="8">
-      <PathIcon Data="{StaticResource IconSpeaker}" Width="14" Height="14" VerticalAlignment="Center" Foreground="#D0D0D0" />
+      <PathIcon Data="{StaticResource IconSpeaker}" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
         <TextBlock Text="{Binding ConnectedVoiceName}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
         <TextBlock Text="{Binding VoiceSessionLabel}" Classes="quiet" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding VoiceStatus}" />

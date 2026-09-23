@@ -2,7 +2,9 @@
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization" xmlns:c="using:Chat.UI.Components"
   x:Class="Chat.UI.Settings.ProfileSettingsView" x:DataType="vm:SettingsViewModel">
   <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/ProfileStyles.axaml" /></UserControl.Styles>
-  <Border Classes="settingsGroup">
+  <StackPanel>
+  <TextBlock Text="{i18n:T SignedOut}" Classes="muted" IsVisible="{Binding !Profile.IsSignedIn}" />
+  <Border Classes="settingsGroup" IsVisible="{Binding Profile.IsSignedIn}">
     <StackPanel IsEnabled="{Binding Profile.IsSignedIn}">
       <Border Classes="bannerPreview" ClipToBounds="True">
         <Panel>
@@ -18,10 +20,10 @@
       </Border>
       <Grid Classes="profileHero" ColumnDefinitions="Auto,*" ColumnSpacing="20">
         <Border Classes="avatarRing">
-          <Button Classes="avatarPick" Width="88" Height="88" Command="{Binding Profile.ChangeAvatar}"
+          <Button Classes="avatarPick" Width="72" Height="72" Command="{Binding Profile.ChangeAvatar}"
             ToolTip.Tip="{i18n:T ChangeAvatar}" AutomationProperties.Name="{i18n:T ChangeAvatar}">
             <Panel>
-              <c:Avatar Width="88" Height="88" Playback="{Binding Profile.Playback}" Initial="{Binding Profile.Initial}" />
+              <c:Avatar Width="72" Height="72" Playback="{Binding Profile.Playback}" Initial="{Binding Profile.Initial}" />
               <Border Classes="avatarScrim" IsHitTestVisible="False">
                 <PathIcon Data="{StaticResource IconCamera}" Width="20" Height="20" Foreground="#F2F2F2"
                   HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -32,14 +34,14 @@
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
           <TextBlock Text="{Binding Profile.PreviewName}" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
           <TextBlock Text="{Binding Profile.Handle}" Classes="muted" FontSize="13" IsVisible="{Binding Profile.HasHandle}" />
-          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+          <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0">
             <Button Classes="settingsSecondary profileAction" Content="{i18n:T ChangeAvatar}" Command="{Binding Profile.ChangeAvatar}" />
             <Button Classes="settingsSecondary profileAction" Content="{i18n:T RemoveAvatar}" Command="{Binding Profile.RemoveAvatar}"
               IsVisible="{Binding Profile.HasAvatar}" />
             <Button Classes="settingsSecondary profileAction" Content="{i18n:T ChangeBanner}" Command="{Binding Profile.ChangeBanner}" />
             <Button Classes="settingsSecondary profileAction" Content="{i18n:T RemoveBanner}" Command="{Binding Profile.RemoveBanner}"
               IsVisible="{Binding Profile.HasBanner}" />
-          </StackPanel>
+          </WrapPanel>
         </StackPanel>
       </Grid>
       <Border Classes="settingsRowDivider" />
@@ -61,4 +63,5 @@
       </Grid>
     </StackPanel>
   </Border>
+  </StackPanel>
 </UserControl>

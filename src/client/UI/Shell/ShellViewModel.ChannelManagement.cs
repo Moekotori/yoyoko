@@ -6,7 +6,33 @@ namespace Chat.UI.Shell;
 public sealed partial class ShellViewModel
 {
     private ChannelEditorViewModel? _channelEditor;
+    private VoiceChannelSettingsViewModel? _voiceChannelSettings;
     private Guid? _enteringChannelId;
+    public VoiceChannelSettingsViewModel? VoiceChannelSettings
+    {
+        get => _voiceChannelSettings;
+        private set { if (ReferenceEquals(_voiceChannelSettings, value)) return; _voiceChannelSettings = value; Changed(); Changed(nameof(ShowVoiceChannelSettings)); }
+    }
+    public bool ShowVoiceChannelSettings => VoiceChannelSettings is not null;
+
+    public void OpenVoiceChannelSettings(ChannelItem channel)
+    {
+        if (!channel.IsVoice || channel.IsFixture || SelectedInstance?.Context.Session is not { } session) return;
+        CloseJump();
+        ProfileOpen = false;
+        var instance = SelectedInstance;
+        VoiceChannelSettingsViewModel? settings = null;
+        void Close()
+        {
+            if (ReferenceEquals(VoiceChannelSettings, settings)) VoiceChannelSettings = null;
+        }
+        settings = new(session, channel, CanManageChannel(channel), _text, () =>
+        {
+            Close();
+            if (SelectedInstance == instance) RefreshCommunity();
+        }, Close, _lifetime);
+        VoiceChannelSettings = settings;
+    }
     public ChannelEditorViewModel? ChannelEditor
     {
         get => _channelEditor;

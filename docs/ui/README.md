@@ -10,7 +10,7 @@ Verified in a real macOS window: the duplicate title is absent, and both search 
 
 ## Member pane (2026-09-21)
 
-The conversation member column is 300px (wider than the 260px channel nav), with 40px avatars and 14/12 name/handle type so long display names stay readable. It shares the chat canvas/wallpaper, keeps a left divider, and groups people as Online / Offline with counts. Loaded-message authors and the signed-in account sit under Online. Ten local layout names (Mika, 苏晚, Nova, 林栖迟, Alexander Whitfield online; 陈默, 江河, 月见里, Ryo, 阿布杜勒·拉赫曼 offline) fill the pane until presence exists. `start.cmd` / `dev.cmd` seed fixture channels (`日常`, `设计`, `深夜电台`), members and eight layout messages as soon as the window opens, before sign-in. Real community data replaces fixture channels after connect. They are not membership, not persisted, and do not appear in ⌘K or unread/read cursors. Presence protocol is **Not implemented yet**.
+The live conversation participant column is 248px and closed by default, with 32px avatars and 13/11 name/handle type. It lists only authors from loaded real messages and the signed-in account under “In this conversation.” It does not claim that these are the full community membership or that message authors are currently online. Normal startup no longer inserts layout messages, channels, voice members, or participant names before sign-in. The explicit `--design-preview` window remains the place for visual fixtures. Presence protocol is **Not implemented yet**.
 
 Release Chat.UI compiled with zero warnings/errors. Native window click-through and wallpaper contrast on Windows/macOS/Linux were not revalidated in this pass.
 
@@ -19,6 +19,20 @@ Release Chat.UI compiled with zero warnings/errors. Native window click-through 
 The timeline follows Discord: every message stays on the left. Wheel scrolling eases over 160ms instead of jumping 50px per notch, and the virtualizing panel keeps one extra viewport cached so rows do not pop in. The avatar occupies a fixed leading column; the name and timestamp sit on one line, with the body underneath. Consecutive messages from the same author hide the avatar and name but keep the column so wrapped text still lines up. Hover actions stay on the trailing edge: copy, reply, edit (own) and delete (own or community owner). Reply shows a one-line quote when the parent is still in the loaded window. Composer shows an edit/reply banner; typing from others appears above it. Listing a channel that returns 403/404 clears that channel cache and shows no access. Presence protocol is **Not implemented yet**.
 
 Release Chat.UI compiled with zero warnings/errors. Native signed-in click-through on Windows/macOS/Linux was not repeated in this pass.
+
+## Live chat density (2026-09-23)
+
+The live shell uses a 64px instance rail, a 236px channel area, and a participant pane that opens on request. Message rows use 40px avatars, 15px text with 22px line height, tighter author and row spacing, and a 52px minimum composer. Consecutive messages keep the avatar column but do not reserve the 40px avatar height. Markdown lists use one line break between entries. Signed-out startup shows connection state instead of local layout content. Loaded authors appear under “In this conversation,” without inferred presence.
+
+The Release desktop client built with zero warnings/errors and the client dependency check passed. A headless Skia render of the production chat controls at 1200×820 confirmed the populated layout and an isolated disconnected startup confirmed that the normal client no longer shows layout fixtures. This is visual rendering evidence; native input, Windows/Linux, and server-backed message actions were not repeated here.
+
+## Interaction reliability (2026-09-23)
+
+Queued attachments now follow the same instance, account, and channel scope as drafts. Switching channels hides the current channel's files and restores them on return; at most eight inactive channel file sets are retained, and sign-out, disconnect, and disposal release their streams. Paste, drag/drop, picker, and attachment shortcut paths reject files during message editing. The UI accepts at most 16 attachments even if a server advertises more; incoming file opening reads at most one candidate beyond the effective limit so the user sees the count error. Read failures surface in the chat status without escaping an `async void` UI event. Older-message load errors likewise surface as status.
+
+The add-instance overlay focuses the address field, restores prior focus on close, blocks background shortcuts, and closes after an in-flight connection is cancelled. Closing search returns focus to the composer; closing the quick switcher restores its previous focus. Escape inside settings is left to the focused control first, allowing an open control to dismiss before the entire settings page closes. Search text now says “loaded messages” because the current filter covers the local timeline window, not all server history.
+
+A focused headless interaction probe verified add-instance focus and channel-scoped attachment restoration. Release client build, dependency boundaries, and diff formatting passed. Native macOS accessibility inspection timed out; physical mouse/keyboard behavior and Windows/Linux interaction remain unverified.
 
 ## Send motion and typing (2026-09-21)
 
@@ -130,7 +144,7 @@ dotnet run --project src/client/App -c Release -- --design-preview
 
 The explicit `--design-preview` flag loads bounded local UI fixtures, marks the window and account area as **设计预览**, skips instance/cache hydration, and blocks adding instances. No fixture data enters Core, the network, or SQLite. Preview channel/tab navigation, current-channel text search, group collapse and member visibility work locally. Sending, reactions, attachment/emoji actions, account settings and voice actions show **Not implemented yet**; drafts are preserved and no message or media success is invented.
 
-For everyday UI work, run `dev.cmd` / `./dev.command` (hot reload), `start.cmd` / `./start.command` (Release), or `dotnet run --project src/client/App`. All read `default_instance_url` from App/appsettings.json (currently `http://localhost:8080`), with `CHAT_DEFAULT_INSTANCE_URL` as an override. Windows `start.cmd` also starts the local LAN server; macOS `start.command` does not. Startup uses the last successfully selected server, falling back to the configured default. It restores the account or registers one on first use (username from Settings → Server, otherwise `User`); an existing account with an expired session is never silently replaced. On a LAN instance without communities, it creates a real community and selects `general`. Settings → Profile edits the account; Settings → Server changes the connection and persists it. Connecting and startup connect can be cancelled from that page (or Escape); a cancelled attempt leaves the previous session untouched. Discovery keeps its same-origin checks. `--design-preview` remains isolated.
+For everyday UI work, run `dev.cmd` / `./dev.command` (hot reload), `start.cmd` / `./start.command` (Release), or `dotnet run --project src/client/App`. All read `default_instance_url` from App/appsettings.json (currently `http://localhost:8080`), with `CHAT_DEFAULT_INSTANCE_URL` as an override. Both normal launch scripts reuse a ready local server or start one when needed. Startup uses the last successfully selected server, falling back to the configured default. It restores the account or registers one on first use (username from Settings → Server, otherwise `User`); an existing account with an expired session is never silently replaced. On a LAN instance without communities, it creates a real community and selects `general`. Settings → Profile edits the account; Settings → Server changes the connection and persists it. Connecting and startup connect can be cancelled from that page (or Escape); a cancelled attempt leaves the previous session untouched. Discovery keeps its same-origin checks. `--design-preview` remains isolated.
 
 The community menu now lets owners create text or voice channels through the existing API. Newly created text channels open immediately; creating voice channels does not join voice. Creating a community selects its own default text channel. These are server-backed operations, without fixture messages or permission bypasses; no protocol version change.
 
@@ -142,14 +156,14 @@ LAN startup verification (2026-09-21): Release build completed with zero warning
 - `Channels/QuickSwitcher`: ⌘ K / Ctrl K channel jump overlay.
 - `Instances`: real instance rail and add-instance form; explicit preview server visuals.
 - `Channels/ChannelSidebar`: grouped navigation with category chevrons and selected-row weight.
-- `Chat/MemberSidebar`: 300px conversation authors plus the signed-in account, grouped Online / Offline. 40px letter avatars, 14px names and 12px handles. Ten local layout names fill the list; they are not persisted or sent to the server. Left-click opens a 360px user card (16px corners, custom JPEG/PNG/GIF/WebP banner or ID-tinted fallback, overlapping avatar, presence, primary action, labeled user ID). Own card can change the banner. Right-click offers message, mention, copy ID/username, own profile, and owner kick/ban entries that currently show Not implemented yet. Real accounts open a 1:1 DM; fixture names cannot. Server membership and presence are **Not implemented yet**.
-- `Chat/ProfileDrawer`: account-bar profile is a 360px rounded popout above the account strip (custom JPEG/PNG/GIF/WebP banner, overlapping avatar, ID, compact fields). Click the banner to change it. Full profile editing in Settings is unchanged.
+- `Chat/MemberSidebar`: 248px pane for loaded-message authors and the signed-in account. It no longer presents layout names or inferred online counts in the live client. Left-click opens the user card; right-click offers message, mention, copy ID/username, own profile, and owner kick/ban entries that currently show Not implemented yet. Real accounts can open a 1:1 DM. Server membership and presence are **Not implemented yet**.
+- `Chat/UserCard`: the message/member flyout is 300px wide with a 104px banner and 66px avatar; actions and ID remain available in a shorter card. Presence text is hidden when no live status is known, rather than labeling a loaded message author offline. `Chat/ProfileDrawer`: the account-bar profile remains a separate 360px popout above the account strip. Full profile editing in Settings is unchanged.
 - `Components/Banner`: rectangular cover with color fallback and optional GIF playback; used by the user card, profile drawer and Settings → Profile.
 - `Workspace`: tabs, conversation, member and account views with presentation state.
 - `Styles/Theme.axaml`: dark tokens and focus/hover/selection presentation.
 - `Styles/Icons.axaml`: official Microsoft Fluent System Icons geometries; MIT license in `Assets`.
 - Five generated avatars are stored at 256px; the preview owns five 128px decoded bitmaps and disposes them at application exit. Normal mode does not decode them.
-- The timeline uses Avalonia ListBox's virtualizing panel. Design-preview fixtures stay in the preview window; the live shell prepends eight local layout messages that never enter Core, SQLite, or the network. Real paging belongs to the message pipeline.
+- The timeline uses Avalonia ListBox's virtualizing panel. Design-preview fixtures stay in the preview window; the live shell displays only real or locally pending messages. Real paging belongs to the message pipeline.
 
 ## Verification
 
@@ -161,7 +175,7 @@ See `../../design-qa.md` for the visual comparison and screenshot evidence.
 
 ### 侧栏与频道管理（2026-09-21）
 
-频道/账号列为 260 px，给底部头像、用户名和麦克风/耳机控件留出间距。已实现紧凑频道分组、2 px 选中行圆角和分组旁的新增按钮。所有者可添加文字/语音频道，文字频道右键打开、重命名、添加同类频道或删除。语音频道单击加入并打开该频道的文字聊天；右键可复制网页语音链接，或打开设置中的设备/音质页。成员列在该语音频道下方，账号条上方可离开。添加与重命名直接在侧栏原位输入，Enter 保存、Esc 取消，无遮罩和居中弹窗；删除在原行展开确认，失败就地显示错误，创建语音频道不会自动加入通话。管理请求走 HTTP，变更通过 Gateway 与 SQLite 同步。
+频道/账号列为 260 px，给底部头像、用户名和麦克风/耳机控件留出间距。已实现紧凑频道分组、2 px 选中行圆角和分组旁的新增按钮。所有者可添加文字/语音频道，文字频道右键打开、重命名、添加同类频道或删除。语音频道单击加入并打开该频道的文字聊天；右键可复制网页语音链接，或打开语音频道设置弹窗查看名称和频道音质上限（所有者可修改）。个人语音设备和音质仍在个人设置页。成员列在该语音频道下方，账号条上方可离开。添加与重命名直接在侧栏原位输入，Enter 保存、Esc 取消；删除在原行展开确认，失败就地显示错误，创建语音频道不会自动加入通话。管理请求走 HTTP，变更通过 Gateway 与 SQLite 同步。
 
 成员栏与消息区共用画布/壁纸，按「在线 / 离线」分组并显示人数。当前账号和已加载消息的作者列在在线；另有十个本地占位名（Mika、苏晚、Nova、林栖迟、Alexander Whitfield 在线，陈默、江河、月见里、Ryo、阿布杜勒·拉赫曼离线）只用于排版。`start.cmd` / `dev.cmd` 打开窗口即出现假频道（日常、设计、深夜电台）、假成员和八条假消息，不必等登录；连上真实社区后会换成真频道。这些数据不入库、不上网、不进 ⌘K，也不参与已读游标。没有头像时显示名字首字。左键打开 300px 圆角用户卡片（横幅、叠放头像、在线状态、发私信/提及和用户 ID）；右键可发私信、提及或复制。真实账号会 get-or-create 一条私信频道并出现在频道列「私信」分组；占位名不能私信。社区所有者对其他人可见踢出/封禁，这两项目前提示尚未实现。服务端成员名单与 presence **尚未实现**。离屏渲染见 [user-card](polish/user-card.png)。
 
@@ -195,6 +209,8 @@ Validation: Release desktop build passed with zero warnings/errors. An isolated 
 
 Rail selection refinement: selected items use a quiet `#2C2C2C` fill (`#303030` on hover), 2px corners, no selection border and no avatar outline. The changed Avatar/InstanceRail XAML compiled in isolation against the preceding successful client build; a native host check confirmed zero selection border and hidden outline, and the [updated window render](polish/instance-selection-native-render.png) was visually inspected. The final full workspace build was blocked by concurrent message/inbox code errors (MessageText, ShellViewModel.Inbox and Presentation); that integration is not claimed as passing.
 
+2026-09-23：按当前界面要求，未登录时隐藏底部账号栏；实例栏与频道侧栏的选中和悬停项不再绘制矩形底色，频道仍用文字粗细与颜色标识当前项。上述 2026-09-21 截图仅记录当时状态。
+
 ### 设置页空白频道列修复（2026-09-21）
 
 恢复 ShellSurface 的 ShowSettings 折叠绑定；设置打开时频道栏宽度降为 0，关闭后恢复 220 px，保留短促过渡及减少动效偏好。折叠样式由可重建的 ShellSurface 自己持有，UltraLight 恢复后也适用，不改变资料页的头像与名称编辑。
@@ -214,3 +230,18 @@ Rail selection refinement: selected items use a quiet `#2C2C2C` fill (`#303030` 
 验证：隔离输出目录的 `Chat.UI` / UltraLight Release 0 警告 0 错误；UltraLight 确认设置打开及恢复后频道列宽与透明度归零。离屏见 [channel-collapse.png](settings/channel-collapse.png)。未再开第二个原生窗口点设置；本机已有占用默认输出的 Chat.App。
 
 选中态减重（2026-09-21）：导航选中不再铺 `SelectedBrush` 整行底，也不再 SemiBold；当前项只提高文字/图标对比，悬停仍用浅底。隔离 Release 构建 `Chat.UI` / UltraLight 0 警告 0 错误，UltraLight 布局检查通过。离屏见 [sidebar-select-quiet.png](settings/sidebar-select-quiet.png)。未再开原生窗口点选分类。
+
+
+### 浅色主题重做（2026-09-23）
+
+浅色采用纸白画布、浅灰导航与石墨文字，选中与悬停使用轻微灰绿层次；主要操作保持深色实底，绿/红/赭色仅承担开关、状态与提及等语义。布局与业务不变。`Styles/Palette.axaml` 集中维护两套完整的语义颜色；`Theme.axaml` 和各组件只引用颜色角色，图片上方的遮罩及其白色图标保留固定颜色。
+
+已覆盖频道/标签、成员与头像占位、聊天输入、按钮状态、设置表单/开关/快捷键、菜单、个人资料面板、附件拖入遮罩和错误提示。Markdown 代码、链接、引用、剧透与公式使用动态主题资源；切换主题无需重建消息。壁纸遮罩在浅色时使用白色，深色时使用黑色。输入框占位文字取消 Fluent 模板的额外半透明处理。
+
+验证：macOS Release 客户端构建 0 警告、0 错误；原生 Avalonia 后端渲染检查了离线主窗口、外观、服务器表单、快捷键、下拉菜单、隔离聊天预览与富文本，并确认已有内联链接在浅→深→浅时更新颜色。浅色主要文字、次级文字、链接、提及文字与主要按钮文字的色值对比检查通过（最低约 4.83:1，不涵盖图片背景或禁用态）。没有启动服务器、发送消息或写入真实账号配置。
+
+图像由运行中的原生控件树通过 RenderTargetBitmap 捕获，不含系统标题栏；聊天图使用明确的设计预览数据。macOS 辅助功能读取超时，未声称系统鼠标/键盘、Windows/Linux 或所有弹出面板完成验收。
+
+- [聊天设计预览](light-mode/light-chat-preview.png)
+- [外观设置](light-mode/light-appearance.png) · [表单](light-mode/light-fields.png) · [快捷键](light-mode/light-shortcuts.png)
+- [下拉菜单](light-mode/light-dropdown.png) · [富文本](light-mode/light-rich-text.png)

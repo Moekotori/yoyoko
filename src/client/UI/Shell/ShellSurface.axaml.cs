@@ -13,4 +13,16 @@ public partial class ShellSurface : UserControl
         if (DataContext is ShellViewModel shell) shell.CloseJump();
         e.Handled = true;
     }
+
+    private void OnAddInstanceBackdrop(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is ShellViewModel shell) shell.CloseAddInstance.Execute(null);
+        e.Handled = true;
+    }
+
+    private void OnVoiceChannelSettingsBackdrop(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is ShellViewModel { VoiceChannelSettings: { } settings }) settings.Close.Execute(null);
+        e.Handled = true;
+    }
 }

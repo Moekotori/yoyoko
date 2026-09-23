@@ -44,7 +44,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     private string _cooldownInput = "0";
     private bool _settingsOpen;
     private readonly AttachmentPreviews _previews;
-    private string _address = "";
     private string _status = "";
     private string _draft = "";
     private string _communityName = "";
@@ -87,10 +86,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         Settings = new(locale, chrome, appearance, shortcuts, Wallpaper, () => ShowSettings = false, () => SelectedInstance?.Context.Session, PickAvatarAsync, OnError, text, Devices, Connection, AuthForm, packs, transport, this);
         chrome.Changed += OnChromeChanged;
         shortcuts.Changed += OnShortcutsChanged;
-        OpenAddInstance = new(_ =>
-        {
-            OpenConnectionSettings();
-        });
+        OpenAddInstance = new(_ => OpenAddInstanceDialog());
+        CloseAddInstance = new(_ => CloseAddInstanceDialog());
         OpenSettings = new(_ =>
         {
             CloseJump();
@@ -125,7 +122,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         ToggleDeaf = new(() => SetDeafAsync(true), OnError);
         LeaveVoice = new(LeaveVoiceAsync, OnError);
         JoinVoice = new(value => JoinVoiceChannelAsync(value as ChannelItem), OnError);
-        BeginAddInstance = new(_ => OpenConnectionSettings());
+        BeginAddInstance = new(_ => OpenAddInstanceDialog());
         Workspace = new(false, text);
         InitializePresentation();
         RebuildQualityChoices();
@@ -188,6 +185,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         }
     }
     public ActionCommand OpenAddInstance { get; }
+    public ActionCommand CloseAddInstance { get; }
     public ActionCommand OpenSettings { get; }
     public ActionCommand OpenVoiceSettings { get; }
     public SettingsViewModel Settings { get; }
@@ -200,7 +198,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     public Action? ScrollToUnread { get; set; }
     public Func<bool>? IsNearBottom { get; set; }
     public Action? FocusComposer { get; set; }
-    public string Address { get => _address; set { _address = value; Changed(); } }
     public string Status { get => _status; private set { _status = value; Changed(); } }
     public string Username { get => AuthForm.Username; set => AuthForm.Username = value; }
     public string DisplayName { get => AuthForm.DisplayName; set => AuthForm.DisplayName = value; }
@@ -276,6 +273,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             Changed(nameof(InviteCode));
             Changed(nameof(HasInvite));
             _ = LoadSessionVisualsAsync();
+            RefreshCommunity();
         }
     }
     public ChannelItem? SelectedChannel
@@ -314,7 +312,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             Connection.SetWatching(value && Settings.Section == SettingsSection.Connection);
         }
     }
-    public bool ShowAddInstance => false;
     public bool ShowAuth => !IsSignedIn && !ShowSettings && SelectedChannel is null;
     public bool ShowGuest => !IsSignedIn;
     public bool ShowChannelNav => IsSignedIn || Channels.Count > 0;
@@ -381,14 +378,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     }
     public ObservableCollection<PendingFileItem> PendingFiles { get; } = [];
     public bool HasPending => PendingFiles.Count > 0;
+    public int AttachmentLimit => Math.Clamp(
+        SelectedInstance?.Context.Session?.MaxAttachments ?? ProtocolVersion.MaxAttachmentsPerMessage,
+        1, IncomingFiles.MaxUiAttachments);
     public string FileLimitTip
     {
         get
         {
             var session = SelectedInstance?.Context.Session;
             var max = FileKinds.SizeLabel(session?.MaxAttachmentBytes ?? ProtocolVersion.MaxAttachmentBytes);
-            var count = session?.MaxAttachments ?? ProtocolVersion.MaxAttachmentsPerMessage;
-            return _text.Get(TextKey.FileLimitHint, max, count);
+            return _text.Get(TextKey.FileLimitHint, max, AttachmentLimit);
         }
     }
 
@@ -454,13 +453,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             if (SelectedInstance == item) RefreshCommunity();
         }
         catch { /* offline: stay on login */ }
-    }
-
-    private async Task AddAsync()
-    {
-        Connection.Address = Address;
-        await ConnectWorkspaceAsync();
-        if (Connection.Status.Length == 0) Address = "";
     }
 
     private async Task AuthenticateAsync(bool register)
@@ -552,12 +544,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         Channels.Clear();
         if (session is null)
         {
-            if (Channels.Any(item => !item.IsFixture))
-            {
-                Channels.Clear();
-                SelectedChannel = null;
-            }
-            SeedLayoutFixtures();
+            SelectedChannel = null;
             NotifySession();
             Connection.Bind(SelectedInstance?.Context);
             return;
@@ -918,7 +905,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     {
         var session = SelectedInstance?.Context.Session;
         var max = session?.MaxAttachmentBytes ?? ProtocolVersion.MaxAttachmentBytes;
-        var cap = session?.MaxAttachments ?? ProtocolVersion.MaxAttachmentsPerMessage;
+        var cap = AttachmentLimit;
         foreach (var file in files)
         {
             if (file.Size <= 0)
@@ -952,6 +939,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
 
     private async Task AttachAsync()
     {
+        if (IsEditing)
+        {
+            Workspace.ShowNotice(_text.Get(TextKey.CannotAttachWhileEditing));
+            return;
+        }
+        if (!ShowChat || ChannelForbidden || !IsSignedIn) return;
         if (PickFiles is null) return;
         await QueueFilesAsync(await PickFiles());
     }
@@ -1020,7 +1013,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         Messages.Clear();
         SelectedChannel = null;
         ClearPlaybacks();
-        SeedLayoutFixtures();
         NotifySession();
         Changed(nameof(ShowAuth));
         Changed(nameof(ShowGuest));
@@ -1099,6 +1091,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             BeginCooldown(wait);
     }
 
+    internal void ReportInteractionError(Exception exception) => OnError(exception);
+
     private void OnChromeChanged()
     {
         Changed(nameof(UltraLightEnabled));
@@ -1141,6 +1135,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             if (ReferenceEquals(_timeline, timeline)) SyncMessages();
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception error)
+        {
+            if (ReferenceEquals(_timeline, timeline)) OnError(error);
+        }
     }
 
     private async Task SaveModerationAsync()

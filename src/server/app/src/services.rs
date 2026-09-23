@@ -353,7 +353,17 @@ pub async fn register(
     username: String,
     display_name: String,
     password: String,
+    server_password: Option<String>,
 ) -> ApiResult<AuthResponse> {
+    if let Some(required) = state.settings.auth.registration_password.as_deref() {
+        if server_password.as_deref() != Some(required) {
+            return Err(ApiErr::new(
+                StatusCode::FORBIDDEN,
+                "invalid_server_password",
+                "Server password is required or incorrect.",
+            ));
+        }
+    }
     validate_username(&username)?;
     validate_display(&display_name)?;
     validate_password(&password)?;

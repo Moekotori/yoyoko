@@ -44,20 +44,6 @@
         </ComboBox>
       </Grid>
     </Border>
-    <Border Classes="settingsRowDivider" IsVisible="{Binding Quality.CanSetChannelQuality}" />
-    <Border Classes="settingsPad" IsVisible="{Binding Quality.CanSetChannelQuality}">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <TextBlock Text="{i18n:T ChannelQualityCap}" Classes="settingsLabel" />
-        <ComboBox Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding Quality.ChannelQualityChoices}" SelectedItem="{Binding Quality.SelectedChannelQuality}"
-          AutomationProperties.Name="{i18n:T ChannelQualityCap}">
-          <ComboBox.ItemTemplate>
-            <DataTemplate x:DataType="voice:AudioQualityChoice">
-              <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-      </Grid>
-    </Border>
     <Border Classes="settingsRowDivider" />
     <Border Classes="settingsHit" vm:SettingsHit.Command="{Binding ToggleHeadsetMediaKeys}"
       ToolTip.Tip="{i18n:T HeadsetMediaKeysHelp}" AutomationProperties.Name="{i18n:T HeadsetMediaKeys}">

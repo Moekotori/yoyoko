@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Chat.UI.Shell;
 
@@ -8,6 +9,7 @@ namespace Chat.UI.Channels;
 public partial class QuickSwitcher : UserControl
 {
     private ShellViewModel? _subscribed;
+    private IInputElement? _returnFocus;
 
     public QuickSwitcher()
     {
@@ -38,18 +40,31 @@ public partial class QuickSwitcher : UserControl
         _subscribed.PropertyChanged -= OnShellChanged;
         if (_subscribed.FocusSwitcher == FocusQuery) _subscribed.FocusSwitcher = null;
         _subscribed = null;
+        _returnFocus = null;
     }
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (args.PropertyName == nameof(ShellViewModel.SwitcherOpen) && _subscribed?.SwitcherOpen == true)
             FocusQuery();
+        else if (args.PropertyName == nameof(ShellViewModel.SwitcherOpen) && _subscribed?.SwitcherOpen == false)
+        {
+            var target = _returnFocus;
+            _returnFocus = null;
+            if (target is Control { IsEffectivelyVisible: true }) target.Focus();
+            else if (_subscribed is { ShowChat: true, ShowSettings: false })
+                _subscribed.FocusComposer?.Invoke();
+        }
     }
 
-    private void FocusQuery() => Dispatcher.UIThread.Post(() =>
+    private void FocusQuery()
     {
-        if (_subscribed?.SwitcherOpen != true) return;
-        Query.Focus();
-        Query.SelectAll();
-    });
+        _returnFocus ??= (TopLevel.GetTopLevel(this) as Window)?.FocusManager?.GetFocusedElement();
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_subscribed?.SwitcherOpen != true) return;
+            Query.Focus();
+            Query.SelectAll();
+        });
+    }
 }

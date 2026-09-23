@@ -1,17 +1,27 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:appearance="using:Chat.UI.Appearance" xmlns:i18n="using:Chat.UI.Localization"
   x:Class="Chat.UI.Settings.AppearanceSettingsView" x:DataType="vm:SettingsViewModel">
+  <UserControl.Styles><StyleInclude Source="avares://Chat.UI/Settings/ThemeChoiceStyles.axaml" /></UserControl.Styles>
   <Border x:Name="Group" Classes="settingsGroup">
     <StackPanel>
-      <Border Classes="settingsHit" Tapped="OnColorTapped">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-          <TextBlock Text="{i18n:T ColorScheme}" Classes="settingsLabel" />
-          <ComboBox x:Name="ColorSchemeBox" Grid.Column="1" Classes="settingsSelect" ItemsSource="{Binding ColorSchemes}"
-            SelectedItem="{Binding SelectedColorScheme}" AutomationProperties.Name="{i18n:T ColorScheme}">
-            <ComboBox.ItemTemplate><DataTemplate x:DataType="appearance:ColorSchemeChoice"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
-          </ComboBox>
-        </Grid>
-      </Border>
+      <TextBlock Text="{i18n:T ColorScheme}" Classes="settingsLabel" FontWeight="Medium" Margin="0,0,0,14" />
+      <ListBox x:Name="ColorSchemeBox" Classes="themeChoices" ItemsSource="{Binding ColorSchemes}" SelectedItem="{Binding SelectedColorScheme}"
+        AutomationProperties.Name="{i18n:T ColorScheme}" Margin="0,0,-8,28">
+        <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1" Columns="2" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="appearance:ColorSchemeChoice">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+              <ThemeVariantScope RequestedThemeVariant="{Binding Variant}" Width="24" Height="24">
+                <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="12" />
+              </ThemeVariantScope>
+              <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="14" VerticalAlignment="Center" />
+              <Border Grid.Column="2" Width="16" Height="16" CornerRadius="8" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" VerticalAlignment="Center" Padding="3">
+                <Ellipse Classes="themeChoiceDot" />
+              </Border>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
       <Border Classes="settingsRowDivider" />
       <Border Classes="settingsHit" vm:SettingsHit.Command="{Binding ToggleCompact}"
         AutomationProperties.Name="{i18n:T CompactLayout}">
@@ -31,7 +41,7 @@
         </Grid>
       </Border>
       <Border Classes="settingsRowDivider" />
-      <Border Classes="settingsHit" vm:SettingsHit.Command="{Binding Wallpaper.Toggle}"
+      <Border Classes="settingsHit" Margin="0,24,0,0" vm:SettingsHit.Command="{Binding Wallpaper.Toggle}"
         AutomationProperties.Name="{i18n:T CustomBackground}">
         <Grid ColumnDefinitions="*,240" ColumnSpacing="16">
           <TextBlock Text="{i18n:T CustomBackground}" Classes="settingsLabel" />
@@ -42,18 +52,17 @@
       <Border Classes="settingsRowDivider" IsVisible="{Binding Wallpaper.Enabled}" />
       <Border Classes="settingsHit" IsVisible="{Binding Wallpaper.Enabled}" vm:SettingsHit.Command="{Binding Wallpaper.Choose}"
         AutomationProperties.Name="{i18n:T PickBackground}">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <Grid ColumnDefinitions="*,240" ColumnSpacing="16">
           <TextBlock Text="{i18n:T PickBackground}" Classes="settingsLabel" />
-          <DockPanel Grid.Column="1" LastChildFill="False" VerticalAlignment="Center">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <Button Classes="settingsSecondary" Content="{i18n:T ChooseBackground}" IsHitTestVisible="False" Focusable="False" />
+          <StackPanel Grid.Column="1" Spacing="8" MaxWidth="360">
+            <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" HorizontalAlignment="Right">
+              <Button Classes="settingsSecondary" Content="{i18n:T ChooseBackground}" Command="{Binding Wallpaper.Choose}" AutomationProperties.Name="{i18n:T ChooseBackground}" />
               <Button Classes="settingsSecondary" Content="{i18n:T RemoveBackground}" Command="{Binding Wallpaper.Clear}"
                 IsVisible="{Binding Wallpaper.HasFile}" AutomationProperties.Name="{i18n:T RemoveBackground}" />
-            </StackPanel>
-            <TextBlock DockPanel.Dock="Left" Text="{Binding Wallpaper.FileLabel}" Classes="muted" FontSize="13"
-              TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,12,0"
-              IsVisible="{Binding Wallpaper.HasLabel}" />
-          </DockPanel>
+            </WrapPanel>
+            <TextBlock Text="{Binding Wallpaper.FileLabel}" Classes="muted" FontSize="13" TextTrimming="CharacterEllipsis"
+              HorizontalAlignment="Right" IsVisible="{Binding Wallpaper.HasLabel}" />
+          </StackPanel>
         </Grid>
       </Border>
       <Border Classes="settingsRowDivider" IsVisible="{Binding Wallpaper.CanAdjust}" />
@@ -79,7 +88,7 @@
         </Grid>
       </Border>
       <TextBlock Text="{Binding Wallpaper.Error}" Classes="muted" FontSize="13" TextWrapping="Wrap"
-        Margin="16,4,16,10" IsVisible="{Binding Wallpaper.HasError}" />
+        Margin="0,8,0,0" IsVisible="{Binding Wallpaper.HasError}" />
     </StackPanel>
   </Border>
 </UserControl>

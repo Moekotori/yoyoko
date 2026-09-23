@@ -14,7 +14,6 @@ using Chat.Localization;
 using Chat.Motion;
 using Chat.UI.Localization;
 using Chat.UI.Shell;
-using FileKinds = global::Chat.Core.Messaging.FileKinds;
 using PickedFile = global::Chat.Core.Sessions.PickedFile;
 
 namespace Chat.UI.Chat;
@@ -136,6 +135,15 @@ public partial class ChatView : UserControl
     {
         if (args.PropertyName == nameof(ShellViewModel.SearchOpen) && _subscribed?.SearchOpen == true)
             FocusSearch();
+        if (args.PropertyName == nameof(ShellViewModel.SearchOpen) && _subscribed?.SearchOpen == false)
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_subscribed is { ShowChat: true, SearchOpen: false, SwitcherOpen: false, ShowSettings: false })
+                {
+                    Composer.Focus();
+                    Composer.CaretIndex = Composer.Text?.Length ?? 0;
+                }
+            });
         if (args.PropertyName == nameof(ShellViewModel.SelectedChannel))
         {
             _olderExhausted = false;
@@ -329,30 +337,35 @@ public partial class ChatView : UserControl
         try { items = await clipboard.TryGetFilesAsync(); }
         catch (Exception) { return false; }
         if (items is null || items.Count == 0) return false;
-        var files = new List<PickedFile>();
-        foreach (var item in items)
+        if (!CanReceiveFiles(shell))
         {
-            if (item is not IStorageFile file) continue;
-            var path = file.TryGetLocalPath();
-            Stream stream;
-            long size;
-            if (path is not null && System.IO.File.Exists(path))
-            {
-                var info = new FileInfo(path);
-                size = info.Length;
-                stream = System.IO.File.OpenRead(path);
-            }
-            else
-            {
-                var props = await file.GetBasicPropertiesAsync();
-                size = (long)(props.Size ?? 0);
-                stream = await file.OpenReadAsync();
-            }
-            files.Add(new(file.Name, FileKinds.MimeFromFileName(file.Name), stream, size));
+            if (shell.IsEditing) shell.Workspace.ShowNotice(I18n.T(TextKey.CannotAttachWhileEditing));
+            return true;
         }
-        if (files.Count == 0) return false;
-        await shell.QueueFilesAsync(files);
+        await QueueIncomingFilesAsync(shell, items);
         return true;
+    }
+
+    private static bool CanReceiveFiles(ShellViewModel shell) =>
+        shell.ShowChat && !shell.IsEditing && !shell.ChannelForbidden
+        && shell.SelectedInstance?.Context.Session is not null;
+
+    private static async Task QueueIncomingFilesAsync(ShellViewModel shell, IEnumerable<IStorageItem> items)
+    {
+        IReadOnlyList<PickedFile>? opened = null;
+        try
+        {
+            opened = await IncomingFiles.OpenAsync(items, shell.AttachmentLimit);
+            await shell.QueueFilesAsync(opened);
+        }
+        catch (Exception error)
+        {
+            if (opened is not null)
+                foreach (var file in opened)
+                    if (!shell.PendingFiles.Any(item => ReferenceEquals(item.File, file)))
+                        try { await file.DisposeAsync(); } catch { /* preserve the original error */ }
+            shell.ReportInteractionError(error);
+        }
     }
 
     private async void CopyMessage(object? sender, RoutedEventArgs args)
@@ -441,7 +454,8 @@ public partial class ChatView : UserControl
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
-        e.DragEffects = e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.DragEffects = DataContext is ShellViewModel shell && CanReceiveFiles(shell)
+            && e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None;
         DropActive = e.DragEffects == DragDropEffects.Copy;
         e.Handled = true;
     }
@@ -463,27 +477,12 @@ public partial class ChatView : UserControl
         if (DataContext is not ShellViewModel shell) return;
         var items = e.DataTransfer.TryGetFiles();
         if (items is null) return;
-        var files = new List<PickedFile>();
-        foreach (var item in items)
+        e.Handled = true;
+        if (!CanReceiveFiles(shell))
         {
-            if (item is not IStorageFile file) continue;
-            var path = file.TryGetLocalPath();
-            Stream stream;
-            long size;
-            if (path is not null && System.IO.File.Exists(path))
-            {
-                var info = new FileInfo(path);
-                size = info.Length;
-                stream = System.IO.File.OpenRead(path);
-            }
-            else
-            {
-                var props = await file.GetBasicPropertiesAsync();
-                size = (long)(props.Size ?? 0);
-                stream = await file.OpenReadAsync();
-            }
-            files.Add(new(file.Name, FileKinds.MimeFromFileName(file.Name), stream, size));
+            if (shell.IsEditing) shell.Workspace.ShowNotice(I18n.T(TextKey.CannotAttachWhileEditing));
+            return;
         }
-        await shell.QueueFilesAsync(files);
+        await QueueIncomingFilesAsync(shell, items);
     }
 }

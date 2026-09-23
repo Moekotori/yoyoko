@@ -4,6 +4,7 @@ using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Chat.Core.Messaging;
 using MathView = Chat.UI.Markup.MathView;
 
@@ -21,11 +22,6 @@ public sealed class MessageText : SelectableTextBlock
     private static readonly AttachedProperty<bool> SpoilerProperty =
         AvaloniaProperty.RegisterAttached<MessageText, Run, bool>("Spoiler");
     private static readonly FontFamily Mono = new("Menlo, SF Mono, Consolas, monospace");
-    private static readonly SolidColorBrush CodeFill = new(Color.FromRgb(36, 36, 36));
-    private static readonly SolidColorBrush SpoilerOpen = new(Color.FromRgb(48, 48, 48));
-    private static readonly SolidColorBrush SpoilerClosed = new(Color.FromRgb(42, 42, 42));
-    private static readonly SolidColorBrush LinkInk = new(Color.FromRgb(140, 176, 214));
-    private static readonly SolidColorBrush QuoteInk = new(Color.FromRgb(158, 158, 158));
     private static readonly FontFamily MathFont = new("Georgia, Times New Roman, Songti SC, STIX Two Math, serif");
     private bool _spoilersOpen;
     private string? _built;
@@ -113,8 +109,9 @@ public sealed class MessageText : SelectableTextBlock
         Inlines.Clear();
         Text = null;
         var em = FontSize > 1 ? FontSize : 16;
-        foreach (var span in spans)
+        foreach (var rawSpan in spans)
         {
+            var span = rawSpan;
             if (span.Kind is MarkupKind.Math or MarkupKind.DisplayMath)
             {
                 AddMath(span, em);
@@ -122,13 +119,22 @@ public sealed class MessageText : SelectableTextBlock
             }
             if (span.Kind is MarkupKind.Heading or MarkupKind.ListItem or MarkupKind.Table or MarkupKind.Rule)
             {
-                if (Inlines.Count > 0) Inlines.Add(new LineBreak());
+                if (Inlines.Count > 0 && Inlines[^1] is Run previous)
+                    previous.Text = previous.Text?.TrimEnd('\r', '\n');
+                if (Inlines.Count > 0 && Inlines[^1] is not LineBreak) Inlines.Add(new LineBreak());
                 Inlines.Add(InlineFor(span, em));
                 Inlines.Add(new LineBreak());
                 continue;
             }
+            if (Inlines.Count > 0 && Inlines[^1] is LineBreak && span.Kind == MarkupKind.Text)
+            {
+                var text = span.Text.TrimStart('\r', '\n');
+                if (text.Length == 0) continue;
+                span = new MarkupSpan(span.Kind, text, span.Extra);
+            }
             Inlines.Add(InlineFor(span, em));
         }
+        if (Inlines.Count > 0 && Inlines[^1] is LineBreak) Inlines.RemoveAt(Inlines.Count - 1);
         _built = content;
         _builtSpoilers = _spoilersOpen;
     }
@@ -207,19 +213,19 @@ public sealed class MessageText : SelectableTextBlock
             case MarkupKind.Fence:
             case MarkupKind.Table:
                 run.FontFamily = Mono;
-                if (span.Kind != MarkupKind.Table) run.Background = CodeFill;
+                if (span.Kind != MarkupKind.Table) run.Bind(TextElement.BackgroundProperty, new DynamicResourceExtension("CodeBrush"));
                 break;
             case MarkupKind.Spoiler:
                 run.SetValue(SpoilerProperty, true);
-                if (_spoilersOpen) run.Background = SpoilerOpen;
+                if (_spoilersOpen) run.Bind(TextElement.BackgroundProperty, new DynamicResourceExtension("SpoilerOpenBrush"));
                 else
                 {
-                    run.Foreground = SpoilerClosed;
-                    run.Background = SpoilerClosed;
+                    run.Bind(TextElement.ForegroundProperty, new DynamicResourceExtension("SpoilerClosedBrush"));
+                    run.Bind(TextElement.BackgroundProperty, new DynamicResourceExtension("SpoilerClosedBrush"));
                 }
                 break;
             case MarkupKind.Link:
-                run.Foreground = LinkInk;
+                run.Bind(TextElement.ForegroundProperty, new DynamicResourceExtension("LinkBrush"));
                 run.TextDecorations = Avalonia.Media.TextDecorations.Underline;
                 break;
             case MarkupKind.Heading:
@@ -227,10 +233,10 @@ public sealed class MessageText : SelectableTextBlock
                 run.FontSize = em + (span.Extra == "1" ? 6 : span.Extra == "2" ? 3 : 1);
                 break;
             case MarkupKind.Quote:
-                run.Foreground = QuoteInk;
+                run.Bind(TextElement.ForegroundProperty, new DynamicResourceExtension("QuoteBrush"));
                 break;
             case MarkupKind.Rule:
-                run.Foreground = QuoteInk;
+                run.Bind(TextElement.ForegroundProperty, new DynamicResourceExtension("QuoteBrush"));
                 break;
         }
         return run;

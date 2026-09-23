@@ -1,0 +1,28 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="ListBox.themeChoices"><Setter Property="HorizontalAlignment" Value="Stretch" /></Style>
+  <Style Selector="ListBox.themeChoices ListBoxItem">
+    <Setter Property="Padding" Value="16,14" /><Setter Property="MinHeight" Value="64" />
+    <Setter Property="Margin" Value="0,0,8,0" /><Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource RaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="ChoiceSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+          BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+            HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBox.themeChoices ListBoxItem:selected"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Background" Value="{DynamicResource MessageHoverBrush}" /></Style>
+  <Style Selector="ListBox.themeChoices ListBoxItem:pointerover /template/ Border#ChoiceSurface"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /></Style>
+  <Style Selector="ListBox.themeChoices ListBoxItem:focus-visible /template/ Border#ChoiceSurface"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /><Setter Property="BorderThickness" Value="2" /><Setter Property="Padding" Value="15,13" /></Style>
+  <Style Selector="ListBox.themeChoices ListBoxItem Ellipse.themeChoiceDot"><Setter Property="Fill" Value="Transparent" /></Style>
+  <Style Selector="ListBox.themeChoices ListBoxItem:selected Ellipse.themeChoiceDot"><Setter Property="Fill" Value="{DynamicResource AccentBrush}" /></Style>
+  <!-- Suppress Fluent's blue selection on the inner presenter; the outer surface owns selection. -->
+  <Style Selector="ListBox.themeChoices ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.themeChoices ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+  </Style>
+</Styles>

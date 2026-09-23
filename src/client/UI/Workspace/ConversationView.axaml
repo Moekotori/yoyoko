@@ -5,23 +5,23 @@
     <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="Grid.messageRow"><Setter Property="Background" Value="Transparent" /><Setter Property="Margin" Value="0,0,0,12" /></Style>
-    <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="#232323" /></Style>
+    <Style Selector="Grid.messageRow:pointerover"><Setter Property="Background" Value="{DynamicResource MessageHoverBrush}" /></Style>
     <Style Selector="Grid.messageRow.continued"><Setter Property="Margin" Value="0,0,0,2" /></Style>
     <Style Selector="Grid.messageRow.continued StackPanel.body"><Setter Property="Margin" Value="0,1,16,1" /></Style>
     <Style Selector="Grid.messageRow Panel.avatarSlot"><Setter Property="DockPanel.Dock" Value="Left" /><Setter Property="Margin" Value="0,12,13,0" /></Style>
     <Style Selector="Grid.messageRow StackPanel.body"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="Margin" Value="0,11,16,9" /></Style>
-    <Style Selector="SelectableTextBlock.messageText"><Setter Property="FontSize" Value="16" /><Setter Property="LineHeight" Value="25" /><Setter Property="Foreground" Value="#CCCCCC" /></Style>
+    <Style Selector="SelectableTextBlock.messageText"><Setter Property="FontSize" Value="16" /><Setter Property="LineHeight" Value="25" /><Setter Property="Foreground" Value="{DynamicResource MessageTextBrush}" /></Style>
     <Style Selector="Button.mentionChip">
       <Setter Property="Padding" Value="4,0" />
       <Setter Property="MinHeight" Value="0" />
-      <Setter Property="Background" Value="#332820" />
-      <Setter Property="Foreground" Value="#D2A88C" />
+      <Setter Property="Background" Value="{DynamicResource MentionBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource MentionTextBrush}" />
       <Setter Property="CornerRadius" Value="2" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Button.mentionChip.strong">
-      <Setter Property="Background" Value="#4A3228" />
-      <Setter Property="Foreground" Value="#E8C4A8" />
+      <Setter Property="Background" Value="{DynamicResource MentionStrongBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource MentionStrongTextBrush}" />
     </Style>
     <Style Selector="Border.messageTools"><Setter Property="IsVisible" Value="False" /><Setter Property="HorizontalAlignment" Value="Right" /><Setter Property="Margin" Value="0,0,24,0" /></Style>
     <Style Selector="Grid.messageRow:pointerover Border.messageTools"><Setter Property="IsVisible" Value="True" /></Style>
@@ -47,7 +47,7 @@
       </Grid>
       <Grid Grid.Row="2" x:Name="TimelineSurface">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9" IsVisible="{Binding HasNoMessages}">
-          <PathIcon Data="{StaticResource IconHash}" Width="28" Height="28" Foreground="#757575" Margin="0,0,0,5" />
+          <PathIcon Data="{StaticResource IconHash}" Width="28" Height="28" Foreground="{DynamicResource QuietTextBrush}" Margin="0,0,0,5" />
           <TextBlock Text="{Binding EmptyTitle}" HorizontalAlignment="Center" FontSize="15" Foreground="{DynamicResource MutedTextBrush}" />
           <TextBlock Text="{Binding EmptyDetail}" HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource QuietTextBrush}" />
         </StackPanel>
@@ -65,12 +65,12 @@
                   </Panel>
                   <StackPanel Classes="body" Spacing="4">
                     <StackPanel Classes="header" Orientation="Horizontal" Spacing="9" IsVisible="{Binding ShowHeader}">
-                      <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="#E2E2E2" />
+                      <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource StrongTextBrush}" />
                       <TextBlock Text="{Binding Time}" Foreground="{DynamicResource QuietTextBrush}" FontSize="11" VerticalAlignment="Center" />
                     </StackPanel>
                     <chat:MessageText Markdown="{Binding Text}" SelfUsername="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).AccountName}" Classes="messageText" TextWrapping="Wrap" />
-                    <Button Classes="reaction" IsVisible="{Binding HasReaction}" Background="#343434" BorderBrush="#505050" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="{i18n:T ReactionUnavailable}">
-                      <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{DynamicResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="#D8D8D8" /></StackPanel>
+                    <Button Classes="reaction" IsVisible="{Binding HasReaction}" Background="{DynamicResource ChannelSelectedBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="2" Padding="7,3" Margin="0,4,0,0" Command="{Binding #Conversation.((vm:WorkspaceViewModel)DataContext).Unavailable}" AutomationProperties.Name="{i18n:T ReactionUnavailable}">
+                      <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Data="{StaticResource IconHeartFilled}" Foreground="{DynamicResource AccentBrush}" Width="14" Height="14" /><TextBlock Text="1" FontSize="11" Foreground="{DynamicResource PrimaryTextBrush}" /></StackPanel>
                     </Button>
                   </StackPanel>
                 </DockPanel>
@@ -82,7 +82,7 @@
           </ListBox.ItemTemplate>
         </ListBox>
       </Grid>
-      <Border Grid.Row="3" Classes="composerFrame" Background="{DynamicResource RaisedBrush}" BorderBrush="#3B3B3B" BorderThickness="1" Margin="24,0,24,22" MinHeight="60" Padding="10,10">
+      <Border Grid.Row="3" Classes="composerFrame" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" Margin="24,0,24,22" MinHeight="60" Padding="10,10">
         <Border.Transitions><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.12" /></Transitions></Border.Transitions>
         <Grid ColumnDefinitions="30,*,30,1,30" ColumnSpacing="9">
           <Button Classes="icon" Command="{Binding Unavailable}" ToolTip.Tip="{i18n:T AddAttachment}" AutomationProperties.Name="{i18n:T AddAttachment}"><PathIcon Data="{StaticResource IconAdd}" Width="20" Height="20" /></Button>

@@ -26,6 +26,8 @@ pub struct Auth {
     pub token_secret: String,
     pub access_ttl_seconds: u64,
     pub refresh_ttl_days: u64,
+    #[serde(default)]
+    pub registration_password: Option<String>,
 }
 #[derive(Clone, Deserialize)]
 pub struct Database {
@@ -120,6 +122,14 @@ impl Settings {
             || !(1..=90).contains(&self.auth.refresh_ttl_days)
         {
             return Err("invalid auth token settings".into());
+        }
+        if self
+            .auth
+            .registration_password
+            .as_ref()
+            .is_some_and(|password| password.is_empty() || password.len() > 128)
+        {
+            return Err("auth.registration_password must contain 1..=128 bytes when configured".into());
         }
         for endpoint in [&self.storage.public_url, &self.rtc.public_url] {
             let uri = Url::parse(endpoint)?;

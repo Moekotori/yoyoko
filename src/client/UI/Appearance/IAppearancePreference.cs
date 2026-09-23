@@ -1,4 +1,5 @@
 using Chat.UI.Components;
+using Avalonia.Styling;
 
 namespace Chat.UI.Appearance;
 
@@ -8,6 +9,7 @@ public sealed class ColorSchemeChoice(ColorScheme scheme) : ObservableObject
 {
     private string _name = "";
     public ColorScheme Scheme { get; } = scheme;
+    public ThemeVariant Variant => Scheme == ColorScheme.Light ? ThemeVariant.Light : ThemeVariant.Dark;
     public string Name
     {
         get => _name;

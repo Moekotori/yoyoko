@@ -9,7 +9,7 @@
     <Style Selector="TextBox.inlineName /template/ Border#PART_BorderElement"><Setter Property="IsVisible" Value="False" /></Style>
   </UserControl.Styles>
   <StackPanel Spacing="4" Margin="0,0,0,2">
-    <Border Background="#343434" BorderThickness="0" Padding="10,0" CornerRadius="2" Height="32" IsVisible="{Binding !IsDelete}">
+    <Border Background="{DynamicResource ChannelSelectedBrush}" BorderThickness="0" Padding="10,0" CornerRadius="2" Height="32" IsVisible="{Binding !IsDelete}">
       <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="9">
         <PathIcon Data="{StaticResource IconHash}" Width="15" Height="15" VerticalAlignment="Center" IsVisible="{Binding !IsVoice}" Foreground="{DynamicResource QuietTextBrush}" />
         <PathIcon Data="{StaticResource IconSpeaker}" Width="15" Height="15" VerticalAlignment="Center" IsVisible="{Binding IsVoice}" Foreground="{DynamicResource QuietTextBrush}" />
@@ -30,9 +30,9 @@
       <TextBlock Text="{Binding Confirmation}" FontSize="12" TextWrapping="Wrap" />
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button x:Name="CancelButton" Content="{i18n:T ChannelCancel}" Command="{Binding Cancel}" IsEnabled="{Binding !IsBusy}" FontSize="12" Padding="7,4" />
-        <Button Content="{Binding SubmitLabel}" Command="{Binding Submit}" IsEnabled="{Binding !IsBusy}" Foreground="#E3A09A" FontSize="12" Padding="7,4" />
+        <Button Content="{Binding SubmitLabel}" Command="{Binding Submit}" IsEnabled="{Binding !IsBusy}" Foreground="{DynamicResource DangerActionBrush}" FontSize="12" Padding="7,4" />
       </StackPanel>
     </StackPanel>
-    <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="#E5A19A" FontSize="11" TextWrapping="Wrap" Margin="10,0,4,4" />
+    <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{DynamicResource DangerActionBrush}" FontSize="11" TextWrapping="Wrap" Margin="10,0,4,4" />
   </StackPanel>
 </UserControl>

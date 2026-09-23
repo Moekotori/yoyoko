@@ -7,6 +7,8 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Chat.Localization;
+using Chat.UI.Chat;
+using Chat.UI.Settings;
 using Chat.UI.Shortcuts;
 using FileKinds = global::Chat.Core.Messaging.FileKinds;
 using PickedFile = global::Chat.Core.Sessions.PickedFile;
@@ -75,14 +77,8 @@ public partial class MainWindow : Window
             Title = global::Chat.UI.Localization.I18n.T(TextKey.PickFiles),
             AllowMultiple = true
         });
-        var result = new List<PickedFile>();
-        foreach (var file in files.Take(4))
-        {
-            var props = await file.GetBasicPropertiesAsync();
-            var stream = await file.OpenReadAsync();
-            result.Add(new(file.Name, FileKinds.MimeFromFileName(file.Name), stream, (long)(props.Size ?? 0)));
-        }
-        return result;
+        var limit = (DataContext as ShellViewModel)?.AttachmentLimit ?? global::Chat.Protocol.ProtocolVersion.MaxAttachmentsPerMessage;
+        return await IncomingFiles.OpenAsync(files, limit);
     }
 
     private async Task<PickedFile?> PickAvatarAsync()
@@ -185,8 +181,25 @@ public partial class MainWindow : Window
     {
         if (e.Handled || DataContext is not ShellViewModel shell) return;
         if (shell.Settings.Shortcuts.IsRecording) return;
+        if (shell.ShowAddInstance)
+        {
+            if (e.Key == Key.Escape)
+            {
+                shell.CloseAddInstance.Execute(null);
+                e.Handled = true;
+            }
+            return;
+        }
+        if (shell.ShowSettings && e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None
+            && IsWithinSettings(e.Source))
+            return;
         var pressed = KeyChord.FromKeyEvent(e);
         var action = pressed is { } chord ? ShortcutScheme.Match(chord, shell.Settings.Shortcuts.Overrides) : null;
+        if (shell.ShowVoiceChannelSettings)
+        {
+            if (e.Key == Key.Escape) { shell.VoiceChannelSettings?.Close.Execute(null); e.Handled = true; }
+            return;
+        }
         if (shell.ProfileOpen)
         {
             if (e.Key == Key.Escape) { shell.CloseProfile.Execute(null); e.Handled = true; }
@@ -238,7 +251,7 @@ public partial class MainWindow : Window
     private void OnWindowTextInput(object? sender, TextInputEventArgs e)
     {
         if (e.Handled || DataContext is not ShellViewModel shell) return;
-        if (!shell.ShowChat || shell.ProfileOpen || shell.SwitcherOpen || shell.SearchOpen || shell.IsChannelEditorOpen) return;
+        if (!shell.ShowChat || shell.ShowAddInstance || shell.ProfileOpen || shell.SwitcherOpen || shell.SearchOpen || shell.IsChannelEditorOpen) return;
         if (IsEditable(e.Source)) return;
         shell.AppendDraft(e.Text ?? "");
         e.Handled = true;
@@ -251,6 +264,13 @@ public partial class MainWindow : Window
             if (current is TextBox or ComboBox) return true;
             if (current is FlyoutPresenter) return true;
         }
+        return false;
+    }
+
+    private static bool IsWithinSettings(object? source)
+    {
+        for (var current = source as Visual; current is not null; current = current.GetVisualParent())
+            if (current is SettingsView) return true;
         return false;
     }
 }

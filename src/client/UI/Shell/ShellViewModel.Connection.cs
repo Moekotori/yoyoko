@@ -101,9 +101,10 @@ public sealed partial class ShellViewModel
         Connection.Status = _text.Get(TextKey.DisconnectingServer);
         try
         {
+            var accountId = item.Context.Account?.Key.Id;
             if (item.Context.Session is { } session) UnbindSession(session);
             await _connection.DisconnectAsync(item.Context, work);
-            ClearAccountDrafts();
+            if (accountId is Guid id) ClearAccountDrafts(item.Context.Descriptor.Id.Value, id);
             DetachTimeline();
             foreach (var pending in PendingFiles.ToList())
                 pending.File.Content.Dispose();

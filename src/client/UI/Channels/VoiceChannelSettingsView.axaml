@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ch="using:Chat.UI.Channels" xmlns:voice="using:Chat.UI.Voice" xmlns:i18n="using:Chat.UI.Localization"
+  x:Class="Chat.UI.Channels.VoiceChannelSettingsView" x:DataType="ch:VoiceChannelSettingsViewModel">
+  <UserControl.KeyBindings><KeyBinding Gesture="Escape" Command="{Binding Close}" /></UserControl.KeyBindings>
+  <StackPanel Spacing="20" Margin="24">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Text="{i18n:T VoiceChannelSettings}" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" />
+      <Button Grid.Column="1" Classes="icon" Command="{Binding Close}" AutomationProperties.Name="{i18n:T CloseSettings}">
+        <PathIcon Data="{StaticResource IconClose}" Width="16" Height="16" />
+      </Button>
+    </Grid>
+    <StackPanel Spacing="16" IsEnabled="{Binding CanManage}">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{i18n:T NewChannelName}" FontSize="13" />
+        <TextBox Text="{Binding Name}" MaxLength="100" Height="38" Padding="10,7"
+          AutomationProperties.Name="{i18n:T NewChannelName}" />
+      </StackPanel>
+      <StackPanel Spacing="8">
+        <TextBlock Text="{i18n:T ChannelQualityCap}" FontSize="13" />
+        <ComboBox ItemsSource="{Binding Qualities}" SelectedItem="{Binding Quality}" MinHeight="38"
+          AutomationProperties.Name="{i18n:T ChannelQualityCap}">
+          <ComboBox.ItemTemplate><DataTemplate x:DataType="voice:AudioQualityChoice">
+            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+          </DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+    </StackPanel>
+    <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{DynamicResource DangerActionBrush}" FontSize="12" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button Content="{i18n:T ChannelCancel}" Command="{Binding Close}" MinWidth="82" />
+      <Button Classes="primary" Content="{i18n:T ChannelSave}" Command="{Binding Save}"
+        IsVisible="{Binding CanManage}" IsEnabled="{Binding !IsBusy}" MinWidth="104" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

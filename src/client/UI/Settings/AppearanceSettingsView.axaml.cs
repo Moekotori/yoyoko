@@ -21,13 +21,6 @@ public partial class AppearanceSettingsView : UserControl
         AddHandler(DragDrop.DropEvent, OnDrop);
     }
 
-    private void OnColorTapped(object? sender, TappedEventArgs e)
-    {
-        if (SettingsHit.FromInteractive(e.Source)) return;
-        ColorSchemeBox.IsDropDownOpen = true;
-        e.Handled = true;
-    }
-
     private void OnDragEnter(object? sender, DragEventArgs e)
     {
         _dragDepth++;

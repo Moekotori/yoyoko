@@ -12,8 +12,13 @@ if [[ "$mode" != release && "$mode" != --watch ]]; then
 fi
 
 client_pid=""
+server_pid=""
 cleanup() {
   if [[ -n "$client_pid" ]]; then kill "$client_pid" 2>/dev/null || true; fi
+  if [[ -n "$server_pid" ]]; then
+    kill "$server_pid" 2>/dev/null || true
+    wait "$server_pid" 2>/dev/null || true
+  fi
 }
 on_exit() {
   local status=$?
@@ -34,18 +39,47 @@ for tool in dotnet; do
   fi
 done
 
-if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+ready_url=http://127.0.0.1:8080/health/ready
+if curl -fsS -m 2 --noproxy '*' "$ready_url" >/dev/null 2>&1; then
+  printf '本机服务已就绪：http://localhost:8080\n'
+elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   printf '正在用 Docker 启动服务端…\n'
   docker compose up -d
-  for _ in $(seq 1 90); do
-    if curl -fsS -m 2 --noproxy '*' http://127.0.0.1:8080/health/ready >/dev/null 2>&1; then
+  for attempt in $(seq 1 90); do
+    if curl -fsS -m 2 --noproxy '*' "$ready_url" >/dev/null 2>&1; then
       printf 'Docker 服务已就绪：http://localhost:8080\n'
       break
     fi
+    if [[ "$attempt" == 90 ]]; then
+      printf '等待 Docker 服务就绪超时。请查看 docker compose logs api。\n' >&2
+      exit 1
+    fi
     sleep 1
   done
-elif command -v node >/dev/null 2>&1; then
-  node ./scripts/up.mjs --no-build || true
+else
+  if ! command -v cargo >/dev/null 2>&1; then
+    printf '本机服务未运行，且没有可用的 Docker 或 cargo。请安装 Docker Desktop 或 Rust。\n' >&2
+    exit 1
+  fi
+  printf 'Docker 不可用，正在构建并启动本机服务端…\n'
+  cargo build --locked -p chat-server
+  ./target/debug/chat-server &
+  server_pid=$!
+  for attempt in $(seq 1 30); do
+    if curl -fsS -m 2 --noproxy '*' "$ready_url" >/dev/null 2>&1; then
+      printf '本机服务已就绪：http://localhost:8080\n'
+      break
+    fi
+    if ! kill -0 "$server_pid" 2>/dev/null; then
+      printf '本机服务端提前退出，请查看上面的错误。\n' >&2
+      exit 1
+    fi
+    if [[ "$attempt" == 30 ]]; then
+      printf '等待本机服务就绪超时，请查看上面的错误。\n' >&2
+      exit 1
+    fi
+    sleep 1
+  done
 fi
 
 if [[ "$mode" == release ]]; then
