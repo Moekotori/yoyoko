@@ -1,4 +1,7 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Theme choice samples retain their own colors under either active theme. -->
+  <SolidColorBrush x:Key="DarkSchemeSwatchBrush">#1C1C1C</SolidColorBrush>
+  <SolidColorBrush x:Key="LightSchemeSwatchBrush">#FAFAF9</SolidColorBrush>
   <!-- Surface, content and interaction roles. Keep both variants complete. -->
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Dark">

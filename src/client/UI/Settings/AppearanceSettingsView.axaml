@@ -11,9 +11,8 @@
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="appearance:ColorSchemeChoice">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-              <ThemeVariantScope RequestedThemeVariant="{Binding Variant}" Width="24" Height="24">
-                <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="12" />
-              </ThemeVariantScope>
+              <Border Classes="themeSwatch" Classes.light="{Binding IsLight}" Width="24" Height="24"
+                BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="12" />
               <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="14" VerticalAlignment="Center" />
               <Border Grid.Column="2" Width="16" Height="16" CornerRadius="8" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" VerticalAlignment="Center" Padding="3">
                 <Ellipse Classes="themeChoiceDot" />

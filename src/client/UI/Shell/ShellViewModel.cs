@@ -293,7 +293,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             _ = OpenChannelAsync();
         }
     }
-    public string InstanceName => SelectedInstance?.Name ?? _text.Get(TextKey.Workspace);
+    public string InstanceName => SelectedInstance?.Name ?? ProductName;
     public string InstanceHost => SelectedInstance?.Host ?? _text.Get(TextKey.NotConnected);
     public bool IsSignedIn => SelectedInstance?.Context.Session is not null;
     public bool ShowSettings

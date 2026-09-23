@@ -245,3 +245,14 @@ Rail selection refinement: selected items use a quiet `#2C2C2C` fill (`#303030` 
 - [聊天设计预览](light-mode/light-chat-preview.png)
 - [外观设置](light-mode/light-appearance.png) · [表单](light-mode/light-fields.png) · [快捷键](light-mode/light-shortcuts.png)
 - [下拉菜单](light-mode/light-dropdown.png) · [富文本](light-mode/light-rich-text.png)
+
+
+### 设置页重排（2026-09-23）
+
+本轮按现有功能重排六类设置。分类导航收窄至 208px，以细标记表示当前页，并把客户端偏好与资料/服务器分开；内容区限制最大宽度、统一标题与表单对齐，右上角提供真正绑定关闭命令的按钮。保留设置入场、频道栏收起与现有轻量控件过渡，分类切换仍立即完成并回到滚动顶部。
+
+常规页面移除外层大卡片，使用行间距与细分隔线。按本轮用户补充要求保留自然圆角：表单/按钮/导航约 6px，主题选项 10px，开关与头像保留圆形。外观页直接并排选择深/浅模式，支持 ListBox 原生键盘选择并复用既有偏好存储；色样保持自身的深/浅颜色。通用页把语言和语言包放在一起，导入操作支持换行；快捷键使用更轻的键帽。资料图片操作自动换行，未登录时只显示未登录状态；服务器表单与全页左边缘对齐。
+
+验证：Release Chat.App 构建 0 警告、0 错误，diff 格式检查通过。macOS 原生 Avalonia 后端在 1200×820 检查六类页面，在 980×640 检查外观、通用、快捷键与服务器页面，并检查深色外观页。对实际控件执行主题选择、紧凑布局开关与关闭命令，状态更新正确。图像为原生控件树 RenderTargetBitmap 渲染，不是 OS 截屏；系统鼠标/键盘、已登录资料保存、真实文件导入与音频设备操作未在本轮重测。使用隔离本地偏好与不可连接的回环地址，没有创建账号或访问远端服务器。协议、阶段与性能结论不变。
+
+[浅色外观](settings-redesign/light-Appearance.png) · [深色外观](settings-redesign/dark-Appearance.png) · [通用](settings-redesign/light-General.png) · [语音](settings-redesign/light-Voice.png) · [服务器](settings-redesign/light-Connection.png) · [小窗口快捷键](settings-redesign/small-Keyboard.png)
