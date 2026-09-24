@@ -32,6 +32,11 @@
   <Style Selector="Button.settingsNav:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Button.settingsNav:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Button.settingsNav:focus-visible /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="BorderThickness" Value="0" /><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.settingsDisclosure">
+    <Setter Property="MinHeight" Value="52" /><Setter Property="Padding" Value="0,8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" /><Setter Property="CornerRadius" Value="2" />
+  </Style>
   <Style Selector="Border.settingsDrop">
     <Setter Property="Background" Value="{DynamicResource SidebarBrush}" /><Setter Property="CornerRadius" Value="6" />
     <Setter Property="BorderBrush" Value="Transparent" /><Setter Property="BorderThickness" Value="1" />

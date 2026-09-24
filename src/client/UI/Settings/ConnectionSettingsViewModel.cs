@@ -24,6 +24,7 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
     private bool _latencyFailed;
     private bool _isBusy;
     private bool _isConnected;
+    private bool _detailsExpanded;
     private CancellationTokenSource? _watch;
     public ConnectionSettingsViewModel(Func<Task> connect, Func<Task> disconnect,
         Func<CancellationToken, Task<int>> probe, Action cancel, Action<Exception> onError, I18n text)
@@ -33,11 +34,18 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
         Connect = new(connect, onError);
         Disconnect = new(disconnect, onError);
         Cancel = new(_ => cancel());
+        ToggleDetails = new(_ => DetailsExpanded = !DetailsExpanded);
         text.PropertyChanged += OnTextChanged;
     }
     public AsyncCommand Connect { get; }
     public AsyncCommand Disconnect { get; }
     public ActionCommand Cancel { get; }
+    public ActionCommand ToggleDetails { get; }
+    public bool DetailsExpanded
+    {
+        get => _detailsExpanded;
+        private set { if (_detailsExpanded == value) return; _detailsExpanded = value; Changed(); }
+    }
     public string Address
     {
         get => _address;
@@ -134,6 +142,7 @@ public sealed class ConnectionSettingsViewModel : ObservableObject, IDisposable
         if (connected && address.Length > 0) Address = address;
         if (identityChanged)
         {
+            DetailsExpanded = false;
             _latencyMs = null;
             _latencyFailed = false;
         }

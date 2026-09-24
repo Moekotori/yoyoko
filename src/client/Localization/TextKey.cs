@@ -130,6 +130,12 @@ public static class TextKey
     public const string NeedSignIn = "NeedSignIn";
     public const string NoInstanceSelected = "NoInstanceSelected";
     public const string Cancelled = "Cancelled";
+    public const string ServerUnreachable = "ServerUnreachable";
+    public const string ConnectionDetails = "ConnectionDetails";
+    public const string RequestTimedOut = "RequestTimedOut";
+    public const string ActionNotAllowed = "ActionNotAllowed";
+    public const string ContentUnavailable = "ContentUnavailable";
+    public const string SignInAgain = "SignInAgain";
     public const string ImagesSelected = "ImagesSelected";
     public const string ProtocolIncompatible = "ProtocolIncompatible";
     public const string InstanceAddressConflict = "InstanceAddressConflict";

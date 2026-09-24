@@ -111,8 +111,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         _text.PropertyChanged += OnTextChanged;
         AddInstance = new(AddAsync, OnError);
 
-        Send = new(SendAsync, OnError);
-        AttachFile = new(AttachAsync, OnError);
+        Send = new(SendAsync, ReportChatError);
+        AttachFile = new(AttachAsync, ReportChatError);
         CreateServer = new(CreateServerAsync, OnError);
         CreateChannel = new(CreateChannelAsync, OnError);
         JoinServer = new(JoinAsync, OnError);
@@ -766,7 +766,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             var row = Messages.FirstOrDefault(existing => existing.Item.LocalId == item.LocalId);
             if (row is null)
                 row = new(item, session?.AuthorName(item.Message.AuthorId) ?? "", SaveAttachmentAsync, RetryFailedAsync,
-                    CancelSendAsync, OnError, session is not null && item.Message.AuthorId == session.Me.Id);
+                    CancelSendAsync, ReportChatError, session is not null && item.Message.AuthorId == session.Me.Id);
             else
             {
                 row.Update(item);
@@ -814,7 +814,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         if (text.Length == 0 && PendingFiles.Count == 0) return Task.CompletedTask;
         if (text.Length > 0 && ContainsBlocked(text))
         {
-            Status = _text.Get(TextKey.BlockedWord);
+            SetChatStatus(_text.Get(TextKey.BlockedWord));
             return Task.CompletedTask;
         }
         if (!_timeline.CanQueue) return Task.CompletedTask;
@@ -825,7 +825,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         var timeline = _timeline;
         var channel = SelectedChannel;
         Draft = "";
-        Status = "";
+        SetChatStatus("");
         PendingFiles.Clear();
         NotifyPending();
         CancelReply();
@@ -839,10 +839,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         if (text.Length == 0 || _editingId is not Guid editing) return;
         if (ContainsBlocked(text))
         {
-            Status = _text.Get(TextKey.BlockedWord);
+            SetChatStatus(_text.Get(TextKey.BlockedWord));
             return;
         }
-        Status = "";
+        SetChatStatus("");
         await _timeline!.EditAsync(editing, text, _lifetime);
         CancelEdit();
         FocusComposer?.Invoke();
@@ -867,11 +867,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
                 var failed = timeline.Items.LastOrDefault(item => item.Status == SendStatus.Failed);
                 if (failed is not null) timeline.DropFailed(failed.LocalId);
             }
-            OnError(exception);
+            if (ReferenceEquals(_timeline, timeline)) ReportChatError(exception);
         }
         catch (Exception exception)
         {
-            OnError(exception);
+            if (ReferenceEquals(_timeline, timeline)) ReportChatError(exception);
         }
     }
 
@@ -916,13 +916,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             if (file.Size > max)
             {
                 await file.DisposeAsync();
-                Status = _text.Get(TextKey.FileTooLarge, file.FileName, FileKinds.SizeLabel(max));
+                SetChatStatus(_text.Get(TextKey.FileTooLarge, file.FileName, FileKinds.SizeLabel(max)));
                 continue;
             }
             if (PendingFiles.Count >= cap)
             {
                 await file.DisposeAsync();
-                Status = _text.Get(TextKey.TooManyFiles, cap);
+                SetChatStatus(_text.Get(TextKey.TooManyFiles, cap));
                 continue;
             }
             PendingFiles.Add(new(file, RemovePending));
@@ -954,8 +954,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         Changed(nameof(HasPending));
         Changed(nameof(FileLimitTip));
         Changed(nameof(CanSend));
-        if (Status.StartsWith(_text.Get(TextKey.PendingPrefix), StringComparison.Ordinal))
-            Status = "";
+        if (ChatStatus.StartsWith(_text.Get(TextKey.PendingPrefix), StringComparison.Ordinal))
+            SetChatStatus("");
     }
 
     private async Task SaveAttachmentAsync(AttachmentDto dto)
@@ -967,11 +967,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             if (output is null) return;
             var session = SelectedInstance?.Context.Session ?? throw new InvalidOperationException(_text.Get(TextKey.NeedSignIn));
             await session.DownloadToAsync(dto, output, _lifetime);
-            Status = _text.Get(TextKey.FileSaved, dto.FileName);
+            Workspace.ShowNotice(_text.Get(TextKey.FileSaved, dto.FileName));
         }
         catch (Exception exception)
         {
-            Status = exception.Message;
+            ReportChatError(exception);
         }
     }
 
@@ -1078,20 +1078,34 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     private async Task<PickedFile?> PickAvatarAsync() =>
         PickAvatar is null ? null : await PickAvatar();
 
-    private void OnError(Exception exception)
+    private string ErrorText(Exception exception) => exception switch
     {
-        Status = exception switch
-        {
-            ChatApiException { Code: "blocked_word" } => _text.Get(TextKey.BlockedWord),
-            ChatApiException { Code: "cooldown", RetryAfterSeconds: int seconds } => _text.Get(TextKey.CooldownWait, seconds),
-            ChatApiException { Code: "cooldown" } => _text.Get(TextKey.CooldownWait, Math.Max(1, CooldownLeft)),
-            _ => _text.Error(exception)
-        };
+        ChatApiException { Code: "blocked_word" } => _text.Get(TextKey.BlockedWord),
+        ChatApiException { Code: "cooldown", RetryAfterSeconds: int seconds } => _text.Get(TextKey.CooldownWait, seconds),
+        ChatApiException { Code: "cooldown" } => _text.Get(TextKey.CooldownWait, Math.Max(1, CooldownLeft)),
+        _ => _text.Error(exception)
+    };
+
+    private void ApplyErrorCooldown(Exception exception)
+    {
         if (exception is ChatApiException { RetryAfterSeconds: int wait })
             BeginCooldown(wait);
     }
 
-    internal void ReportInteractionError(Exception exception) => OnError(exception);
+    private void OnError(Exception exception)
+    {
+        Status = ErrorText(exception);
+        if (IsSignedIn && !ShowSettings) Workspace.ShowNotice(Status);
+        ApplyErrorCooldown(exception);
+    }
+
+    private void ReportChatError(Exception exception)
+    {
+        SetChatStatus(ErrorText(exception));
+        ApplyErrorCooldown(exception);
+    }
+
+    internal void ReportInteractionError(Exception exception) => ReportChatError(exception);
 
     private void OnChromeChanged()
     {
@@ -1137,7 +1151,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
         catch (Exception error)
         {
-            if (ReferenceEquals(_timeline, timeline)) OnError(error);
+            if (ReferenceEquals(_timeline, timeline)) ReportChatError(error);
         }
     }
 

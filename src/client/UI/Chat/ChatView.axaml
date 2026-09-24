@@ -56,7 +56,7 @@
     <Style Selector="Button.avatarPick"><Setter Property="Cursor" Value="Hand" /></Style>
     <Style Selector="Grid.unreadDivider TextBlock"><Setter Property="FontSize" Value="10" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{DynamicResource UnreadTextBrush}" /></Style>
   </UserControl.Styles>
-  <Grid ColumnDefinitions="*,Auto">
+  <Grid x:Name="ChatLayout" ColumnDefinitions="*,Auto">
     <Grid RowDefinitions="Auto,*,Auto">
       <Grid ColumnDefinitions="*,30" Margin="24,12,24,0" IsVisible="{Binding SearchOpen}">
         <TextBox x:Name="SearchBox" Text="{Binding SearchQuery}" PlaceholderText="{i18n:T SearchInChannel}" AutomationProperties.Name="{i18n:T SearchContent}" />
@@ -152,7 +152,7 @@
       </Panel>
       </motion:MotionHost>
       <StackPanel Grid.Row="2" Margin="20,0,20,14" Spacing="6">
-        <TextBlock Text="{Binding Status}" Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasStatus}" />
+        <TextBlock Text="{Binding ChatStatus}" Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasChatStatus}" />
         <ItemsControl ItemsSource="{Binding PendingFiles}" IsVisible="{Binding HasPending}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="chat:PendingFileItem">
@@ -200,7 +200,9 @@
         </Border>
       </StackPanel>
     </Grid>
-    <Border Grid.Column="1" Width="248" IsVisible="{Binding ParticipantsOpen}">
+    <Border x:Name="MemberBackdrop" Grid.ColumnSpan="2" Background="#59000000" ZIndex="1"
+      IsVisible="False" PointerPressed="OnMemberBackdrop" />
+    <Border x:Name="ParticipantsPane" Grid.Column="1" Width="248" Background="{DynamicResource CanvasBrush}" IsVisible="{Binding ParticipantsOpen}">
       <chat:MemberSidebar />
     </Border>
   </Grid>

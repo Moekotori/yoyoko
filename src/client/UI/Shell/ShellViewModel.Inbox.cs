@@ -116,7 +116,7 @@ public sealed partial class ShellViewModel
     {
         if (_timeline is null) return;
         try { await _timeline.DeleteAsync(messageId, _lifetime); }
-        catch (Exception error) { OnError(error); }
+        catch (Exception error) { ReportChatError(error); }
     }
 
     public void NoteComposerActivity()

@@ -51,6 +51,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private SettingsSection _section;
     private string _languagePackNotice = "";
     private bool _languagePackDropActive;
+    private bool _showLanguagePacks;
     public SettingsViewModel(ILocalePreference preference, IChatChrome chrome, IAppearancePreference appearance,
         IShortcutPreference shortcuts, WallpaperSession wallpaper, Action close, Func<InstanceSession?> session,
         Func<Task<PickedFile?>> pickAvatar, Action<Exception> onError, I18n text, VoiceDevicesViewModel devices, ConnectionSettingsViewModel connection, AuthFormViewModel auth, ILanguagePacks packs,
@@ -87,6 +88,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         ToggleCompact = new(_ => _chrome.SetCompact(!_chrome.Compact));
         ToggleReduceMotion = new(_ => _chrome.SetReduceMotion(!_chrome.ReduceMotion));
         ToggleUltraLight = new(_ => _chrome.SetUltraLightEnabled(!_chrome.UltraLightEnabled));
+        ToggleLanguagePacks = new(_ => ShowLanguagePacks = !ShowLanguagePacks);
         ToggleHeadsetMediaKeys = new(_ => _transport.SetHeadsetMediaKeys(!_transport.HeadsetMediaKeys));
         ToggleLoopback = new(devices.ToggleLoopbackAsync, onError);
         ImportLanguagePack = new(ImportLanguagePackAsync, onError);
@@ -156,6 +158,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public ActionCommand ToggleCompact { get; }
     public ActionCommand ToggleReduceMotion { get; }
     public ActionCommand ToggleUltraLight { get; }
+    public ActionCommand ToggleLanguagePacks { get; }
     public ActionCommand ToggleHeadsetMediaKeys { get; }
     public AsyncCommand ToggleLoopback { get; }
     public AsyncCommand ImportLanguagePack { get; }
@@ -164,10 +167,21 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public Func<Task<IReadOnlyList<string>>>? PickLanguagePackPaths { get; set; }
     public Func<string, string, Task>? SaveLanguageTemplate { get; set; }
     public bool CanRemoveLanguagePack => _packs.HasOverlay(_preference.Current.Code);
+    public bool ShowLanguagePacks
+    {
+        get => _showLanguagePacks;
+        private set { if (_showLanguagePacks == value) return; _showLanguagePacks = value; Changed(); }
+    }
     public bool LanguagePackDropActive
     {
         get => _languagePackDropActive;
-        set { if (_languagePackDropActive == value) return; _languagePackDropActive = value; Changed(); }
+        set
+        {
+            if (_languagePackDropActive == value) return;
+            _languagePackDropActive = value;
+            if (value) ShowLanguagePacks = true;
+            Changed();
+        }
     }
     public string LanguagePackNotice
     {
@@ -263,6 +277,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private void OnPacksChanged() => Refresh();
     public void ImportDropped(IEnumerable<string> paths)
     {
+        ShowLanguagePacks = true;
         try
         {
             Locale? last = null;

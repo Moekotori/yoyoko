@@ -74,20 +74,14 @@
       <Border Classes="menuDivider" IsVisible="{Binding IsSignedIn}" />
       <StackPanel Margin="10,6,10,8" Spacing="4">
         <TextBlock Text="{Binding InstanceName}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
-        <TextBlock Text="{Binding InstanceHost}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
       </StackPanel>
-      <Grid ColumnDefinitions="*,Auto" Margin="10,0,6,6" IsVisible="{Binding HasInvite}">
-        <StackPanel VerticalAlignment="Center" Spacing="2">
-          <TextBlock Text="{i18n:T InviteCode}" Classes="quiet" FontSize="11" />
-          <TextBlock Text="{Binding InviteCode}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-        </StackPanel>
-        <Button Grid.Column="1" Classes="icon" Width="30" Height="30" Click="CopyInvite"
-          ToolTip.Tip="{i18n:T CopyText}" AutomationProperties.Name="{i18n:T CopyText}">
-          <PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" />
-        </Button>
-      </Grid>
-      <TextBlock Text="{Binding InviteHint}" TextWrapping="Wrap" Classes="muted" FontSize="12" Margin="10,0,10,8"
-        IsVisible="{Binding !HasInvite}" />
+      <Button Classes="menuAction" Click="CopyInvite" IsVisible="{Binding HasInvite}"
+        ToolTip.Tip="{i18n:T CopyInvite}" AutomationProperties.Name="{i18n:T CopyInvite}">
+        <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
+          <TextBlock Text="{i18n:T CopyInvite}" VerticalAlignment="Center" />
+          <PathIcon Grid.Column="1" Data="{StaticResource IconCopy}" Width="14" Height="14" />
+        </Grid>
+      </Button>
       <Border Classes="menuDivider" />
       <Button Classes="menuAction" Command="{Binding OpenAddInstance}">
         <TextBlock Text="{i18n:T AddInstance}" VerticalAlignment="Center" />

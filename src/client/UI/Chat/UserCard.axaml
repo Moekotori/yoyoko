@@ -31,11 +31,6 @@
       <Setter Property="FontSize" Value="11" />
       <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
     </Style>
-    <Style Selector="Border.idWell">
-      <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="Padding" Value="10,8" />
-    </Style>
     <Style Selector="Button.bannerHit">
       <Setter Property="Padding" Value="0" />
       <Setter Property="Background" Value="Transparent" />
@@ -82,10 +77,16 @@
             <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold"
               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
           </DockPanel>
-          <Button Classes="handle" Click="CopyUsername" IsVisible="{Binding HasHandle}"
-            ToolTip.Tip="{i18n:T CopyUsername}" AutomationProperties.Name="{i18n:T CopyUsername}">
-            <TextBlock Text="{Binding Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
-          </Button>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+            <Button Classes="handle" Click="CopyUsername" IsVisible="{Binding HasHandle}"
+              ToolTip.Tip="{i18n:T CopyUsername}" AutomationProperties.Name="{i18n:T CopyUsername}">
+              <TextBlock Text="{Binding Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" />
+            </Button>
+            <Button Grid.Column="1" Classes="icon" Width="24" Height="24" Padding="4" Click="CopyId"
+              ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
+              <PathIcon Data="{StaticResource IconCopy}" Width="12" Height="12" />
+            </Button>
+          </Grid>
           <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,1,0,0" IsVisible="{Binding HasPresenceStatus}">
             <Ellipse Width="7" Height="7" VerticalAlignment="Center"
               Fill="{DynamicResource SuccessBrush}" IsVisible="{Binding IsOnline}" />
@@ -101,20 +102,6 @@
           Content="{i18n:T MentionMember}" AutomationProperties.Name="{i18n:T MentionMember}" />
         <Button Classes="primary cardAction" Click="EditProfile" IsVisible="{Binding IsSelf}"
           Content="{i18n:T Profile}" AutomationProperties.Name="{i18n:T Profile}" />
-        <Border Classes="idWell">
-          <StackPanel Spacing="3">
-            <TextBlock Text="{i18n:T UserId}" Classes="section" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-              <SelectableTextBlock Text="{Binding IdText}" FontSize="10"
-                FontFamily="Menlo, Consolas, monospace" TextTrimming="CharacterEllipsis"
-                VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
-              <Button Grid.Column="1" Classes="icon" Width="24" Height="24" Padding="4" Click="CopyId"
-                ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
-                <PathIcon Data="{StaticResource IconCopy}" Width="13" Height="13" />
-              </Button>
-            </Grid>
-          </StackPanel>
-        </Border>
       </StackPanel>
     </StackPanel>
   </Border>

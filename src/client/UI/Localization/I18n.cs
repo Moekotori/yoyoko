@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Chat.Core;
+using Chat.Core.Sessions;
 using Chat.Localization;
 
 namespace Chat.UI.Localization;
@@ -30,7 +31,14 @@ public sealed class I18n : INotifyPropertyChanged, IDisposable
         args.Length == 0 ? Get(key) : _catalog.Get(_preference.Current, key, args);
     public string Error(Exception exception) => exception switch
     {
+        TaskCanceledException => Get(TextKey.RequestTimedOut),
         OperationCanceledException => Get(TextKey.Cancelled),
+        TimeoutException => Get(TextKey.RequestTimedOut),
+        HttpRequestException => Get(TextKey.ServerUnreachable),
+        System.Net.Sockets.SocketException => Get(TextKey.ServerUnreachable),
+        ChatApiException { Code: "forbidden" } => Get(TextKey.ActionNotAllowed),
+        ChatApiException { Code: "not_found" or "invalid_reply" or "invalid_channel" } => Get(TextKey.ContentUnavailable),
+        ChatApiException { Code: "unauthorized" or "invalid_credentials" } => Get(TextKey.SignInAgain),
         LanguagePackException pack => Get(pack.Key),
         ClientFault fault => Get(fault.Key, fault.Args),
         _ => exception.Message

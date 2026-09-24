@@ -59,6 +59,7 @@ public partial class CommunityMenu : UserControl
             var origin = shell.SelectedInstance?.Context.Descriptor.BaseUrl;
             var text = origin is null ? shell.InviteCode : WorkspaceInvite.Link(origin, shell.InviteCode);
             await ClipboardExtensions.SetTextAsync(clipboard, text);
+            CloseHostFlyout();
             shell.Workspace.ShowNotice(I18n.T(TextKey.InviteCopied));
         }
         catch (Exception)

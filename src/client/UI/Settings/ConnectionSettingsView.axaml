@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion"
   x:Class="Chat.UI.Settings.ConnectionSettingsView" x:DataType="vm:ConnectionSettingsViewModel">
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding Cancel}" />
@@ -39,42 +40,51 @@
             <TextBlock Grid.Column="1" Text="{Binding ServerName}" FontSize="14" TextTrimming="CharacterEllipsis"
               VerticalAlignment="Center" />
           </Grid>
-          <Border Classes="settingsRowDivider" IsVisible="{Binding HasHost}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasHost}">
-            <TextBlock Text="{i18n:T ServerHost}" Classes="settingsLabel" />
-            <TextBlock Grid.Column="1" Text="{Binding Host}" FontSize="14" TextTrimming="CharacterEllipsis"
-              VerticalAlignment="Center" />
-          </Grid>
           <Border Classes="settingsRowDivider" IsVisible="{Binding HasCommunity}" />
           <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasCommunity}">
             <TextBlock Text="{i18n:T Community}" Classes="settingsLabel" />
             <TextBlock Grid.Column="1" Text="{Binding CommunityName}" FontSize="14" TextTrimming="CharacterEllipsis"
               VerticalAlignment="Center" />
           </Grid>
-          <Border Classes="settingsRowDivider" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16">
-            <TextBlock Text="{i18n:T ServerLatency}" Classes="settingsLabel" />
-            <TextBlock Grid.Column="1" Text="{Binding LatencyText}" FontSize="14" VerticalAlignment="Center"
-              Classes="muted" />
-          </Grid>
-          <Border Classes="settingsRowDivider" IsVisible="{Binding HasProtocol}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasProtocol}">
-            <TextBlock Text="{i18n:T ServerProtocol}" Classes="settingsLabel" />
-            <TextBlock Grid.Column="1" Text="{Binding ProtocolText}" FontSize="14" VerticalAlignment="Center"
-              Classes="muted" />
-          </Grid>
           <Border Classes="settingsRowDivider" IsVisible="{Binding HasInvite}" />
-          <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasInvite}">
-            <TextBlock Text="{i18n:T InviteCode}" Classes="settingsLabel" />
-            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBlock Text="{Binding InviteCode}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"
-                TextTrimming="CharacterEllipsis" />
-              <Button Grid.Column="1" Classes="icon" Width="30" Height="30" Click="CopyInvite"
-                ToolTip.Tip="{i18n:T CopyInvite}" AutomationProperties.Name="{i18n:T CopyInvite}">
-                <PathIcon Data="{StaticResource IconCopy}" Width="14" Height="14" />
-              </Button>
+          <Button Classes="settingsDisclosure" IsVisible="{Binding HasInvite}" Click="CopyInvite"
+            AutomationProperties.Name="{i18n:T CopyInvite}">
+            <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
+              <TextBlock Text="{i18n:T CopyInvite}" Classes="settingsLabel" />
+              <PathIcon Grid.Column="1" Data="{StaticResource IconCopy}" Width="14" Height="14" VerticalAlignment="Center" />
             </Grid>
-          </Grid>
+          </Button>
+          <Border Classes="settingsRowDivider" />
+          <Button Classes="settingsDisclosure" Command="{Binding ToggleDetails}"
+            AutomationProperties.Name="{i18n:T ConnectionDetails}">
+            <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
+              <TextBlock Text="{i18n:T ConnectionDetails}" Classes="settingsLabel" />
+              <PathIcon Grid.Column="1" Classes="groupChevron" Classes.collapsed="{Binding !DetailsExpanded}"
+                Data="{StaticResource IconChevronDown}" Width="12" Height="12" VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+          <motion:RevealHost IsOpen="{Binding DetailsExpanded}">
+            <StackPanel>
+              <Border Classes="settingsRowDivider" IsVisible="{Binding HasHost}" />
+              <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasHost}">
+                <TextBlock Text="{i18n:T ServerHost}" Classes="settingsLabel" />
+                <TextBlock Grid.Column="1" Text="{Binding Host}" FontSize="14" TextTrimming="CharacterEllipsis"
+                  VerticalAlignment="Center" />
+              </Grid>
+              <Border Classes="settingsRowDivider" />
+              <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16">
+                <TextBlock Text="{i18n:T ServerLatency}" Classes="settingsLabel" />
+                <TextBlock Grid.Column="1" Text="{Binding LatencyText}" FontSize="14" VerticalAlignment="Center"
+                  Classes="muted" />
+              </Grid>
+              <Border Classes="settingsRowDivider" IsVisible="{Binding HasProtocol}" />
+              <Grid Classes="settingsFact" ColumnDefinitions="*,240" ColumnSpacing="16" IsVisible="{Binding HasProtocol}">
+                <TextBlock Text="{i18n:T ServerProtocol}" Classes="settingsLabel" />
+                <TextBlock Grid.Column="1" Text="{Binding ProtocolText}" FontSize="14" VerticalAlignment="Center"
+                  Classes="muted" />
+              </Grid>
+            </StackPanel>
+          </motion:RevealHost>
         </StackPanel>
       </StackPanel>
     </Border>

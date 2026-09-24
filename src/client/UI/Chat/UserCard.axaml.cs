@@ -25,6 +25,7 @@ public partial class UserCard : UserControl
     {
         if (DataContext is MemberProfile member)
             await MemberGestures.CopyAsync(this, member.IdText);
+        CloseFlyout();
         e.Handled = true;
     }
 
@@ -32,6 +33,7 @@ public partial class UserCard : UserControl
     {
         if (DataContext is MemberProfile { HasHandle: true } member)
             await MemberGestures.CopyAsync(this, member.Username);
+        CloseFlyout();
         e.Handled = true;
     }
 

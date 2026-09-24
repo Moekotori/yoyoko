@@ -32,14 +32,14 @@ public partial class Banner : UserControl
     {
         ReadOnlySpan<Color> swatches =
         [
-            Color.FromRgb(88, 122, 158),
-            Color.FromRgb(120, 98, 140),
-            Color.FromRgb(72, 122, 98),
-            Color.FromRgb(140, 100, 78),
-            Color.FromRgb(64, 112, 128),
-            Color.FromRgb(128, 86, 100),
-            Color.FromRgb(90, 108, 80),
-            Color.FromRgb(92, 96, 118)
+            Color.FromRgb(75, 80, 82),
+            Color.FromRgb(83, 80, 78),
+            Color.FromRgb(79, 82, 80),
+            Color.FromRgb(82, 83, 85),
+            Color.FromRgb(85, 82, 79),
+            Color.FromRgb(77, 84, 85),
+            Color.FromRgb(84, 82, 84),
+            Color.FromRgb(80, 84, 82)
         ];
         return new SolidColorBrush(swatches[(id.GetHashCode() & int.MaxValue) % swatches.Length]);
     }

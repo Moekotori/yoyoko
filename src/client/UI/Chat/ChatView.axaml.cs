@@ -28,6 +28,7 @@ public partial class ChatView : UserControl
     private bool _loadingOlder;
     private bool _olderExhausted;
     private DispatcherOperation? _pendingScroll;
+    private bool _participantsOverlay;
 
     public ChatView()
     {
@@ -44,6 +45,7 @@ public partial class ChatView : UserControl
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(Button.ClickEvent, OnMentionChip, RoutingStrategies.Bubble);
+        SizeChanged += (_, _) => UpdateAdaptiveLayout();
     }
 
     public bool DropActive
@@ -62,10 +64,35 @@ public partial class ChatView : UserControl
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        UpdateAdaptiveLayout();
         Messages.ContainerPrepared += OnMessagePrepared;
         AttachScroll();
         if (_scroll is null)
             Messages.LayoutUpdated += OnMessagesLayout;
+    }
+
+    private void UpdateAdaptiveLayout()
+    {
+        var overlay = Bounds.Width > 0 && Bounds.Width < 820;
+        if (_participantsOverlay == overlay) return;
+        _participantsOverlay = overlay;
+        ChatLayout.ColumnDefinitions[1].Width = overlay ? new GridLength(0) : GridLength.Auto;
+        Grid.SetColumn(ParticipantsPane, overlay ? 0 : 1);
+        Grid.SetColumnSpan(ParticipantsPane, overlay ? 2 : 1);
+        ParticipantsPane.HorizontalAlignment = overlay ? Avalonia.Layout.HorizontalAlignment.Right
+            : Avalonia.Layout.HorizontalAlignment.Stretch;
+        ParticipantsPane.ZIndex = overlay ? 2 : 0;
+        UpdateMemberBackdrop();
+    }
+
+    private void UpdateMemberBackdrop() =>
+        MemberBackdrop.IsVisible = _participantsOverlay && DataContext is ShellViewModel { ParticipantsOpen: true };
+
+    private void OnMemberBackdrop(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is ShellViewModel { ParticipantsOpen: true } shell)
+            shell.ToggleParticipants.Execute(null);
+        e.Handled = true;
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
@@ -91,6 +118,7 @@ public partial class ChatView : UserControl
         _subscribed.PlaceComposerCaret = PlaceComposerCaret;
         _subscribed.FocusSearch = FocusSearch;
         _subscribed.PropertyChanged += OnShellChanged;
+        UpdateMemberBackdrop();
         if (IsLoaded) AttachScroll();
     }
 
@@ -135,6 +163,7 @@ public partial class ChatView : UserControl
     {
         if (args.PropertyName == nameof(ShellViewModel.SearchOpen) && _subscribed?.SearchOpen == true)
             FocusSearch();
+        if (args.PropertyName == nameof(ShellViewModel.ParticipantsOpen)) UpdateMemberBackdrop();
         if (args.PropertyName == nameof(ShellViewModel.SearchOpen) && _subscribed?.SearchOpen == false)
             Dispatcher.UIThread.Post(() =>
             {

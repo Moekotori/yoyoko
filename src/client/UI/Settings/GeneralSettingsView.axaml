@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="using:Chat.UI.Settings" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion"
   x:Class="Chat.UI.Settings.GeneralSettingsView" x:DataType="vm:SettingsViewModel">
   <Border Classes="settingsGroup">
   <StackPanel HorizontalAlignment="Stretch">
@@ -13,9 +14,25 @@
       </Grid>
     </Border>
     <Border Classes="settingsRowDivider" />
-    <StackPanel Margin="0,28,0,28" Spacing="12">
-      <TextBlock Text="{i18n:T LanguagePacks}" Classes="settingsLabel" FontWeight="Medium" />
-      <Border Classes="settingsDrop" Classes.active="{Binding LanguagePackDropActive}" Padding="16" ToolTip.Tip="{i18n:T LanguagePackHelp}">
+    <Border Classes="settingsHit" vm:SettingsHit.Command="{Binding ToggleUltraLight}"
+      ToolTip.Tip="{i18n:T UltraLightHelp}" AutomationProperties.Name="{i18n:T UltraLightMode}">
+      <Grid ColumnDefinitions="*,240" ColumnSpacing="16">
+        <TextBlock Text="{i18n:T UltraLightMode}" Classes="settingsLabel" />
+        <ToggleSwitch Grid.Column="1" Classes="settingsToggle" Focusable="False" HorizontalAlignment="Right" IsChecked="{Binding UltraLightEnabled}" />
+      </Grid>
+    </Border>
+    <Border Classes="settingsRowDivider" />
+    <Button Classes="settingsDisclosure" Command="{Binding ToggleLanguagePacks}"
+      AutomationProperties.Name="{i18n:T LanguagePacks}">
+      <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
+        <TextBlock Text="{i18n:T LanguagePacks}" Classes="settingsLabel" />
+        <PathIcon Grid.Column="1" Classes="groupChevron" Classes.collapsed="{Binding !ShowLanguagePacks}"
+          Data="{StaticResource IconChevronDown}" Width="12" Height="12" VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+    <motion:RevealHost IsOpen="{Binding ShowLanguagePacks}">
+      <Border Classes="settingsDrop" Classes.active="{Binding LanguagePackDropActive}" Padding="16" Margin="0,4,0,0"
+        ToolTip.Tip="{i18n:T LanguagePackHelp}">
         <StackPanel Spacing="8">
           <TextBlock Text="{i18n:T DropLanguagePack}" FontSize="14" />
           <TextBlock Text="{i18n:T CustomLanguagePack}" Classes="muted" FontSize="13" IsVisible="{Binding CanRemoveLanguagePack}" />
@@ -30,15 +47,7 @@
           </WrapPanel>
         </StackPanel>
       </Border>
-    </StackPanel>
-    <Border Classes="settingsRowDivider" />
-    <Border Classes="settingsHit" vm:SettingsHit.Command="{Binding ToggleUltraLight}"
-      ToolTip.Tip="{i18n:T UltraLightHelp}" AutomationProperties.Name="{i18n:T UltraLightMode}">
-      <Grid ColumnDefinitions="*,240" ColumnSpacing="16">
-        <TextBlock Text="{i18n:T UltraLightMode}" Classes="settingsLabel" />
-        <ToggleSwitch Grid.Column="1" Classes="settingsToggle" Focusable="False" HorizontalAlignment="Right" IsChecked="{Binding UltraLightEnabled}" />
-      </Grid>
-    </Border>
+    </motion:RevealHost>
   </StackPanel>
   </Border>
 </UserControl>

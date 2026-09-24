@@ -23,6 +23,7 @@ public sealed partial class ShellViewModel
     private bool _messagesChanged;
     private bool _presentationDisposed;
     private string _searchQuery = "";
+    private string _chatStatus = "";
     private string? _draftKey;
     private readonly Dictionary<string, string> _channelDrafts = [];
     private readonly Dictionary<string, List<PendingFileItem>> _pendingByDraftKey = [];
@@ -63,6 +64,15 @@ public sealed partial class ShellViewModel
     public int ParticipantCount => Participants.Count;
     public bool HasParticipants => Participants.Count > 0;
     public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
+    public string ChatStatus => _chatStatus;
+    public bool HasChatStatus => _chatStatus.Length > 0;
+    private void SetChatStatus(string value)
+    {
+        if (_chatStatus == value) return;
+        _chatStatus = value;
+        Changed(nameof(ChatStatus));
+        Changed(nameof(HasChatStatus));
+    }
     public bool ShowChannelEmpty => IsSignedIn && SelectedChannel is null && !ShowSettings;
 
     private void InitializePresentation()
@@ -102,7 +112,7 @@ public sealed partial class ShellViewModel
             else if (ChannelEditor is { } editor) editor.Cancel.Execute(null);
             else if (ShowSettings) ShowSettings = false;
             else if (SearchOpen) { SearchOpen = false; SearchQuery = ""; }
-            else Status = "";
+            else { Status = ""; SetChatStatus(""); }
         });
         InitializeKeyboard();
         InitializeMentions();
@@ -115,6 +125,7 @@ public sealed partial class ShellViewModel
     {
         if (args.PropertyName == nameof(SelectedInstance))
         {
+            SetChatStatus("");
             StashPendingFiles();
             _draftKey = null;
             ProfileOpen = false;
@@ -127,6 +138,7 @@ public sealed partial class ShellViewModel
         }
         if (args.PropertyName == nameof(SelectedChannel))
         {
+            SetChatStatus("");
             FlushDraft();
             StashPendingFiles();
             if (IsEditing) { _editingId = null; _editBackup = ""; Changed(nameof(IsEditing)); }

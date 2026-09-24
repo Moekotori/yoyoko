@@ -79,21 +79,17 @@
         </Panel>
         <Border Margin="12,0,12,12" Background="{DynamicResource ProfileInsetBrush}" CornerRadius="8" Padding="12">
           <StackPanel Spacing="10">
-            <StackPanel Spacing="2">
-              <TextBlock Text="{Binding Settings.Profile.DisplayName}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-              <SelectableTextBlock Text="{Binding Settings.Profile.Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" IsVisible="{Binding Settings.Profile.HasHandle}" />
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Settings.Profile.DisplayName}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <SelectableTextBlock Text="{Binding Settings.Profile.Handle}" Foreground="{DynamicResource MutedTextBrush}" FontSize="12" IsVisible="{Binding Settings.Profile.HasHandle}" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="icon" Width="26" Height="26" Padding="5" Click="CopyId"
+                ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
+                <PathIcon Data="{StaticResource IconCopy}" Width="13" Height="13" />
+              </Button>
+            </Grid>
             <Border Height="1" Background="{DynamicResource DividerBrush}" />
-            <StackPanel Spacing="4">
-              <TextBlock Text="{i18n:T UserId}" Classes="section" />
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                <SelectableTextBlock Text="{Binding Settings.Profile.IdText}" FontSize="11" FontFamily="Menlo, Consolas, monospace" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                <Button Grid.Column="1" Classes="icon" Width="26" Height="26" Padding="5" Click="CopyId"
-                  ToolTip.Tip="{i18n:T CopyUserId}" AutomationProperties.Name="{i18n:T CopyUserId}">
-                  <PathIcon Data="{StaticResource IconCopy}" Width="13" Height="13" />
-                </Button>
-              </Grid>
-            </StackPanel>
             <StackPanel Spacing="4">
               <TextBlock Text="{i18n:T DisplayNameField}" Classes="section" />
               <TextBox x:Name="DisplayNameField" Classes="cardField" Text="{Binding Settings.Profile.DisplayName}" MaxLength="100" AutomationProperties.Name="{i18n:T DisplayNameField}" />
