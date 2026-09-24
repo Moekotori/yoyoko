@@ -37,7 +37,8 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <Grid MaxWidth="380" Margin="0,12" VerticalAlignment="Center"
       RowDefinitions="Auto,Auto,Auto,Auto">
-      <Border Grid.Row="1" Background="{DynamicResource RaisedBrush}" CornerRadius="8" Padding="4" Margin="0,0,0,26">
+      <Border Grid.Row="1" Background="{DynamicResource RaisedBrush}" CornerRadius="8" Padding="4" Margin="0,0,0,26"
+        IsVisible="{Binding AllowRegistration}">
         <Grid ColumnDefinitions="*,*" IsEnabled="{Binding !IsBusy}">
           <Button Classes="authTab" Classes.selected="{Binding !IsRegistration}"
             Content="{i18n:T SignIn}" Command="{Binding ShowSignIn}" />
@@ -45,6 +46,8 @@
             Content="{i18n:T Register}" Command="{Binding ShowRegistration}" />
         </Grid>
       </Border>
+      <TextBlock Grid.Row="1" Text="{i18n:T SignIn}" FontSize="20" FontWeight="SemiBold"
+        Margin="0,0,0,26" IsVisible="{Binding !AllowRegistration}" />
       <StackPanel Grid.Row="2" Spacing="20" IsEnabled="{Binding !IsBusy}">
         <StackPanel Spacing="8">
           <TextBlock Text="{i18n:T Username}" FontSize="13" />

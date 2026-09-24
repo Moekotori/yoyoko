@@ -14,6 +14,7 @@ public sealed class AuthFormViewModel : ObservableObject
     public string DisplayName { get => _displayName; set { _displayName = value; Changed(); } }
     public string Status { get => _status; set { _status = value; Changed(); } }
     private bool _isRegistration;
+    private bool _allowRegistration = true;
     private bool _isBusy;
 
     public AuthFormViewModel(Func<bool, Task> authenticate, Action<Exception> onError)
@@ -32,6 +33,17 @@ public sealed class AuthFormViewModel : ObservableObject
     public ActionCommand ShowRegistration { get; }
     public AsyncCommand Submit { get; }
     public bool IsRegistration => _isRegistration;
+    public bool AllowRegistration
+    {
+        get => _allowRegistration;
+        set
+        {
+            if (_allowRegistration == value) return;
+            _allowRegistration = value;
+            if (!value) SetMode(false);
+            Changed();
+        }
+    }
     public bool IsBusy
     {
         get => _isBusy;
@@ -40,7 +52,7 @@ public sealed class AuthFormViewModel : ObservableObject
 
     private void SetMode(bool registration)
     {
-        if (IsBusy || _isRegistration == registration) return;
+        if (IsBusy || (registration && !AllowRegistration) || _isRegistration == registration) return;
         _isRegistration = registration;
         Changed(nameof(IsRegistration));
     }

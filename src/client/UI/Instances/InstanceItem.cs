@@ -9,9 +9,11 @@ public sealed class InstanceItem(InstanceContext context) : ObservableObject
     private Guid? _avatarId;
     private bool _hasUnread;
     private bool _hasMention;
+    private bool _isUnavailable;
     public AvatarPlayback? Playback { get; private set; }
     public bool HasUnread { get => _hasUnread; set { if (_hasUnread == value) return; _hasUnread = value; Changed(); } }
     public bool HasMention { get => _hasMention; set { if (_hasMention == value) return; _hasMention = value; Changed(); } }
+    public bool IsUnavailable { get => _isUnavailable; set { if (_isUnavailable == value) return; _isUnavailable = value; Changed(); } }
     public InstanceContext Context { get; } = context;
     public string Name => Context.Descriptor.DisplayName;
     public string Host => Context.Descriptor.BaseUrl.Authority;

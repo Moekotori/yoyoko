@@ -104,6 +104,7 @@ public sealed partial class ShellViewModel
             var accountId = item.Context.Account?.Key.Id;
             if (item.Context.Session is { } session) UnbindSession(session);
             await _connection.DisconnectAsync(item.Context, work);
+            item.IsUnavailable = false;
             if (accountId is Guid id) ClearAccountDrafts(item.Context.Descriptor.Id.Value, id);
             DetachTimeline();
             foreach (var pending in PendingFiles.ToList())
@@ -157,7 +158,7 @@ public sealed partial class ShellViewModel
         if (item is not null) return item;
         var previous = Instances.FirstOrDefault(item => item.Context.Descriptor.Id == context.Descriptor.Id);
         if (previous is not null) Instances.Remove(previous);
-        item = new(context);
+        item = new(context) { IsUnavailable = context.Session?.IsGatewayUnavailable ?? false };
         Instances.Add(item);
         return item;
     }

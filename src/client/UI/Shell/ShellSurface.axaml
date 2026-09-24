@@ -2,7 +2,7 @@
   xmlns:vm="using:Chat.UI.Shell" xmlns:instances="using:Chat.UI.Instances" xmlns:channels="using:Chat.UI.Channels"
   xmlns:chat="using:Chat.UI.Chat" xmlns:voice="using:Chat.UI.Voice"
   xmlns:motion="clr-namespace:Chat.Motion;assembly=Chat.Motion" xmlns:settings="using:Chat.UI.Settings"
-  xmlns:appearance="using:Chat.UI.Appearance" xmlns:i18n="using:Chat.UI.Localization"
+  xmlns:appearance="using:Chat.UI.Appearance" xmlns:auth="using:Chat.UI.Auth" xmlns:i18n="using:Chat.UI.Localization"
   xmlns:chrome="using:Avalonia.Controls.Chrome"
   x:Class="Chat.UI.Shell.ShellSurface" x:DataType="vm:ShellViewModel"
 >
@@ -50,7 +50,30 @@
       </Border>
       <Panel Grid.Row="1">
         <motion:MotionHost IsVisible="{Binding ShowAuth}">
-          <StackPanel MaxWidth="400" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+          <Panel>
+          <Panel IsVisible="{Binding ShowAuthForm}">
+            <auth:AuthView DataContext="{Binding AuthForm}" />
+            <Button Content="{i18n:T BackToLocalConnection}" Command="{Binding CloseLocalAccountForm}"
+              IsVisible="{Binding !AuthForm.AllowRegistration}" HorizontalAlignment="Left" VerticalAlignment="Top"
+              Margin="24" />
+          </Panel>
+          <StackPanel MaxWidth="400" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18"
+            IsVisible="{Binding ShowLocalConnection}">
+            <TextBlock Text="{i18n:T LocalConnectionTitle}" FontSize="21" FontWeight="SemiBold"
+              HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding Connection.Status}" Classes="muted" FontSize="15" TextWrapping="Wrap"
+              TextAlignment="Center" HorizontalAlignment="Center" IsVisible="{Binding Connection.HasStatus}" />
+            <TextBlock Text="{Binding AuthForm.Status}" Classes="muted" FontSize="15" TextWrapping="Wrap"
+              TextAlignment="Center" HorizontalAlignment="Center" IsVisible="{Binding !Connection.HasStatus}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+              <Button Classes="primary" Content="{i18n:T RetryLocalConnection}" Command="{Binding Connection.Connect}"
+                IsEnabled="{Binding !Connection.IsBusy}" MinWidth="92" Height="38" CornerRadius="2" />
+              <Button Content="{i18n:T UseExistingAccount}" Command="{Binding OpenLocalAccountForm}"
+                MinWidth="82" Height="38" Background="{DynamicResource RaisedBrush}" CornerRadius="2" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel MaxWidth="400" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18"
+            IsVisible="{Binding ShowConnectPrompt}">
             <TextBlock Text="{i18n:T ConnectCommunity}" FontSize="21" FontWeight="SemiBold"
               HorizontalAlignment="Center" IsVisible="{Binding !Connection.HasStatus}" />
             <TextBlock Text="{Binding Connection.Status}" Classes="muted" FontSize="15" TextWrapping="Wrap"
@@ -65,6 +88,7 @@
                 Background="{DynamicResource RaisedBrush}" CornerRadius="2" />
             </StackPanel>
           </StackPanel>
+          </Panel>
         </motion:MotionHost>
         <chat:ChatView IsVisible="{Binding ShowChat}" />
         <TextBlock Text="{i18n:T SelectChannel}" Classes="muted" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ShowChannelEmpty}" />

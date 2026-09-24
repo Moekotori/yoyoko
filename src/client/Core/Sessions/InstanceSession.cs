@@ -31,6 +31,7 @@ public sealed partial class InstanceSession : IAsyncDisposable
     private bool _resumeAfterGap;
     private bool _forceIdentify;
     private bool _needsResync;
+    private volatile bool _gatewayUnavailable;
     private long _lastAckTicks;
     public InstanceSession(InstanceDescriptor descriptor, UserDto me, IChatApi api, IMessageCache cache,
         ICredentialVault vault, Func<IGatewayConnection> gateways, IVoiceMedia media, string accessToken, string refreshToken)
@@ -59,6 +60,8 @@ public sealed partial class InstanceSession : IAsyncDisposable
     public VoiceRuntime Voice { get; }
     public OutboundQueue Outbound { get; }
     public event Action? ResyncNeeded;
+    public event Action? GatewayAvailabilityChanged;
+    public bool IsGatewayUnavailable => _gatewayUnavailable;
     public long MaxAttachmentBytes { get; private set; } = ProtocolVersion.MaxAttachmentBytes;
     public int MaxAttachments { get; private set; } = ProtocolVersion.MaxAttachmentsPerMessage;
     public event Action? CommunityChanged;
@@ -92,19 +95,29 @@ public sealed partial class InstanceSession : IAsyncDisposable
     {
         var accountId = await cache.GetSettingAsync("account:" + descriptor.Id.Value, cancellationToken);
         if (accountId is null || !Guid.TryParse(accountId, out var id)) return null;
-        var refresh = await vault.GetAsync(descriptor.Id, id, cancellationToken);
-        if (refresh is null) return null;
-        try
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            var auth = await api.RefreshAsync(refresh, cancellationToken);
-            var session = new InstanceSession(descriptor, auth.User, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
-            await session.PersistAuthAsync(cancellationToken);
-            var cached = await cache.LoadCommunityAsync(session.Scope, cancellationToken);
-            session.ApplyCommunity(cached);
-            session.Start();
-            return session;
+            var refresh = await vault.GetAsync(descriptor.Id, id, cancellationToken);
+            if (refresh is null) return null;
+            try
+            {
+                var auth = await api.RefreshAsync(refresh, cancellationToken);
+                var session = new InstanceSession(descriptor, auth.User, api, cache, vault, gateways, media, auth.AccessToken, auth.RefreshToken);
+                await session.PersistAuthAsync(cancellationToken);
+                var cached = await cache.LoadCommunityAsync(session.Scope, cancellationToken);
+                session.ApplyCommunity(cached);
+                session.Start();
+                return session;
+            }
+            catch (ChatApiException exception) when (exception.Code == "unauthorized")
+            {
+                // Another client sharing this cache may have rotated the refresh token.
+                if (attempt == 2) return null;
+                await Task.Delay(100, cancellationToken);
+                if (await vault.GetAsync(descriptor.Id, id, cancellationToken) == refresh) return null;
+            }
         }
-        catch (ChatApiException exception) when (exception.Code == "unauthorized") { return null; }
+        return null;
     }
 
     public string AuthorName(Guid userId) =>
@@ -291,11 +304,13 @@ public sealed partial class InstanceSession : IAsyncDisposable
             try
             {
                 await ConnectOnceAsync(cancellationToken);
+                SetGatewayUnavailable(true);
                 attempt = 0;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
             catch
             {
+                SetGatewayUnavailable(true);
                 attempt++;
                 try { await Task.Delay(ReconnectPolicy.Delay(attempt, Random.Shared.NextDouble()), cancellationToken); }
                 catch (OperationCanceledException) { return; }
@@ -310,6 +325,7 @@ public sealed partial class InstanceSession : IAsyncDisposable
         await _gateway.ConnectAsync(_api.Gateway, cancellationToken);
         await using var events = _gateway.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
         if (!await events.MoveNextAsync() || events.Current.Op != "hello") throw new InvalidDataException("Expected hello.");
+        SetGatewayUnavailable(false);
         var hello = events.Current.Data.Deserialize(ProtocolJson.Default.GatewayHello)
             ?? new GatewayHello(1, 30_000);
         var cursor = await _cache.LoadCursorAsync(Scope, cancellationToken);
@@ -373,6 +389,13 @@ public sealed partial class InstanceSession : IAsyncDisposable
     }
 
     private enum SeqDecision { Apply, Skip, Gap }
+
+    private void SetGatewayUnavailable(bool unavailable)
+    {
+        if (_gatewayUnavailable == unavailable) return;
+        _gatewayUnavailable = unavailable;
+        GatewayAvailabilityChanged?.Invoke();
+    }
 
     private SeqDecision InspectSeq(long seq)
     {

@@ -258,6 +258,12 @@ Rail selection refinement: selected items use a quiet `#2C2C2C` fill (`#303030` 
 - [外观设置](light-mode/light-appearance.png) · [表单](light-mode/light-fields.png) · [快捷键](light-mode/light-shortcuts.png)
 - [下拉菜单](light-mode/light-dropdown.png) · [富文本](light-mode/light-rich-text.png)
 
+### 浅色配色调整（2026-09-24）
+
+参考 Discord 浅色主题的区域层级，将原先偏灰绿的画布、导航、选中态、输入框与头像占位改为白色和中性冷灰。主要操作与焦点使用克制的蓝紫色；提及、未读与开关跟随同一强调色，错误和在线状态仍用各自语义色。深色主题及布局未改。当前颜色统一在 `Styles/Palette.axaml` 的 Light 字典中。
+
+验证：Release `Chat.App` 构建 0 警告、0 错误；用实际 Avalonia 控件树和 Skia 渲染了隔离的聊天设计预览，检查了实例栏、频道栏、消息区、成员栏和输入框。主要文字、次级文字、链接、提及及主要按钮的前景/底色对比均超过 4.5:1。此图为离屏渲染，不代表 macOS 窗口输入或三平台验收。[浅色聊天预览](light-mode/light-chat-discord-palette.png)。
+
 
 ### 设置页重排（2026-09-23）
 

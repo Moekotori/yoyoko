@@ -1,3 +1,4 @@
+using Chat.Core;
 using Chat.Core.Instances;
 using Chat.Core.Sessions;
 using Chat.Localization;
@@ -101,6 +102,20 @@ public sealed partial class ShellViewModel
         catch (ChatApiException error) when (error.Code == "invalid_server_password")
         {
             AddInstanceStatus = _text.Get(TextKey.InvalidServerPassword);
+        }
+        catch (ClientFault error) when (error.Key == TextKey.SessionRecoveryRequired)
+        {
+            var context = _instances.Contexts.FirstOrDefault(item => item.Descriptor.BaseUrl == address);
+            if (context is null) AddInstanceStatus = _text.Error(error);
+            else
+            {
+                SelectedInstance = TrackInstance(context);
+                Connection.Address = context.Descriptor.BaseUrl.AbsoluteUri;
+                Connection.Bind(context);
+                ShowSettings = false;
+                AuthForm.Status = _text.Error(error);
+                connected = true;
+            }
         }
         catch (Exception error)
         {

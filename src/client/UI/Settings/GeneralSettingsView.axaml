@@ -31,7 +31,7 @@
       </Grid>
     </Button>
     <motion:RevealHost IsOpen="{Binding ShowLanguagePacks}">
-      <Border Classes="settingsDrop" Classes.active="{Binding LanguagePackDropActive}" Padding="16" Margin="0,4,0,0"
+      <Border Classes="settingsDrop" Classes.active="{Binding LanguagePackDropActive}" Padding="0,8" Margin="0,4,0,0"
         ToolTip.Tip="{i18n:T LanguagePackHelp}">
         <StackPanel Spacing="8">
           <TextBlock Text="{i18n:T DropLanguagePack}" FontSize="14" />

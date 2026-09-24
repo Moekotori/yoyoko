@@ -37,11 +37,16 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" /><Setter Property="CornerRadius" Value="2" />
   </Style>
+  <Style Selector="Button.settingsDisclosure /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
+  <Style Selector="Button.settingsDisclosure:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+  <Style Selector="Button.settingsDisclosure:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
+  <Style Selector="Button.settingsDisclosure:focus-visible /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
+  <Style Selector="Button.settingsDisclosure:pointerover PathIcon"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Border.settingsDrop">
-    <Setter Property="Background" Value="{DynamicResource SidebarBrush}" /><Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="Transparent" /><Setter Property="CornerRadius" Value="6" />
     <Setter Property="BorderBrush" Value="Transparent" /><Setter Property="BorderThickness" Value="1" />
   </Style>
-  <Style Selector="Border.settingsDrop.active"><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Style>
+  <Style Selector="Border.settingsDrop.active"><Setter Property="Background" Value="{DynamicResource SubtleBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Style>
   <Style Selector="Border.settingsGroup">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="CornerRadius" Value="0" />

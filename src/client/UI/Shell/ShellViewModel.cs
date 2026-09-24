@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using Avalonia.Threading;
+using Chat.Core;
 using Chat.Core.Instances;
 using Chat.Localization;
 using Chat.Core.Messaging;
@@ -43,6 +44,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     private string _moderationWords = "";
     private string _cooldownInput = "0";
     private bool _settingsOpen;
+    private bool _showLocalAccountForm;
     private readonly AttachmentPreviews _previews;
     private string _status = "";
     private string _draft = "";
@@ -88,6 +90,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         shortcuts.Changed += OnShortcutsChanged;
         OpenAddInstance = new(_ => OpenAddInstanceDialog());
         CloseAddInstance = new(_ => CloseAddInstanceDialog());
+        OpenLocalAccountForm = new(_ => { _showLocalAccountForm = true; NotifyAuthSurface(); });
+        CloseLocalAccountForm = new(_ => { _showLocalAccountForm = false; NotifyAuthSurface(); });
         OpenSettings = new(_ =>
         {
             CloseJump();
@@ -187,6 +191,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     public ActionCommand OpenAddInstance { get; }
     public ActionCommand CloseAddInstance { get; }
     public ActionCommand OpenSettings { get; }
+    public ActionCommand OpenLocalAccountForm { get; }
+    public ActionCommand CloseLocalAccountForm { get; }
     public ActionCommand OpenVoiceSettings { get; }
     public SettingsViewModel Settings { get; }
     public WallpaperSession Wallpaper { get; }
@@ -250,6 +256,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         set
         {
             _selected = value;
+            _showLocalAccountForm = false;
+            AuthForm.AllowRegistration = value?.Context.Descriptor.BaseUrl.IsLoopback != true;
             _settingsOpen = false;
             ClearPlaybacks();
             Changed();
@@ -257,6 +265,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             Changed(nameof(InstanceHost));
             Changed(nameof(ShowAddInstance));
             Changed(nameof(ShowAuth));
+            Changed(nameof(ShowAuthForm));
+            Changed(nameof(ShowConnectPrompt));
+            Changed(nameof(ShowLocalConnection));
             Changed(nameof(ShowChannelNav));
             Changed(nameof(ShowChat));
             Changed(nameof(ShowSettings));
@@ -313,6 +324,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         }
     }
     public bool ShowAuth => !IsSignedIn && !ShowSettings && SelectedChannel is null;
+    public bool ShowAuthForm => ShowAuth && SelectedInstance is not null &&
+        (!IsLocalInstance || _showLocalAccountForm);
+    public bool ShowConnectPrompt => ShowAuth && SelectedInstance is null;
+    public bool ShowLocalConnection => ShowAuth && IsLocalInstance && !_showLocalAccountForm;
+    private bool IsLocalInstance => SelectedInstance?.Context.Descriptor.BaseUrl.IsLoopback == true;
+    private void NotifyAuthSurface()
+    {
+        Changed(nameof(ShowAuthForm));
+        Changed(nameof(ShowLocalConnection));
+    }
     public bool ShowGuest => !IsSignedIn;
     public bool ShowChannelNav => IsSignedIn || Channels.Count > 0;
     public bool ShowChat => !ShowSettings && SelectedChannel is { CanChat: true };
@@ -428,7 +449,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
                 }
                 else await RestoreAsync(item, work);
             }
-            if (preparationError is not null) OnError(preparationError);
+            if (preparationError is not null)
+            {
+                if (preparationError is ClientFault { Key: TextKey.SessionRecoveryRequired })
+                    AuthForm.Status = _text.Error(preparationError);
+                OnError(preparationError);
+            }
             if (work.IsCancellationRequested) Connection.Status = _text.Get(TextKey.Cancelled);
             else Connection.Status = preparationError is null ? "" : _text.Error(preparationError);
             Connection.Bind(SelectedInstance?.Context);
@@ -452,7 +478,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
             BindSession(session);
             if (SelectedInstance == item) RefreshCommunity();
         }
-        catch { /* offline: stay on login */ }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch { item.IsUnavailable = true; /* offline: stay on login */ }
     }
 
     private async Task AuthenticateAsync(bool register)
@@ -473,8 +500,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         item.Context.AttachSessionClear();
         item.Context.AttachSession(session);
         BindSession(session);
+        await session.RefreshCommunityAsync(_lifetime);
         Password = "";
         AuthForm.Status = "";
+        _showLocalAccountForm = false;
         Status = "";
         Settings.Profile.Reload();
         Connection.Status = "";
@@ -489,6 +518,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
     private void BindSession(InstanceSession session)
     {
         if (!_boundSessions.Add(session)) return;
+        var item = Instances.FirstOrDefault(candidate => candidate.Context.Session == session);
+        if (item is not null)
+        {
+            item.IsUnavailable = session.IsGatewayUnavailable;
+            session.GatewayAvailabilityChanged += () => Dispatcher.UIThread.Post(() =>
+            {
+                if (item.Context.Session == session) item.IsUnavailable = session.IsGatewayUnavailable;
+            });
+        }
         _transport.Attach(session);
         session.Voice.ApplyRoute(Devices.Route);
         session.CommunityChanged += () => Dispatcher.UIThread.Post(RefreshCommunity);
@@ -585,6 +623,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         foreach (var instance in Instances) instance.RefreshIdentity();
         Changed(nameof(IsSignedIn));
         Changed(nameof(ShowAuth));
+        Changed(nameof(ShowAuthForm));
+        Changed(nameof(ShowConnectPrompt));
+        Changed(nameof(ShowLocalConnection));
         Changed(nameof(ShowGuest));
         Changed(nameof(ShowChannelNav));
         Changed(nameof(ShowChat));
@@ -1004,6 +1045,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IVoi
         }
         ClearAccountDrafts();
         item.Context.AttachSessionClear();
+        item.IsUnavailable = false;
         DetachTimeline();
         foreach (var pending in PendingFiles.ToList())
             pending.File.Content.Dispose();
